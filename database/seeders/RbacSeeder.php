@@ -96,6 +96,7 @@ class RbacSeeder extends Seeder
                 'crm.view' => 'company', 'crm.manage' => 'company', 'crm.deals.manage' => 'company',
                 'finance.view' => 'company', 'finance.manage' => 'company', 'finance.invoices.manage' => 'company',
                 'accounting.view' => 'company', 'accounting.manage' => 'company',
+                'projects.view' => 'company', 'projects.manage' => 'company',
                 'audit.view' => 'company', 'settings.view' => 'company', 'settings.manage' => 'company',
                 'search.global' => 'company', 'documents.templates.manage' => 'company',
                 'documents.templates.view' => 'company',
@@ -118,6 +119,7 @@ class RbacSeeder extends Seeder
                 'crm.view' => 'company', 'crm.manage' => 'company', 'crm.deals.manage' => 'company',
                 'finance.view' => 'company', 'finance.manage' => 'company', 'finance.invoices.manage' => 'company',
                 'accounting.view' => 'company', 'accounting.manage' => 'company',
+                'projects.view' => 'company', 'projects.manage' => 'company',
                 'search.global' => 'company',
             ],
 
@@ -142,6 +144,7 @@ class RbacSeeder extends Seeder
                 'crm.view' => 'company',
                 'finance.view' => 'company',
                 'accounting.view' => 'company',
+                'projects.view' => 'company',
                 'search.global' => 'department',
             ],
 

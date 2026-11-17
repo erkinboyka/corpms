@@ -43,6 +43,11 @@ class FinTransaction extends Model
         return $this->belongsTo(FinCategory::class, 'category_id');
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

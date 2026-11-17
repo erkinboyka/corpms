@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FinAccount;
 use App\Models\FinCategory;
 use App\Models\FinTransaction;
+use App\Models\Project;
 use App\Shared\Enums\FinDirection;
 use App\Shared\Enums\FinTransactionSource;
 use App\Support\PermissionService;
@@ -56,7 +57,7 @@ class FinTransactionController extends Controller
 
         $transactions = FinTransaction::query()
             ->where('company_id', $companyId)
-            ->with(['account', 'category', 'creator'])
+            ->with(['account', 'category', 'project', 'creator'])
             ->whereBetween('occurred_at', [$start, $end])
             ->when(in_array($direction, ['income', 'expense'], true), static fn ($query) => $query->where('direction', $direction))
             ->when(is_numeric($accountId), static fn ($query) => $query->where('account_id', (int) $accountId))
@@ -73,6 +74,7 @@ class FinTransactionController extends Controller
             'metrics' => $this->finance->metrics($companyId, $month),
             'accounts' => FinAccount::query()->where('company_id', $companyId)->active()->orderBy('name')->get(),
             'categories' => FinCategory::query()->where('company_id', $companyId)->active()->orderBy('name')->get(),
+            'projects' => Project::query()->where('company_id', $companyId)->open()->orderBy('name')->get(),
             'directions' => FinDirection::cases(),
             'canManage' => $this->permissions->check($request->user(), 'finance.manage'),
         ]);
@@ -91,6 +93,7 @@ class FinTransactionController extends Controller
         $validated = $request->validate([
             'account_id' => ['required', 'integer'],
             'category_id' => ['nullable', 'integer'],
+            'project_id' => ['nullable', 'integer'],
             'direction' => ['required', Rule::enum(FinDirection::class)],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
             'occurred_at' => ['required', 'date'],
@@ -98,6 +101,12 @@ class FinTransactionController extends Controller
         ], [], ['amount' => 'сумма', 'direction' => 'направление', 'occurred_at' => 'дата']);
 
         TenantGuard::ensureReference('fin_accounts', (int) $validated['account_id'], $me);
+
+        $projectId = $validated['project_id'] ?? null;
+
+        if ($projectId !== null && $projectId !== '') {
+            TenantGuard::ensureReference('projects', (int) $projectId, $me);
+        }
 
         $categoryId = $validated['category_id'] ?? null;
 
@@ -115,6 +124,7 @@ class FinTransactionController extends Controller
             'company_id' => $me->company_id,
             'account_id' => (int) $validated['account_id'],
             'category_id' => $categoryId ?: null,
+            'project_id' => $projectId ?: null,
             'direction' => FinDirection::from($validated['direction']),
             'amount' => $validated['amount'],
             'occurred_at' => $validated['occurred_at'],

@@ -31,6 +31,9 @@ use App\Http\Controllers\Web\IntegrationController;
 use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\PayrollController;
+use App\Http\Controllers\Web\ProjectController;
+use App\Http\Controllers\Web\ProjectMemberController;
+use App\Http\Controllers\Web\ProjectMilestoneController;
 use App\Http\Controllers\Web\PurchaseController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\RfidController;
@@ -220,6 +223,22 @@ Route::middleware('auth')->group(function () {
     Route::delete('/accounting/documents/{document}', [AccountingDocumentController::class, 'destroy'])->middleware('permission:accounting.manage@company')->name('accounting.documents.destroy');
 
     Route::get('/accounting/reports', [AccountingReportController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.reports.index');
+
+    /* ---------- проекты (E5) ---------- */
+    Route::get('/projects', [ProjectController::class, 'index'])->middleware('permission:projects.view')->name('projects.index');
+    Route::post('/projects', [ProjectController::class, 'store'])->middleware('permission:projects.manage@company')->name('projects.store');
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->middleware('permission:projects.view')->name('projects.show');
+    Route::patch('/projects/{project}', [ProjectController::class, 'update'])->middleware('permission:projects.manage@company')->name('projects.update');
+    Route::post('/projects/{project}/status', [ProjectController::class, 'status'])->middleware('permission:projects.manage@company')->name('projects.status');
+    Route::post('/projects/{project}/tasks', [ProjectController::class, 'attachTask'])->middleware('permission:projects.manage@company')->name('projects.tasks.attach');
+    Route::delete('/projects/{project}/tasks/{task}', [ProjectController::class, 'detachTask'])->middleware('permission:projects.manage@company')->name('projects.tasks.detach');
+
+    Route::post('/projects/{project}/members', [ProjectMemberController::class, 'store'])->middleware('permission:projects.manage@company')->name('projects.members.store');
+    Route::delete('/projects/{project}/members/{member}', [ProjectMemberController::class, 'destroy'])->middleware('permission:projects.manage@company')->name('projects.members.destroy');
+
+    Route::post('/projects/{project}/milestones', [ProjectMilestoneController::class, 'store'])->middleware('permission:projects.manage@company')->name('projects.milestones.store');
+    Route::post('/projects/{project}/milestones/{milestone}/toggle', [ProjectMilestoneController::class, 'toggle'])->middleware('permission:projects.manage@company')->name('projects.milestones.toggle');
+    Route::delete('/projects/{project}/milestones/{milestone}', [ProjectMilestoneController::class, 'destroy'])->middleware('permission:projects.manage@company')->name('projects.milestones.destroy');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');

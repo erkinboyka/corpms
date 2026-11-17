@@ -78,7 +78,7 @@
                         <td class="text-secondary">{{ $transaction->occurred_at?->format('d.m.Y') }}</td>
                         <td>
                             <div class="crm-table__main">{{ $transaction->description ?: ($transaction->direction->value === 'income' ? 'Доход' : 'Расход') }}</div>
-                            <div class="crm-table__sub">{{ $transaction->account?->name ?? '—' }}</div>
+                            <div class="crm-table__sub">{{ $transaction->account?->name ?? '—' }}@if ($transaction->project) · проект «{{ $transaction->project->name }}»@endif</div>
                         </td>
                         <td class="text-secondary">{{ $transaction->category?->name ?? '—' }}</td>
                         <td>
@@ -146,6 +146,15 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+                <div class="crm-form__field">
+                    <label class="form-label" for="ft-project">Проект (для бюджета)</label>
+                    <select id="ft-project" name="project_id" class="form-select">
+                        <option value="">— без проекта —</option>
+                        @foreach ($projects as $project)
+                            <option value="{{ $project->id }}" @selected((string) old('project_id') === (string) $project->id)>{{ $project->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="crm-form__field">
                     <label class="form-label" for="ft-description">Описание</label>

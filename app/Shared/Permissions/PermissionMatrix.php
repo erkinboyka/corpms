@@ -29,6 +29,7 @@ final class PermissionMatrix
         'crm' => 'CRM',
         'finance' => 'Финансы',
         'accounting' => 'Бухгалтерия',
+        'projects' => 'Проекты',
         'system' => 'Система',
     ];
 
@@ -144,6 +145,10 @@ final class PermissionMatrix
         // --- Бухгалтерия (Этап E4) ---
         'accounting.view' => ['Просмотр плана счетов, проводок и отчётов', 'accounting'],
         'accounting.manage' => ['Управление планом счетов, проводками и документами', 'accounting'],
+
+        // --- Проекты (Этап E5) ---
+        'projects.view' => ['Просмотр проектов, бюджета и задач', 'projects'],
+        'projects.manage' => ['Управление проектами, участниками, вехами и задачами', 'projects'],
 
         // --- Система ---
         'audit.view' => ['История действий', 'system'],

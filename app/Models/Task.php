@@ -52,6 +52,11 @@ class Task extends Model
         return $this->belongsTo(Department::class, 'department_id');
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
+    }
+
     public function author(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'author_id');

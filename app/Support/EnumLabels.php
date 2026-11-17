@@ -223,6 +223,13 @@ final class EnumLabels
             'invoice' => 'Счёт', 'act' => 'Акт',
             'payment_order' => 'Платёжное поручение', 'other' => 'Другое',
         ],
+        'project_status' => [
+            'planned' => 'Запланирован', 'active' => 'В работе', 'on_hold' => 'Приостановлен',
+            'completed' => 'Завершён', 'cancelled' => 'Отменён',
+        ],
+        'project_member_role' => [
+            'manager' => 'Руководитель', 'member' => 'Участник', 'observer' => 'Наблюдатель',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string
