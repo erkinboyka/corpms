@@ -4,12 +4,23 @@ declare(strict_types=1);
 
 namespace App\Domains\Ai\Services;
 
+use App\Domains\Accounting\Services\AccountingService;
 use App\Domains\Analytics\Services\AnalyticsService;
 use App\Domains\Audit\Services\AuditService;
+use App\Domains\Bi\Services\BiService;
+use App\Domains\Crm\Services\CrmService;
+use App\Domains\Finance\Services\FinanceService;
+use App\Domains\Inventory\Services\InventoryService;
+use App\Domains\Projects\Services\ProjectService;
+use App\Models\CrmClient;
+use App\Models\CrmDeal;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\Project;
 use App\Models\Task;
+use App\Shared\Enums\CrmDealStage;
 use App\Support\PermissionService;
+use Carbon\CarbonImmutable;
 use Closure;
 
 /**
@@ -28,6 +39,12 @@ class AiToolRegistry
         protected PermissionService $permissions,
         protected AnalyticsService $analytics,
         protected AuditService $audit,
+        protected CrmService $crm,
+        protected FinanceService $finance,
+        protected InventoryService $inventory,
+        protected ProjectService $projects,
+        protected AccountingService $accounting,
+        protected BiService $bi,
     ) {}
 
     /* -------------------- публичный API -------------------- */
@@ -190,6 +207,98 @@ class AiToolRegistry
                     ],
                 ],
             ],
+
+            'crm_pipeline_summary' => [
+                'description' => 'Сводка воронки CRM: открытые сделки и суммы по стадиям. Только чтение.',
+                'permission' => 'crm.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [],
+                    'required' => [],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->crmPipelineSummary($asker),
+            ],
+
+            'crm_clients_search' => [
+                'description' => 'Поиск клиентов CRM по названию, ИНН, телефону или e-mail. Возвращает до 5 записей со ссылками.',
+                'permission' => 'crm.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => ['type' => 'string', 'description' => 'Поисковый запрос'],
+                    ],
+                    'required' => ['query'],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->crmClientsSearch($asker, (string) $args['query']),
+            ],
+
+            'finance_summary' => [
+                'description' => 'Финансовая сводка компании за месяц (по умолчанию текущий): доходы, расходы, прибыль, баланс, неоплаченные счета. Только чтение.',
+                'permission' => 'finance.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'month' => ['type' => 'string', 'description' => 'Месяц YYYY-MM; по умолчанию текущий'],
+                    ],
+                    'required' => [],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->financeSummary($asker, isset($args['month']) ? (string) $args['month'] : null),
+            ],
+
+            'inventory_stock_summary' => [
+                'description' => 'Остатки склада: число товаров, позиции ниже минимума и топ товаров по остатку. Только чтение.',
+                'permission' => 'inventory.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [],
+                    'required' => [],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->inventoryStockSummary($asker),
+            ],
+
+            'projects_summary' => [
+                'description' => 'Портфель проектов: открытые проекты, статус, прогресс по задачам и бюджет план/факт. Только чтение.',
+                'permission' => 'projects.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [],
+                    'required' => [],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->projectsSummary($asker),
+            ],
+
+            'accounting_trial_balance' => [
+                'description' => 'Оборотно-сальдовая ведомость за месяц: итоги дебета/кредита и топ счетов по обороту. Только чтение.',
+                'permission' => 'accounting.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'month' => ['type' => 'string', 'description' => 'Месяц YYYY-MM; по умолчанию текущий'],
+                    ],
+                    'required' => [],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->accountingTrialBalance($asker, isset($args['month']) ? (string) $args['month'] : null),
+            ],
+
+            'bi_metrics_summary' => [
+                'description' => 'Сводка витрины BI за месяц: ключевые метрики и прогноз доходов на следующий месяц. Только чтение.',
+                'permission' => 'bi.view',
+                'critical' => false,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'month' => ['type' => 'string', 'description' => 'Месяц YYYY-MM; по умолчанию текущий'],
+                    ],
+                    'required' => [],
+                ],
+                'handler' => fn (Employee $asker, array $args): array => $this->biMetricsSummary($asker, isset($args['month']) ? (string) $args['month'] : null),
+            ],
         ];
     }
 
@@ -332,6 +441,202 @@ class AiToolRegistry
     }
 
     /** Конфигурационный kill-switch (corpms.ai.tools). */
+    /** Сводка воронки CRM: открытые сделки и суммы по стадиям. */
+    protected function crmPipelineSummary(Employee $asker): array
+    {
+        $rows = CrmDeal::query()
+            ->where('company_id', $asker->company_id)
+            ->selectRaw('stage, COUNT(*) as total, SUM(amount) as amount')
+            ->groupBy('stage')
+            ->get();
+
+        $open = CrmDeal::query()
+            ->where('company_id', $asker->company_id)
+            ->open()
+            ->selectRaw('COUNT(*) as total, SUM(amount) as amount')
+            ->first();
+
+        return [
+            'open_deals' => (int) ($open->total ?? 0),
+            'open_amount' => (float) ($open->amount ?? 0),
+            'stages' => $rows->map(static function ($row): array {
+                $stage = $row->stage instanceof CrmDealStage ? $row->stage->value : (string) $row->stage;
+
+                return [
+                    'stage' => $stage,
+                    'count' => (int) $row->total,
+                    'amount' => (float) $row->amount,
+                ];
+            })->all(),
+            'url' => route('crm.deals.index'),
+        ];
+    }
+
+    /** Поиск клиентов CRM по названию/ИНН/телефону/e-mail. */
+    protected function crmClientsSearch(Employee $asker, string $query): array
+    {
+        $clients = CrmClient::query()
+            ->where('company_id', $asker->company_id)
+            ->where(static fn ($sub) => $sub
+                ->where('name', 'like', "%{$query}%")
+                ->orWhere('inn', 'like', "%{$query}%")
+                ->orWhere('phone', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%"))
+            ->orderBy('name')
+            ->limit(5)
+            ->get();
+
+        return [
+            'count' => $clients->count(),
+            'items' => $clients->map(static fn (CrmClient $client): array => [
+                'name' => (string) $client->name,
+                'status' => $client->status->value,
+                'url' => route('crm.clients.show', $client),
+            ])->all(),
+        ];
+    }
+
+    /** Финансовая сводка компании за месяц. */
+    protected function financeSummary(Employee $asker, ?string $month): array
+    {
+        $month = $this->monthBounds($month)[0];
+
+        $metrics = $this->finance->metrics((int) $asker->company_id, $month);
+
+        return [
+            'month' => $month,
+            'income' => $metrics['income'],
+            'expense' => $metrics['expense'],
+            'profit' => $metrics['profit'],
+            'balance' => $metrics['balance'],
+            'unpaid_invoices' => $metrics['unpaid'],
+            'url' => route('finance.transactions.index', ['month' => $month]),
+        ];
+    }
+
+    /** Остатки склада и позиции ниже минимума. */
+    protected function inventoryStockSummary(Employee $asker): array
+    {
+        $products = $this->inventory->productsWithStock((int) $asker->company_id, onlyGoods: true);
+
+        $low = $products->filter(
+            static fn ($product): bool => $product->min_stock > 0
+                && (float) $product->getAttribute('stock_total') < (float) $product->min_stock,
+        );
+
+        $items = ($low->isNotEmpty() ? $low : $products)
+            ->take(5)
+            ->map(static fn ($product): array => [
+                'name' => (string) $product->name,
+                'sku' => (string) $product->sku,
+                'stock' => (float) $product->getAttribute('stock_total'),
+                'min' => (float) $product->min_stock,
+                'unit' => (string) $product->unit,
+            ])
+            ->values();
+
+        return [
+            'products' => $products->count(),
+            'low_stock' => $low->count(),
+            'items' => $items->all(),
+            'url' => route('inventory.index'),
+        ];
+    }
+
+    /** Портфель открытых проектов с прогрессом и бюджетом. */
+    protected function projectsSummary(Employee $asker): array
+    {
+        $projects = Project::query()
+            ->where('company_id', $asker->company_id)
+            ->open()
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get();
+
+        return [
+            'open_projects' => Project::query()
+                ->where('company_id', $asker->company_id)
+                ->open()
+                ->count(),
+            'items' => $projects->map(function (Project $project): array {
+                $progress = $this->projects->progress($project);
+                $budget = $this->projects->budget($project);
+
+                return [
+                    'name' => (string) $project->name,
+                    'status' => $project->status->value,
+                    'progress' => $progress['percent'],
+                    'budget' => $budget['planned'],
+                    'spent' => $budget['spent'],
+                    'url' => route('projects.show', $project),
+                ];
+            })->all(),
+            'url' => route('projects.index'),
+        ];
+    }
+
+    /** Оборотно-сальдовая ведомость за месяц: итоги и топ счетов. */
+    protected function accountingTrialBalance(Employee $asker, ?string $month): array
+    {
+        [$month, $from, $to] = $this->monthBounds($month);
+
+        $rows = $this->accounting->trialBalance((int) $asker->company_id, $from, $to);
+
+        $debit = (float) $rows->sum(static fn ($row): float => (float) $row->debit_turnover);
+        $credit = (float) $rows->sum(static fn ($row): float => (float) $row->credit_turnover);
+
+        $accounts = $rows
+            ->filter(static fn ($row): bool => ((float) $row->debit_turnover + (float) $row->credit_turnover) > 0)
+            ->sortByDesc(static fn ($row): float => (float) $row->debit_turnover + (float) $row->credit_turnover)
+            ->take(5)
+            ->map(static fn ($row): array => [
+                'code' => (string) $row->code,
+                'name' => (string) $row->name,
+                'debit' => (float) $row->debit_turnover,
+                'credit' => (float) $row->credit_turnover,
+            ])
+            ->values();
+
+        return [
+            'month' => $month,
+            'debit' => round($debit, 2),
+            'credit' => round($credit, 2),
+            'accounts' => $accounts->all(),
+            'url' => route('accounting.reports.index', ['month' => $month]),
+        ];
+    }
+
+    /** Сводка витрины BI и прогноз доходов. */
+    protected function biMetricsSummary(Employee $asker, ?string $month): array
+    {
+        [$month, $from, $to] = $this->monthBounds($month);
+
+        $forecast = $this->bi->forecast((int) $asker->company_id, 'finance_income', 1);
+
+        return [
+            'month' => $month,
+            'metrics' => $this->bi->totals((int) $asker->company_id, $from, $to),
+            'income_forecast' => $forecast[0] ?? null,
+            'url' => route('bi.index', ['month' => $month]),
+        ];
+    }
+
+    /**
+     * Границы месяца по строке YYYY-MM (невалидное значение — текущий месяц).
+     *
+     * @return array{0:string, 1:string, 2:string}
+     */
+    protected function monthBounds(?string $month): array
+    {
+        $month = $month !== null && preg_match('/^\d{4}-\d{2}$/', $month) === 1
+            ? $month
+            : now()->format('Y-m');
+
+        $start = CarbonImmutable::createFromFormat('Y-m-d', $month.'-01');
+
+        return [$month, $start->startOfMonth()->toDateString(), $start->endOfMonth()->toDateString()];
+    }
+
     protected function enabled(): bool
     {
         return (bool) config('corpms.ai.tools', true);
