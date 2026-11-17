@@ -10,6 +10,10 @@ use App\Http\Controllers\Web\AttendanceCorrectionController;
 use App\Http\Controllers\Web\AuditController;
 use App\Http\Controllers\Web\BiometricController;
 use App\Http\Controllers\Web\CompanyController;
+use App\Http\Controllers\Web\CrmActivityController;
+use App\Http\Controllers\Web\CrmClientController;
+use App\Http\Controllers\Web\CrmDealController;
+use App\Http\Controllers\Web\CrmLeadController;
 use App\Http\Controllers\Web\DepartmentController;
 use App\Http\Controllers\Web\DocumentController;
 use App\Http\Controllers\Web\DocumentTemplateController;
@@ -143,6 +147,31 @@ Route::middleware('auth')->group(function () {
     Route::post('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->middleware('permission:purchases.manage@company')->name('purchases.cancel');
     Route::post('/purchases/{order}/items', [PurchaseController::class, 'addItem'])->middleware('permission:purchases.manage@company')->name('purchases.items.store');
     Route::post('/purchases/{order}/items/{item}/remove', [PurchaseController::class, 'removeItem'])->middleware('permission:purchases.manage@company')->name('purchases.items.remove');
+
+    /* ---------- CRM (E2) ---------- */
+    Route::get('/crm/clients', [CrmClientController::class, 'index'])->middleware('permission:crm.view')->name('crm.clients.index');
+    Route::post('/crm/clients', [CrmClientController::class, 'store'])->middleware('permission:crm.manage@company')->name('crm.clients.store');
+    Route::get('/crm/clients/{client}', [CrmClientController::class, 'show'])->middleware('permission:crm.view')->name('crm.clients.show');
+    Route::patch('/crm/clients/{client}', [CrmClientController::class, 'update'])->middleware('permission:crm.manage@company')->name('crm.clients.update');
+    Route::post('/crm/clients/{client}/toggle', [CrmClientController::class, 'toggle'])->middleware('permission:crm.manage@company')->name('crm.clients.toggle');
+    Route::post('/crm/clients/{client}/contacts', [CrmClientController::class, 'storeContact'])->middleware('permission:crm.manage@company')->name('crm.clients.contacts.store');
+    Route::delete('/crm/clients/{client}/contacts/{contact}', [CrmClientController::class, 'destroyContact'])->middleware('permission:crm.manage@company')->name('crm.clients.contacts.destroy');
+
+    Route::get('/crm/leads', [CrmLeadController::class, 'index'])->middleware('permission:crm.view')->name('crm.leads.index');
+    Route::post('/crm/leads', [CrmLeadController::class, 'store'])->middleware('permission:crm.manage@company')->name('crm.leads.store');
+    Route::post('/crm/leads/{lead}/qualify', [CrmLeadController::class, 'qualify'])->middleware('permission:crm.manage@company')->name('crm.leads.qualify');
+    Route::post('/crm/leads/{lead}/lose', [CrmLeadController::class, 'lose'])->middleware('permission:crm.manage@company')->name('crm.leads.lose');
+    Route::post('/crm/leads/{lead}/convert', [CrmLeadController::class, 'convert'])->middleware('permission:crm.deals.manage@company')->name('crm.leads.convert');
+
+    Route::get('/crm/deals', [CrmDealController::class, 'index'])->middleware('permission:crm.view')->name('crm.deals.index');
+    Route::post('/crm/deals', [CrmDealController::class, 'store'])->middleware('permission:crm.deals.manage@company')->name('crm.deals.store');
+    Route::patch('/crm/deals/{deal}', [CrmDealController::class, 'update'])->middleware('permission:crm.deals.manage@company')->name('crm.deals.update');
+    Route::post('/crm/deals/{deal}/move', [CrmDealController::class, 'move'])->middleware('permission:crm.deals.manage@company')->name('crm.deals.move');
+
+    Route::get('/crm/activities', [CrmActivityController::class, 'index'])->middleware('permission:crm.view')->name('crm.activities.index');
+    Route::post('/crm/activities', [CrmActivityController::class, 'store'])->middleware('permission:crm.manage@company')->name('crm.activities.store');
+    Route::post('/crm/activities/{activity}/complete', [CrmActivityController::class, 'complete'])->middleware('permission:crm.manage@company')->name('crm.activities.complete');
+    Route::post('/crm/activities/{activity}/reopen', [CrmActivityController::class, 'reopen'])->middleware('permission:crm.manage@company')->name('crm.activities.reopen');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');

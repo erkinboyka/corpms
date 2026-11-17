@@ -169,6 +169,29 @@ final class EnumLabels
             'draft' => 'Черновик', 'ordered' => 'Размещён',
             'received' => 'Принят', 'cancelled' => 'Отменён',
         ],
+        'crm_client_kind' => [
+            'company' => 'Организация', 'person' => 'Частное лицо',
+        ],
+        'crm_client_status' => [
+            'active' => 'Активен', 'archived' => 'В архиве',
+        ],
+        'crm_lead_source' => [
+            'web' => 'Сайт', 'call' => 'Звонок', 'referral' => 'Рекомендация',
+            'event' => 'Мероприятие', 'other' => 'Другое',
+        ],
+        'crm_lead_status' => [
+            'new' => 'Новый', 'qualified' => 'Квалифицирован',
+            'converted' => 'Конвертирован', 'lost' => 'Потерян',
+        ],
+        'crm_deal_stage' => [
+            'new' => 'Новая', 'qualification' => 'Квалификация',
+            'proposal' => 'Предложение', 'negotiation' => 'Переговоры',
+            'won' => 'Выиграна', 'lost' => 'Проиграна',
+        ],
+        'crm_activity_kind' => [
+            'call' => 'Звонок', 'meeting' => 'Встреча', 'email' => 'Письмо',
+            'task' => 'Задача', 'note' => 'Заметка',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string

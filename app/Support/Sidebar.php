@@ -56,6 +56,12 @@ class Sidebar
         ['inventory.suppliers', 'Поставщики', 'truck-delivery', 'inventory.view'],
         ['purchases.index', 'Закупки', 'shopping-cart', 'purchases.view'],
 
+        ['_', 'CRM'],
+        ['crm.clients.index', 'Клиенты', 'address-book', 'crm.view'],
+        ['crm.leads.index', 'Лиды', 'user-search', 'crm.view'],
+        ['crm.deals.index', 'Сделки', 'chart-funnel', 'crm.view'],
+        ['crm.activities.index', 'Активности', 'calendar-event', 'crm.view'],
+
         ['_', 'Задачи'],
         ['tasks.index', 'Все задачи', 'list-check', 'tasks.view'],
         ['tasks.mine', 'Мои задачи', 'user-check', 'tasks.view'],

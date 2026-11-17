@@ -26,6 +26,7 @@ final class PermissionMatrix
         'reports' => 'Отчёты',
         'payroll' => 'Зарплата',
         'inventory' => 'Склад и закупки',
+        'crm' => 'CRM',
         'system' => 'Система',
     ];
 
@@ -127,6 +128,11 @@ final class PermissionMatrix
         'inventory.move' => ['Складские операции (приход/расход)', 'inventory'],
         'purchases.view' => ['Просмотр закупочных заказов', 'inventory'],
         'purchases.manage' => ['Управление закупочными заказами', 'inventory'],
+
+        // --- CRM (Этап E2) ---
+        'crm.view' => ['Просмотр клиентов, лидов и сделок', 'crm'],
+        'crm.manage' => ['Управление клиентами, лидами и активностями', 'crm'],
+        'crm.deals.manage' => ['Управление сделками и конверсия лидов', 'crm'],
 
         // --- Система ---
         'audit.view' => ['История действий', 'system'],
