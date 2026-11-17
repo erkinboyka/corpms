@@ -62,6 +62,13 @@ class Sidebar
         ['crm.deals.index', 'Сделки', 'chart-funnel', 'crm.view'],
         ['crm.activities.index', 'Активности', 'calendar-event', 'crm.view'],
 
+        ['_', 'Финансы'],
+        ['finance.accounts.index', 'Касса и счета', 'cash-banknote', 'finance.view'],
+        ['finance.invoices.index', 'Счета и акты', 'file-invoice', 'finance.view'],
+        ['finance.transactions.index', 'Доходы и расходы', 'receipt', 'finance.view'],
+        ['finance.budgets.index', 'Бюджеты', 'target', 'finance.view'],
+        ['finance.categories.index', 'Статьи', 'category', 'finance.view'],
+
         ['_', 'Задачи'],
         ['tasks.index', 'Все задачи', 'list-check', 'tasks.view'],
         ['tasks.mine', 'Мои задачи', 'user-check', 'tasks.view'],

@@ -18,6 +18,11 @@ use App\Http\Controllers\Web\DepartmentController;
 use App\Http\Controllers\Web\DocumentController;
 use App\Http\Controllers\Web\DocumentTemplateController;
 use App\Http\Controllers\Web\EmployeeController;
+use App\Http\Controllers\Web\FinAccountController;
+use App\Http\Controllers\Web\FinBudgetController;
+use App\Http\Controllers\Web\FinCategoryController;
+use App\Http\Controllers\Web\FinInvoiceController;
+use App\Http\Controllers\Web\FinTransactionController;
 use App\Http\Controllers\Web\IntegrationController;
 use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\NotificationController;
@@ -172,6 +177,28 @@ Route::middleware('auth')->group(function () {
     Route::post('/crm/activities', [CrmActivityController::class, 'store'])->middleware('permission:crm.manage@company')->name('crm.activities.store');
     Route::post('/crm/activities/{activity}/complete', [CrmActivityController::class, 'complete'])->middleware('permission:crm.manage@company')->name('crm.activities.complete');
     Route::post('/crm/activities/{activity}/reopen', [CrmActivityController::class, 'reopen'])->middleware('permission:crm.manage@company')->name('crm.activities.reopen');
+
+    /* ---------- финансы (E3) ---------- */
+    Route::get('/finance/accounts', [FinAccountController::class, 'index'])->middleware('permission:finance.view')->name('finance.accounts.index');
+    Route::post('/finance/accounts', [FinAccountController::class, 'store'])->middleware('permission:finance.manage@company')->name('finance.accounts.store');
+    Route::post('/finance/accounts/{account}/toggle', [FinAccountController::class, 'toggle'])->middleware('permission:finance.manage@company')->name('finance.accounts.toggle');
+
+    Route::get('/finance/categories', [FinCategoryController::class, 'index'])->middleware('permission:finance.view')->name('finance.categories.index');
+    Route::post('/finance/categories', [FinCategoryController::class, 'store'])->middleware('permission:finance.manage@company')->name('finance.categories.store');
+    Route::post('/finance/categories/{category}/toggle', [FinCategoryController::class, 'toggle'])->middleware('permission:finance.manage@company')->name('finance.categories.toggle');
+
+    Route::get('/finance/transactions', [FinTransactionController::class, 'index'])->middleware('permission:finance.view')->name('finance.transactions.index');
+    Route::post('/finance/transactions', [FinTransactionController::class, 'store'])->middleware('permission:finance.manage@company')->name('finance.transactions.store');
+
+    Route::get('/finance/invoices', [FinInvoiceController::class, 'index'])->middleware('permission:finance.view')->name('finance.invoices.index');
+    Route::post('/finance/invoices', [FinInvoiceController::class, 'store'])->middleware('permission:finance.invoices.manage@company')->name('finance.invoices.store');
+    Route::get('/finance/invoices/{invoice}', [FinInvoiceController::class, 'show'])->middleware('permission:finance.view')->name('finance.invoices.show');
+    Route::post('/finance/invoices/{invoice}/issue', [FinInvoiceController::class, 'issue'])->middleware('permission:finance.invoices.manage@company')->name('finance.invoices.issue');
+    Route::post('/finance/invoices/{invoice}/cancel', [FinInvoiceController::class, 'cancel'])->middleware('permission:finance.invoices.manage@company')->name('finance.invoices.cancel');
+    Route::post('/finance/invoices/{invoice}/payments', [FinInvoiceController::class, 'storePayment'])->middleware('permission:finance.invoices.manage@company')->name('finance.invoices.payments.store');
+
+    Route::get('/finance/budgets', [FinBudgetController::class, 'index'])->middleware('permission:finance.view')->name('finance.budgets.index');
+    Route::post('/finance/budgets', [FinBudgetController::class, 'store'])->middleware('permission:finance.manage@company')->name('finance.budgets.store');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');

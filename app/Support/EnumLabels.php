@@ -192,6 +192,26 @@ final class EnumLabels
             'call' => 'Звонок', 'meeting' => 'Встреча', 'email' => 'Письмо',
             'task' => 'Задача', 'note' => 'Заметка',
         ],
+        'fin_account_kind' => [
+            'cash' => 'Касса', 'bank' => 'Расчётный счёт',
+        ],
+        'fin_direction' => [
+            'income' => 'Доход', 'expense' => 'Расход',
+        ],
+        'fin_invoice_kind' => [
+            'invoice' => 'Счёт', 'act' => 'Акт',
+        ],
+        'fin_invoice_status' => [
+            'draft' => 'Черновик', 'issued' => 'Выставлен',
+            'paid' => 'Оплачен', 'cancelled' => 'Отменён',
+        ],
+        'fin_payment_method' => [
+            'cash' => 'Наличные', 'bank_transfer' => 'Перевод',
+            'card' => 'Карта', 'other' => 'Другое',
+        ],
+        'fin_transaction_source' => [
+            'manual' => 'Ручной ввод', 'invoice_payment' => 'Оплата счёта',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string

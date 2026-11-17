@@ -27,6 +27,7 @@ final class PermissionMatrix
         'payroll' => 'Зарплата',
         'inventory' => 'Склад и закупки',
         'crm' => 'CRM',
+        'finance' => 'Финансы',
         'system' => 'Система',
     ];
 
@@ -133,6 +134,11 @@ final class PermissionMatrix
         'crm.view' => ['Просмотр клиентов, лидов и сделок', 'crm'],
         'crm.manage' => ['Управление клиентами, лидами и активностями', 'crm'],
         'crm.deals.manage' => ['Управление сделками и конверсия лидов', 'crm'],
+
+        // --- Финансы (Этап E3) ---
+        'finance.view' => ['Просмотр кассы, счетов и бюджетов', 'finance'],
+        'finance.manage' => ['Управление счетами, операциями и бюджетами', 'finance'],
+        'finance.invoices.manage' => ['Выставление счетов и приём платежей', 'finance'],
 
         // --- Система ---
         'audit.view' => ['История действий', 'system'],
