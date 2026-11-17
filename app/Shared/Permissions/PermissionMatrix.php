@@ -30,6 +30,7 @@ final class PermissionMatrix
         'finance' => 'Финансы',
         'accounting' => 'Бухгалтерия',
         'projects' => 'Проекты',
+        'bi' => 'BI',
         'system' => 'Система',
     ];
 
@@ -149,6 +150,10 @@ final class PermissionMatrix
         // --- Проекты (Этап E5) ---
         'projects.view' => ['Просмотр проектов, бюджета и задач', 'projects'],
         'projects.manage' => ['Управление проектами, участниками, вехами и задачами', 'projects'],
+
+        // --- BI (Этап E6) ---
+        'bi.view' => ['Просмотр витрины, дашбордов и прогнозов', 'bi'],
+        'bi.manage' => ['Сборка витрины и настройка дашбордов', 'bi'],
 
         // --- Система ---
         'audit.view' => ['История действий', 'system'],

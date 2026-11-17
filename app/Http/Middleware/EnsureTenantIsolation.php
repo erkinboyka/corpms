@@ -8,6 +8,7 @@ use App\Models\AppNotification;
 use App\Models\AttendanceAnomaly;
 use App\Models\AttendanceCorrection;
 use App\Models\BiometricProfile;
+use App\Models\BiWidget;
 use App\Models\Company;
 use App\Models\DocumentSignature;
 use App\Models\DocumentSignatureRequest;
@@ -65,6 +66,7 @@ final class EnsureTenantIsolation
         BiometricProfile::class => ['employee'],
         AppNotification::class => ['recipient'],
         TaskAttachment::class => ['task'],
+        BiWidget::class => ['dashboard'],
     ];
 
     public function __construct(private PermissionService $permissions) {}

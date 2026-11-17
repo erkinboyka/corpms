@@ -12,6 +12,8 @@ use App\Http\Controllers\Web\AnalyticsController;
 use App\Http\Controllers\Web\AttendanceController;
 use App\Http\Controllers\Web\AttendanceCorrectionController;
 use App\Http\Controllers\Web\AuditController;
+use App\Http\Controllers\Web\BiDashboardController;
+use App\Http\Controllers\Web\BiMetricsController;
 use App\Http\Controllers\Web\BiometricController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\CrmActivityController;
@@ -239,6 +241,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/milestones', [ProjectMilestoneController::class, 'store'])->middleware('permission:projects.manage@company')->name('projects.milestones.store');
     Route::post('/projects/{project}/milestones/{milestone}/toggle', [ProjectMilestoneController::class, 'toggle'])->middleware('permission:projects.manage@company')->name('projects.milestones.toggle');
     Route::delete('/projects/{project}/milestones/{milestone}', [ProjectMilestoneController::class, 'destroy'])->middleware('permission:projects.manage@company')->name('projects.milestones.destroy');
+
+    /* ---------- BI (E6) ---------- */
+    Route::get('/bi', [BiDashboardController::class, 'index'])->middleware('permission:bi.view')->name('bi.index');
+    Route::get('/bi/metrics', [BiMetricsController::class, 'index'])->middleware('permission:bi.view')->name('bi.metrics.index');
+    Route::post('/bi/rebuild', [BiDashboardController::class, 'rebuild'])->middleware('permission:bi.manage@company')->name('bi.rebuild');
+    Route::post('/bi/dashboards', [BiDashboardController::class, 'store'])->middleware('permission:bi.manage@company')->name('bi.dashboards.store');
+    Route::get('/bi/dashboards/{dashboard}', [BiDashboardController::class, 'show'])->middleware('permission:bi.view')->name('bi.dashboards.show');
+    Route::post('/bi/dashboards/{dashboard}/widgets', [BiDashboardController::class, 'storeWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.store');
+    Route::delete('/bi/dashboards/{dashboard}/widgets/{widget}', [BiDashboardController::class, 'destroyWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.destroy');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');

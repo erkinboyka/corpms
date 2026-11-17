@@ -93,6 +93,8 @@ class Sidebar
         ['analytics.index', 'Аналитика', 'chart-bar', 'analytics.view'],
         ['reports.index', 'Отчёты', 'report', 'reports.view'],
         ['ai.index', 'AI-ассистент', 'sparkles', 'analytics.ai.use'],
+        ['bi.index', 'BI-дашборды', 'chart-histogram', 'bi.view'],
+        ['bi.metrics.index', 'Срезы витрины', 'chart-line', 'bi.view'],
 
         ['_', 'Система'],
         ['audit.index', 'Audit Log', 'history', 'audit.view'],

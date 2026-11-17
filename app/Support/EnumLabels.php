@@ -230,6 +230,9 @@ final class EnumLabels
         'project_member_role' => [
             'manager' => 'Руководитель', 'member' => 'Участник', 'observer' => 'Наблюдатель',
         ],
+        'bi_widget_kind' => [
+            'kpi' => 'KPI', 'trend' => 'Тренд',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string
