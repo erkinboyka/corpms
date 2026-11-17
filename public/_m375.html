@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- DEV-ONLY mobile harness: renders app pages in a 375x812 iframe (http://127.0.0.1:8099/_m375.html) -->
+<html>
+<body style="margin:0;background:#1d1d1f;color:#eee;font:12px monospace">
+<div>iframe 375x812 — <span id="cur"></span></div>
+<iframe id="f" src="/dashboard" style="width:375px;height:812px;border:1px solid #666;background:#fff;display:block"></iframe>
+<script>
+  const f = document.getElementById('f');
+  window._nav = (path) => { f.src = path; document.getElementById('cur').textContent = path; return 'nav'; };
+  window._ready = (p) => new Promise((res) => {
+    let n = 0; const t = setInterval(() => { n++;
+      try { const d = f.contentDocument; if (d && d.readyState === 'complete' && f.contentWindow.location.pathname === p) { clearInterval(t); res('ok'); } } catch (e) {}
+      if (n > 80) { clearInterval(t); res('timeout'); } }, 50);
+  });
+  window.report = () => {
+    const d = f.contentDocument, w = f.contentWindow;
+    const iw = w.innerWidth;
+    const over = [];
+    d.querySelectorAll('body *').forEach((el) => {
+      if (el.closest('.offcanvas')) return;
+      const r = el.getBoundingClientRect();
+      if (r.width > 2 && (r.right > iw + 1 || r.left < -1)) {
+        over.push(el.tagName + '.' + (typeof el.className === 'string' ? el.className.slice(0, 70) : '') + ' L' + Math.round(r.left) + ' R' + Math.round(r.right));
+      }
+    });
+    return { iw, scrollW: d.documentElement.scrollWidth, clientW: d.documentElement.clientWidth,
+      over: over.slice(0, 50), overCount: over.length };
+  };
+  window.dom = () => f.contentDocument;
+  window.win = () => f.contentWindow;
+</script>
+</body>
+</html>

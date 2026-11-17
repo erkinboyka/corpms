@@ -1,0 +1,212 @@
+<?php
+
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Web\AiController;
+use App\Http\Controllers\Web\AnalyticsController;
+use App\Http\Controllers\Web\AttendanceController;
+use App\Http\Controllers\Web\AttendanceCorrectionController;
+use App\Http\Controllers\Web\AuditController;
+use App\Http\Controllers\Web\BiometricController;
+use App\Http\Controllers\Web\CompanyController;
+use App\Http\Controllers\Web\DepartmentController;
+use App\Http\Controllers\Web\DocumentController;
+use App\Http\Controllers\Web\DocumentTemplateController;
+use App\Http\Controllers\Web\EmployeeController;
+use App\Http\Controllers\Web\IntegrationController;
+use App\Http\Controllers\Web\NotificationController;
+use App\Http\Controllers\Web\PayrollController;
+use App\Http\Controllers\Web\ReportController;
+use App\Http\Controllers\Web\RfidController;
+use App\Http\Controllers\Web\ScheduleController;
+use App\Http\Controllers\Web\SearchController;
+use App\Http\Controllers\Web\SettingsController;
+use App\Http\Controllers\Web\TaskController;
+use App\Http\Controllers\Web\UserController;
+use App\Http\Controllers\Web\WorkflowController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    // IP-throttle 30/мин — защита от флуда; основной антибрутфорс — лок по
+    // аккаунту 5 неудач/15 мин внутри AuthController (терпимо к офису за NAT)
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30,1');
+
+    // Восстановление пароля (P1-2 аудита): ссылка на email + сброс по токену
+    Route::get('/forgot-password', [PasswordResetController::class, 'forgotForm'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:10,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:10,1')->name('password.update');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
+Route::get('/', fn () => redirect()->route('dashboard'));
+
+Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profile', [UserController::class, 'profile'])->name('profile.show');
+    Route::put('/profile/password', [UserController::class, 'changePassword'])->name('profile.password');
+    Route::put('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/photo', [UserController::class, 'uploadPhoto'])->name('profile.photo');
+    Route::post('/profile/ai-fill', [UserController::class, 'aiFillProfile'])->middleware('throttle:10,1')->name('profile.ai-fill');
+
+    /* ---------- организация ---------- */
+    Route::get('/companies', [CompanyController::class, 'index'])->middleware('permission:companies.view')->name('companies.index');
+    Route::post('/companies', [CompanyController::class, 'store'])->middleware('permission:companies.manage')->name('companies.store');
+    Route::patch('/companies/{company}', [CompanyController::class, 'update'])->middleware('permission:companies.manage')->name('companies.update');
+    Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->middleware('permission:companies.manage')->name('companies.destroy');
+
+    Route::get('/departments', [DepartmentController::class, 'index'])->middleware('permission:departments.view')->name('departments.index');
+    Route::get('/orgchart', [DepartmentController::class, 'orgChart'])->middleware('permission:org_chart.view')->name('orgchart.index');
+    Route::post('/departments', [DepartmentController::class, 'store'])->middleware('permission:departments.manage')->name('departments.store');
+    Route::patch('/departments/{department}', [DepartmentController::class, 'update'])->middleware('permission:departments.manage')->name('departments.update');
+    Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->middleware('permission:departments.manage')->name('departments.destroy');
+
+    Route::get('/positions', [CompanyController::class, 'positionsIndex'])->middleware('permission:positions.view')->name('positions.index');
+    Route::post('/positions', [CompanyController::class, 'positionsStore'])->middleware('permission:positions.manage')->name('positions.store');
+    Route::patch('/positions/{position}', [CompanyController::class, 'positionsUpdate'])->middleware('permission:positions.manage')->name('positions.update');
+    Route::delete('/positions/{position}', [CompanyController::class, 'positionsDestroy'])->middleware('permission:positions.manage')->name('positions.destroy');
+
+    Route::get('/employees', [EmployeeController::class, 'index'])->middleware('permission:employees.view')->name('employees.index');
+    Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:employees.manage')->name('employees.store');
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->middleware('permission:employees.view')->name('employees.show');
+    Route::patch('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:employees.manage')->name('employees.update');
+    Route::put('/employees/{employee}/roles', [EmployeeController::class, 'updateRoles'])->middleware('permission:employees.roles')->name('employees.roles');
+    Route::get('/employees/{employee}/subordinates', [EmployeeController::class, 'subordinates'])->middleware('permission:employees.view')->name('employees.subordinates');
+
+    /* ---------- графики и отпуска ---------- */
+    Route::get('/schedules', [ScheduleController::class, 'schedules'])->middleware('permission:schedules.view')->name('schedules.index');
+    Route::post('/schedules', [ScheduleController::class, 'storeSchedule'])->middleware('permission:schedules.manage')->name('schedules.store');
+    Route::patch('/schedules/{schedule}', [ScheduleController::class, 'updateSchedule'])->middleware('permission:schedules.manage')->name('schedules.update');
+    Route::delete('/schedules/{schedule}', [ScheduleController::class, 'destroySchedule'])->middleware('permission:schedules.manage')->name('schedules.destroy');
+    Route::post('/schedules/assignments', [ScheduleController::class, 'assignSchedule'])->middleware('permission:schedules.manage')->name('schedules.assign');
+    Route::get('/holidays', [ScheduleController::class, 'holidays'])->middleware('permission:schedules.view')->name('schedules.holidays');
+    Route::post('/holidays', [ScheduleController::class, 'storeHoliday'])->middleware('permission:holidays.manage')->name('holidays.store');
+    Route::delete('/holidays/{holiday}', [ScheduleController::class, 'destroyHoliday'])->middleware('permission:holidays.manage')->name('holidays.destroy');
+    Route::get('/my-schedule', [ScheduleController::class, 'mySchedule'])->middleware('permission:attendance.view')->name('schedules.mine');
+    Route::get('/leaves', [ScheduleController::class, 'leaves'])->middleware('permission:leaves.view')->name('schedules.leaves');
+    Route::post('/leaves', [ScheduleController::class, 'requestLeave'])->middleware('permission:leaves.request')->name('leaves.request');
+    Route::put('/leaves/{leave}/decision', [ScheduleController::class, 'decideLeave'])->middleware('permission:leaves.approve')->name('leaves.decide');
+
+    /* ---------- посещаемость ---------- */
+    Route::get('/attendance', [AttendanceController::class, 'index'])->middleware('permission:attendance.view')->name('attendance.index');
+    Route::get('/attendance/live', [AttendanceController::class, 'index'])->middleware('permission:attendance.live.view')->name('attendance.live');
+    Route::get('/attendance/live/feed', [AttendanceController::class, 'liveFeed'])->middleware('permission:attendance.live.view')->name('attendance.liveFeed');
+    Route::get('/attendance/timesheet', [AttendanceController::class, 'timesheet'])->middleware('permission:attendance.timesheet.view')->name('attendance.timesheet');
+    Route::get('/attendance/timesheet/export', [AttendanceController::class, 'timesheetExport'])->middleware('permission:attendance.timesheet.export')->name('attendance.timesheet.export');
+    Route::get('/attendance/anomalies', [AttendanceController::class, 'anomalies'])->middleware('permission:attendance.anomalies.view')->name('attendance.anomalies');
+    Route::put('/attendance/anomalies/{anomaly}', [AttendanceController::class, 'resolveAnomaly'])->middleware('permission:attendance.anomalies.manage')->name('attendance.anomalies.resolve');
+    Route::get('/attendance/corrections', [AttendanceCorrectionController::class, 'index'])->middleware('permission:attendance.correct')->name('attendance.corrections');
+    Route::post('/attendance/corrections', [AttendanceCorrectionController::class, 'store'])->middleware('permission:attendance.correct')->name('attendance.corrections.store');
+    Route::post('/attendance/corrections/{correction}/approve', [AttendanceCorrectionController::class, 'approve'])->middleware('permission:attendance.corrections.approve')->name('attendance.corrections.approve');
+    Route::post('/attendance/corrections/{correction}/reject', [AttendanceCorrectionController::class, 'reject'])->middleware('permission:attendance.corrections.approve')->name('attendance.corrections.reject');
+
+    /* ---------- зарплата ---------- */
+    Route::get('/payroll', [PayrollController::class, 'index'])->middleware('permission:payroll.view')->name('payroll.index');
+    Route::post('/payroll', [PayrollController::class, 'store'])->middleware('permission:payroll.manage@company')->name('payroll.store');
+    Route::get('/payroll/salaries', [PayrollController::class, 'salaries'])->middleware('permission:payroll.view')->name('payroll.salaries');
+    Route::post('/payroll/salaries', [PayrollController::class, 'storeSalary'])->middleware('permission:payroll.manage@company')->name('payroll.salaries.store');
+    Route::post('/payroll/components', [PayrollController::class, 'storeComponent'])->middleware('permission:payroll.manage@company')->name('payroll.components.store');
+    Route::post('/payroll/components/{component}/toggle', [PayrollController::class, 'toggleComponent'])->middleware('permission:payroll.manage@company')->name('payroll.components.toggle');
+    Route::get('/payroll/periods/{period}', [PayrollController::class, 'show'])->middleware('permission:payroll.view')->name('payroll.show');
+    Route::post('/payroll/periods/{period}/calculate', [PayrollController::class, 'calculate'])->middleware('permission:payroll.manage@company')->name('payroll.calculate');
+    Route::post('/payroll/periods/{period}/approve', [PayrollController::class, 'approve'])->middleware('permission:payroll.approve@company')->name('payroll.approve');
+    Route::post('/payroll/periods/{period}/pay', [PayrollController::class, 'pay'])->middleware('permission:payroll.approve@company')->name('payroll.pay');
+    Route::get('/payroll/periods/{period}/export', [PayrollController::class, 'export'])->middleware('permission:payroll.view')->name('payroll.export');
+
+    /* ---------- документы и подписи ---------- */
+    Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');
+    Route::get('/documents/mine', [DocumentController::class, 'mine'])->middleware('permission:documents.view')->name('documents.mine');
+    Route::get('/documents/templates', [DocumentTemplateController::class, 'index'])->middleware('permission:documents.templates.view')->name('documents.templates');
+    Route::post('/documents', [DocumentController::class, 'store'])->middleware('permission:documents.create')->name('documents.store');
+    Route::get('/documents/{document}', [DocumentController::class, 'show'])->middleware('permission:documents.view')->name('documents.show');
+    Route::post('/documents/{document}/version', [DocumentController::class, 'addVersion'])->middleware('permission:documents.view')->name('documents.version');
+    Route::get('/documents/{document}/versions/{version}/file', [DocumentController::class, 'downloadVersion'])->middleware('permission:documents.view')->name('documents.version.file');
+    Route::post('/documents/{document}/submit', [DocumentController::class, 'submit'])->middleware('permission:documents.submit')->name('documents.submit');
+    Route::post('/documents/{document}/decide', [DocumentController::class, 'decide'])->middleware('permission:documents.approve')->name('documents.decide');
+    Route::post('/documents/{document}/register', [DocumentController::class, 'register'])->middleware('permission:documents.approve')->name('documents.register');
+    Route::post('/documents/{document}/archive', [DocumentController::class, 'archive'])->middleware('permission:documents.archive')->name('documents.archive');
+    Route::post('/documents/{document}/signatures/request', [DocumentController::class, 'requestSignatures'])->middleware('permission:signatures.request')->name('documents.signature.request');
+    Route::post('/documents/{document}/signatures/{signatureRequest}/sign', [DocumentController::class, 'sign'])->middleware('permission:signatures.sign')->name('documents.signature.sign');
+    Route::post('/documents/{document}/signatures/{signatureRequest}/decline', [DocumentController::class, 'declineSignature'])->middleware('permission:signatures.sign')->name('documents.signature.decline');
+    Route::post('/signatures/{signature}/verify', [DocumentController::class, 'verifySignature'])->middleware('permission:signatures.verify')->name('documents.signature.verify');
+    Route::post('/signatures/{signature}/revoke', [DocumentController::class, 'revokeSignature'])->middleware('permission:signatures.revoke')->name('documents.signature.revoke');
+
+    /* ---------- маршруты согласования, шаблоны, учётки, интеграции ---------- */
+    Route::get('/workflows', [WorkflowController::class, 'index'])->middleware('permission:workflows.view')->name('workflows.index');
+    Route::post('/workflows', [WorkflowController::class, 'store'])->middleware('permission:workflows.manage')->name('workflows.store');
+
+    Route::post('/documents/templates/category', [DocumentTemplateController::class, 'storeCategory'])->middleware('permission:documents.categories.manage')->name('documents.categories.store');
+    Route::post('/documents/templates', [DocumentTemplateController::class, 'storeTemplate'])->middleware('permission:documents.templates.manage')->name('documents.templates.store');
+    Route::post('/documents/templates/{template}/create', [DocumentTemplateController::class, 'createFromTemplate'])->middleware('permission:documents.create')->name('documents.templates.create');
+
+    Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.manage')->name('users.index');
+    Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.manage')->name('users.store');
+    Route::post('/users/{user}/password', [UserController::class, 'resetPassword'])->middleware('permission:users.manage')->name('users.password');
+
+    Route::get('/integrations', [IntegrationController::class, 'index'])->middleware('permission:integrations.manage')->name('integrations.index');
+
+    /* ---------- биометрия ---------- */
+    Route::get('/biometrics', [BiometricController::class, 'index'])->middleware('permission:biometry.devices.view')->name('biometrics.index');
+    Route::get('/biometrics/events', [BiometricController::class, 'events'])->middleware('permission:biometry.events.view')->name('biometrics.events');
+    Route::get('/biometrics/privacy', [BiometricController::class, 'privacy'])->middleware('permission:biometry.privacy.manage')->name('biometrics.privacy');
+    Route::post('/biometrics/privacy', [BiometricController::class, 'privacyUpdate'])->middleware('permission:biometry.privacy.manage')->name('biometrics.privacy.save');
+
+    /* ---------- RFID (п.72 ТЗ) ---------- */
+    Route::get('/rfid', [RfidController::class, 'index'])->middleware('permission:biometry.rfid.view')->name('rfid.index');
+    Route::post('/rfid', [RfidController::class, 'issue'])->middleware('permission:biometry.rfid.manage')->name('rfid.issue');
+    Route::post('/rfid/{card}/revoke', [RfidController::class, 'revoke'])->middleware('permission:biometry.rfid.manage')->name('rfid.revoke');
+    Route::post('/biometrics/devices', [BiometricController::class, 'registerDevice'])->middleware('permission:biometry.devices.manage')->name('biometrics.devices.store');
+    Route::post('/biometrics/devices/{device}', [BiometricController::class, 'updateDevice'])->middleware('permission:biometry.devices.manage')->name('biometrics.devices.update');
+    Route::post('/biometrics/devices/{device}/delete', [BiometricController::class, 'deleteDevice'])->middleware('permission:biometry.devices.manage')->name('biometrics.devices.delete');
+    Route::post('/biometrics/profiles', [BiometricController::class, 'enroll'])->middleware('permission:biometry.enroll')->name('biometrics.profile.enroll');
+    Route::post('/biometrics/profiles/{profile}/disable', [BiometricController::class, 'disableProfile'])->middleware('permission:biometry.profiles.manage')->name('biometrics.profile.disable');
+    Route::post('/biometrics/profiles/{profile}/delete', [BiometricController::class, 'deleteProfile'])->middleware('permission:biometry.profiles.manage')->name('biometrics.profile.delete');
+
+    /* ---------- аналитика, отчёты, аудит, настройки, поиск ---------- */
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->middleware('permission:analytics.view')->name('analytics.index');
+
+    Route::get('/reports', [ReportController::class, 'index'])->middleware('permission:reports.view')->name('reports.index');
+    Route::get('/reports/hr', [ReportController::class, 'hr'])->middleware('permission:reports.view')->name('reports.hr');
+    Route::get('/reports/attendance', [ReportController::class, 'attendance'])->middleware('permission:reports.view')->name('reports.attendance');
+    Route::get('/reports/tasks', [ReportController::class, 'tasks'])->middleware('permission:reports.view')->name('reports.tasks');
+    Route::get('/reports/{type}/export', [ReportController::class, 'export'])->where('type', 'hr|attendance|tasks')->middleware('permission:reports.export')->name('reports.export');
+
+    Route::get('/audit', [AuditController::class, 'index'])->middleware('permission:audit.view@company')->name('audit.index');
+
+    Route::get('/settings', [SettingsController::class, 'index'])->middleware('permission:settings.view@company')->name('settings.index');
+    Route::post('/settings', [SettingsController::class, 'update'])->middleware('permission:settings.manage@company')->name('settings.update');
+
+    Route::get('/search', [SearchController::class, 'index'])->middleware(['permission:search.global', 'throttle:60,1'])->name('search.index');
+    Route::get('/search/hint', [SearchController::class, 'hint'])->middleware(['permission:search.global', 'throttle:120,1'])->name('search.hint');
+
+    Route::get('/ai', [AiController::class, 'index'])->middleware(['permission:analytics.ai.use', 'throttle:30,1'])->name('ai.index');
+    Route::post('/ai', [AiController::class, 'ask'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.ask');
+    Route::post('/ai/message', [AiController::class, 'message'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.message');
+
+    /* ---------- задачи ---------- */ Route::get('/tasks', [TaskController::class, 'index'])->middleware('permission:tasks.view')->name('tasks.index');
+    Route::get('/tasks/mine', [TaskController::class, 'mine'])->middleware('permission:tasks.view')->name('tasks.mine');
+    Route::get('/tasks/overdue', [TaskController::class, 'overdue'])->middleware('permission:tasks.view')->name('tasks.overdue');
+    Route::post('/tasks', [TaskController::class, 'store'])->middleware('permission:tasks.create')->name('tasks.store');
+    Route::patch('/tasks/{task}', [TaskController::class, 'update'])->middleware('permission:tasks.view')->name('tasks.update');
+    Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->middleware('permission:tasks.view')->name('tasks.destroy');
+    Route::get('/tasks/{task}', [TaskController::class, 'show'])->middleware('permission:tasks.view')->name('tasks.show');
+    Route::put('/tasks/{task}/status', [TaskController::class, 'changeStatus'])->middleware('permission:tasks.view')->name('tasks.status');
+    Route::post('/tasks/{task}/subtasks', [TaskController::class, 'createSubtask'])->middleware('permission:tasks.view')->name('tasks.subtasks');
+    Route::post('/tasks/{task}/bulk', [TaskController::class, 'bulkCreate'])->middleware('permission:tasks.assign')->name('tasks.bulk');
+    Route::post('/tasks/{task}/delegate', [TaskController::class, 'delegate'])->middleware('permission:tasks.delegate')->name('tasks.delegate');
+    Route::post('/tasks/{task}/result', [TaskController::class, 'submitResult'])->middleware('permission:tasks.view')->name('tasks.result');
+    Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->middleware('permission:tasks.comment')->name('tasks.comment');
+    Route::post('/tasks/{task}/time', [TaskController::class, 'toggleTimeTracking'])->middleware('permission:tasks.view')->name('tasks.time');
+    Route::post('/tasks/{task}/attachments', [TaskController::class, 'storeAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.store');
+    Route::get('/tasks/{task}/attachments/{attachment}', [TaskController::class, 'downloadAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.download');
+    Route::delete('/tasks/{task}/attachments/{attachment}', [TaskController::class, 'destroyAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.destroy');
+
+    /* ---------- уведомления ---------- */
+    Route::get('/notifications', [NotificationController::class, 'index'])->middleware('permission:attendance.view')->name('notifications.index');
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->middleware('permission:attendance.view')->name('notifications.read');
+});

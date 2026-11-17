@@ -1,0 +1,90 @@
+/* ============================================================================
+   CorpMS Bridge v1.0 — сопряжение токенов (tokens.css) с Tabler 1.1.1
+   Порядок загрузки: tabler → vendor → tokens.css → effects.css → corpms.css
+   ЭТОТ файл — только переменные-мосты и чуть типографики. Не расширять!
+   Новые правила — в effects.css, значения — только из tokens.css.
+   ============================================================================ */
+
+:root {
+    /* базовыеTabler-переменные от токенов */
+    --tblr-body-color: var(--crm-text);
+    /* шрифт и базовый размер по нашей шкале (Tabler хардкодит 14px) */
+    --tblr-body-font-family: var(--crm-font);
+    --tblr-body-font-size: var(--crm-text-body);
+    --tblr-font-sans-serif: var(--crm-font);
+    /* тонкая таблица границ по теме */
+}
+
+body { font-size: var(--crm-text-body); }
+
+[data-bs-theme="light"] {
+    --tblr-primary: var(--crm-accent-strong);
+    --tblr-primary-rgb: var(--crm-accent-rgb);
+    --tblr-secondary: var(--crm-text-secondary);
+    --tblr-secondary-color: var(--crm-text-secondary);
+    --tblr-success: var(--crm-success);
+    --tblr-success-rgb: var(--crm-success-rgb);
+    --tblr-danger: var(--crm-danger);
+    --tblr-danger-rgb: var(--crm-danger-rgb);
+    --tblr-warning: var(--crm-warning);
+    --tblr-warning-rgb: var(--crm-warning-rgb);
+    --tblr-info: var(--crm-info);
+    --tblr-info-rgb: var(--crm-info-rgb);
+    --tblr-border-color: var(--crm-border);
+    --tblr-bg-surface: var(--crm-surface-solid);
+    --tblr-bg-forms: var(--crm-input-bg);
+    --tblr-secondary-rgb: var(--crm-text-secondary-rgb);
+}
+
+[data-bs-theme="dark"] {
+    --tblr-primary: var(--crm-accent);
+    --tblr-primary-rgb: var(--crm-accent-rgb);
+    --tblr-secondary: var(--crm-text-secondary);
+    --tblr-secondary-color: var(--crm-text-secondary);
+    --tblr-success: var(--crm-success);
+    --tblr-success-rgb: var(--crm-success-rgb);
+    --tblr-danger: var(--crm-danger);
+    --tblr-danger-rgb: var(--crm-danger-rgb);
+    --tblr-warning: var(--crm-warning);
+    --tblr-warning-rgb: var(--crm-warning-rgb);
+    --tblr-info: var(--crm-info);
+    --tblr-info-rgb: var(--crm-info-rgb);
+    --tblr-border-color: var(--crm-border);
+    --tblr-bg-surface: var(--crm-surface-solid);
+    --tblr-bg-forms: var(--crm-input-bg);
+    --tblr-secondary-rgb: var(--crm-text-secondary-rgb);
+}
+
+/* ---------- типографика: шкала из tokens ---------- */
+.h1 { font-size: var(--crm-text-display); font-weight: 700; line-height: var(--crm-lh-tight); letter-spacing: -0.02em; }
+.h2, h2 { font-size: var(--crm-text-heading); font-weight: 700; line-height: var(--crm-lh-tight); letter-spacing: -0.02em; }
+.h3, h3 { font-size: var(--crm-text-section); font-weight: 600; line-height: var(--crm-lh-tight); letter-spacing: -0.01em; }
+.small, .text-secondary, .text-muted { color: var(--crm-text-secondary); }
+/* табличные цифры в метриках и табелях */
+.h1, .h2, .h3, .page-title { font-feature-settings: 'tnum' 1; }
+
+/* широкий экран: контент не «зажимается» в узкую колонку на 1920+ */
+@media (min-width: 1600px) {
+    .page-body .container-xl { max-width: 1520px; }
+}
+@media (min-width: 2200px) {
+    .page-body .container-xl { max-width: 1680px; }
+}
+/* Быстрый вход в ассистента: заметен, но не перекрывает рабочие действия. */
+.crm-ai-launch {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 1030;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .7rem 1rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--tblr-primary);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(32, 107, 196, .28);
+}
+.crm-ai-launch:hover { background: var(--tblr-primary); color: #fff; transform: translateY(-1px); }
+@media (max-width: 575.98px) { .crm-ai-launch { width: 3.25rem; height: 3.25rem; justify-content: center; padding: 0; } .crm-ai-launch span { display: none; } }
