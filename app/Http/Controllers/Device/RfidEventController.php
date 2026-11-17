@@ -18,9 +18,7 @@ use Throwable;
  */
 class RfidEventController extends Controller
 {
-    public function __construct(protected RfidService $rfid)
-    {
-    }
+    public function __construct(protected RfidService $rfid) {}
 
     /** POST /api/v1/biometric/device/rfid — "карта приложена". */
     public function store(Request $request): JsonResponse
@@ -61,7 +59,7 @@ class RfidEventController extends Controller
         if (in_array($status, ['unknown_card', 'card_disabled', 'card_expired'], true)) {
             return response()->json([
                 'status' => $status,
-                'message' => 'RFID-карта не принята (' . $status . ')',
+                'message' => 'RFID-карта не принята ('.$status.')',
             ], 422);
         }
 
@@ -96,7 +94,7 @@ class RfidEventController extends Controller
 
         $payload['employee'] = [
             'employee_no' => $employee->employee_no,
-            'full_name' => $employee->last_name . ' ' . $employee->first_name,
+            'full_name' => $employee->last_name.' '.$employee->first_name,
         ];
 
         return response()->json($payload);

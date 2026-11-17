@@ -13,7 +13,6 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use App\Shared\Enums\CorrectionStatus;
-use App\Shared\Enums\PermissionScope;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -26,12 +25,19 @@ class AttendanceCorrectionsHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected WorkSchedule $schedule;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
+
     protected User $workerUser;
+
     protected Employee $worker;
+
     protected User $peerUser;
+
     protected Employee $peer;
 
     protected function setUp(): void
@@ -98,7 +104,7 @@ class AttendanceCorrectionsHttpTest extends TestCase
         $response = $this->post('/attendance/corrections', [
             'date' => today()->toDateString(),
             'field' => 'clock_out_at',
-            'new_value' => today()->toDateString() . ' 18:05',
+            'new_value' => today()->toDateString().' 18:05',
             'reason' => 'Забыл отметить уход после смены',
         ]);
 
@@ -126,7 +132,7 @@ class AttendanceCorrectionsHttpTest extends TestCase
         $this->post('/attendance/corrections', [
             'date' => today()->toDateString(),
             'field' => 'clock_out_at',
-            'new_value' => today()->toDateString() . ' 18:05',
+            'new_value' => today()->toDateString().' 18:05',
             'reason' => 'Первое',
         ])->assertRedirect();
 
@@ -134,7 +140,7 @@ class AttendanceCorrectionsHttpTest extends TestCase
             ->post('/attendance/corrections', [
                 'date' => today()->toDateString(),
                 'field' => 'clock_out_at',
-                'new_value' => today()->toDateString() . ' 19:00',
+                'new_value' => today()->toDateString().' 19:00',
                 'reason' => 'Дубль',
             ])
             ->assertRedirect()
@@ -151,7 +157,7 @@ class AttendanceCorrectionsHttpTest extends TestCase
         $record = AttendanceRecord::create([
             'employee_id' => $this->worker->id,
             'date' => today()->toDateString(),
-            'clock_in_at' => today()->toDateString() . ' 09:20',
+            'clock_in_at' => today()->toDateString().' 09:20',
             'clock_out_at' => null,
             'late_minutes' => 20,
         ]);
@@ -160,13 +166,13 @@ class AttendanceCorrectionsHttpTest extends TestCase
             'employee_id' => $this->worker->id,
             'date' => today()->toDateString(),
             'field' => 'clock_out_at',
-            'new_value' => today()->toDateString() . ' 18:00',
+            'new_value' => today()->toDateString().' 18:00',
             'reason' => 'Уход не записался',
         ])->assertRedirect();
 
         $correction = AttendanceCorrection::query()->sole();
 
-        $this->post('/attendance/corrections/' . $correction->id . '/approve')->assertRedirect();
+        $this->post('/attendance/corrections/'.$correction->id.'/approve')->assertRedirect();
 
         $correction->refresh();
         self::assertSame(CorrectionStatus::Approved->value, $correction->status->value);
@@ -188,21 +194,21 @@ class AttendanceCorrectionsHttpTest extends TestCase
         AttendanceRecord::create([
             'employee_id' => $this->worker->id,
             'date' => today()->toDateString(),
-            'clock_in_at' => today()->toDateString() . ' 09:00',
-            'clock_out_at' => today()->toDateString() . ' 18:00',
+            'clock_in_at' => today()->toDateString().' 09:00',
+            'clock_out_at' => today()->toDateString().' 18:00',
         ]);
 
         $this->post('/attendance/corrections', [
             'employee_id' => $this->worker->id,
             'date' => today()->toDateString(),
             'field' => 'clock_in_at',
-            'new_value' => today()->toDateString() . ' 08:00',
+            'new_value' => today()->toDateString().' 08:00',
             'reason' => 'Хочу пораньше в стате',
         ])->assertRedirect();
 
         $correction = AttendanceCorrection::query()->sole();
 
-        $this->post('/attendance/corrections/' . $correction->id . '/reject', [
+        $this->post('/attendance/corrections/'.$correction->id.'/reject', [
             'decision_comment' => 'Отметка прихода верна',
         ])->assertRedirect();
 
@@ -220,7 +226,7 @@ class AttendanceCorrectionsHttpTest extends TestCase
             'employee_id' => $this->peer->id, // чужая заявка для рядового
             'date' => today()->toDateString(),
             'field' => 'clock_in_at',
-            'new_value' => today()->toDateString() . ' 08:00',
+            'new_value' => today()->toDateString().' 08:00',
             'reason' => 'тест',
             'status' => CorrectionStatus::Pending->value,
             'requested_by' => $this->worker->id,
@@ -228,10 +234,10 @@ class AttendanceCorrectionsHttpTest extends TestCase
 
         // worker согласовывать не может
         $this->actingAs($this->workerUser);
-        $this->post('/attendance/corrections/' . $correction->id . '/approve')->assertForbidden();
+        $this->post('/attendance/corrections/'.$correction->id.'/approve')->assertForbidden();
 
         // и чужое согласование (attendance.corrections.approve нет у employee)
-        $this->post('/attendance/corrections/' . $correction->id . '/reject', [
+        $this->post('/attendance/corrections/'.$correction->id.'/reject', [
             'decision_comment' => 'попытка',
         ])->assertForbidden();
 
@@ -240,7 +246,7 @@ class AttendanceCorrectionsHttpTest extends TestCase
             'employee_id' => $this->peer->id,
             'date' => today()->toDateString(),
             'field' => 'clock_in_at',
-            'new_value' => today()->toDateString() . ' 08:00',
+            'new_value' => today()->toDateString().' 08:00',
             'reason' => 'за другого',
         ])->assertForbidden();
 
@@ -255,14 +261,14 @@ class AttendanceCorrectionsHttpTest extends TestCase
             'employee_id' => $this->worker->id,
             'date' => today()->toDateString(),
             'field' => 'clock_in_at',
-            'new_value' => today()->toDateString() . ' 08:00',
+            'new_value' => today()->toDateString().' 08:00',
             'reason' => 'ранее заявлено',
         ])->assertRedirect();
 
         $correctionId = AttendanceCorrection::query()->sole()->id;
         $requestedBy = AttendanceCorrection::query()->sole()->requested_by; // admin (себя подавал)
 
-        $this->post('/attendance/corrections/' . $correctionId . '/approve')->assertRedirect();
+        $this->post('/attendance/corrections/'.$correctionId.'/approve')->assertRedirect();
 
         $this->assertDatabaseHas('attendance_notifications', [
             'recipient_id' => $requestedBy,
@@ -277,12 +283,12 @@ class AttendanceCorrectionsHttpTest extends TestCase
         AttendanceRecord::create([
             'employee_id' => $this->worker->id,
             'date' => now()->startOfMonth()->toDateString(),
-            'clock_in_at' => now()->startOfMonth()->toDateString() . ' 09:00',
-            'clock_out_at' => now()->startOfMonth()->toDateString() . ' 18:00',
+            'clock_in_at' => now()->startOfMonth()->toDateString().' 09:00',
+            'clock_out_at' => now()->startOfMonth()->toDateString().' 18:00',
             'worked_minutes' => 480,
         ]);
 
-        $response = $this->get('/attendance/timesheet/export?year=' . now()->year . '&month=' . now()->month);
+        $response = $this->get('/attendance/timesheet/export?year='.now()->year.'&month='.now()->month);
         $response->assertOk();
 
         $csv = $response->streamedContent();
@@ -303,6 +309,6 @@ class AttendanceCorrectionsHttpTest extends TestCase
 
         // обычный сотрудник может выгрузить свой табель (scope own)
         $this->actingAs($this->workerUser);
-        $this->get('/attendance/timesheet/export?year=' . now()->year . '&month=' . now()->month)->assertOk();
+        $this->get('/attendance/timesheet/export?year='.now()->year.'&month='.now()->month)->assertOk();
     }
 }

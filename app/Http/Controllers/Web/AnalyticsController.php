@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web;
 
 use App\Domains\Analytics\Services\AnalyticsService;
-use App\Http\Controllers\Controller;
 use App\Domains\Audit\Services\AuditService;
-use App\Models\Task;
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\PermissionService;
 use Illuminate\View\View;
@@ -21,8 +20,7 @@ class AnalyticsController extends Controller
         protected AnalyticsService $analytics,
         protected AuditService $audit,
         protected PermissionService $permissions,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {

@@ -15,9 +15,7 @@ use Illuminate\Http\Request;
  */
 class TelegramWebhookController extends Controller
 {
-    public function __construct(protected TelegramService $telegram)
-    {
-    }
+    public function __construct(protected TelegramService $telegram) {}
 
     public function handle(Request $request, string $secret): JsonResponse
     {

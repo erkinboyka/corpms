@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Shared\Enums\WorkflowState;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DocumentWorkflowState extends Model
 {
     protected $table = 'document_workflows_pivot';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
-            'state' => \App\Shared\Enums\WorkflowState::class,
-            'current_step' => 'int'
+            'state' => WorkflowState::class,
+            'current_step' => 'int',
         ];
     }
 
@@ -31,5 +31,4 @@ class DocumentWorkflowState extends Model
     {
         return $this->belongsTo(DocumentWorkflow::class, 'workflow_id');
     }
-
 }

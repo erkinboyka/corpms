@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Attendance;
 
 use App\Domains\Biometric\Services\BiometricService;
+use App\Models\AttendanceRecord;
 use App\Models\Company;
 use App\Models\Employee;
-use App\Models\WorkSchedule;
 use App\Models\User;
+use App\Models\WorkSchedule;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -22,6 +23,7 @@ class DeviceApiControllerTest extends TestCase
     use RefreshDatabase;
 
     protected string $token;
+
     protected Employee $employee;
 
     protected function setUp(): void
@@ -49,7 +51,7 @@ class DeviceApiControllerTest extends TestCase
             'first_name' => 'Сергей',
             'last_name' => 'Сергеев',
             'status' => 'active',
-            'work_schedule_id' => \App\Models\WorkSchedule::first()->id,
+            'work_schedule_id' => WorkSchedule::first()->id,
         ]);
 
         // камера на вход, направление IN
@@ -75,7 +77,7 @@ class DeviceApiControllerTest extends TestCase
     public function test_valid_event_clocks_in(): void
     {
         $response = $this->postJson('/api/v1/biometric/device/events', self::payload('08:03:21'), [
-            'Authorization' => 'Bearer ' . $this->token,
+            'Authorization' => 'Bearer '.$this->token,
         ]);
 
         $response->assertOk()
@@ -86,14 +88,14 @@ class DeviceApiControllerTest extends TestCase
 
     public function test_duplicate_event_uuid_processing_once(): void
     {
-        $this->postJson('/api/v1/biometric/device/events', self::payload('08:03:21'), ['Authorization' => 'Bearer ' . $this->token]);
+        $this->postJson('/api/v1/biometric/device/events', self::payload('08:03:21'), ['Authorization' => 'Bearer '.$this->token]);
         Carbon::setTestNow(Carbon::parse('2026-10-29 09:00:00'));
 
         // повтор той же ПОСЫЛКИ (офлайн-синк мог задублировать)
-        $r2 = $this->postJson('/api/v1/biometric/device/events', self::payload('08:03:21'), ['Authorization' => 'Bearer ' . $this->token]);
+        $r2 = $this->postJson('/api/v1/biometric/device/events', self::payload('08:03:21'), ['Authorization' => 'Bearer '.$this->token]);
         $r2->assertOk()->assertJsonPath('status', 'duplicate');
 
-        $records = \App\Models\AttendanceRecord::query()->get();
+        $records = AttendanceRecord::query()->get();
         $this->assertCount(1, $records);
         $this->assertEquals('08:03:21', $records->first()->clock_in_at->format('H:i:s'));
     }
@@ -102,7 +104,7 @@ class DeviceApiControllerTest extends TestCase
     {
         $this->postJson('/api/v1/biometric/device/events', array_merge(self::payload('08:03:21'), [
             'employee_no' => 'NOPE',
-        ]), ['Authorization' => 'Bearer ' . $this->token])->assertStatus(422)->assertJsonMissing(['status' => 'processed']);
+        ]), ['Authorization' => 'Bearer '.$this->token])->assertStatus(422)->assertJsonMissing(['status' => 'processed']);
 
         $this->assertDatabaseHas('biometric_events', [
             'event_uuid' => 'e1',
@@ -115,7 +117,7 @@ class DeviceApiControllerTest extends TestCase
         // камера входа прислала OUT — направление не совпадает
         $response = $this->postJson('/api/v1/biometric/device/events', array_merge(self::payload('08:03:21'), [
             'direction' => 'out',
-        ]), ['Authorization' => 'Bearer ' . $this->token]);
+        ]), ['Authorization' => 'Bearer '.$this->token]);
 
         $response->assertStatus(422)->assertJsonPath('status', 'skipped');
         $this->assertDatabaseMissing('attendance_records', []);
@@ -123,7 +125,7 @@ class DeviceApiControllerTest extends TestCase
 
     public function test_late_computed_via_api(): void
     {
-        $this->postJson('/api/v1/biometric/device/events', self::payload('08:25:00'), ['Authorization' => 'Bearer ' . $this->token])
+        $this->postJson('/api/v1/biometric/device/events', self::payload('08:25:00'), ['Authorization' => 'Bearer '.$this->token])
             ->assertOk()
             ->assertJsonPath('attendance.status', 'late')
             ->assertJsonPath('attendance.late_minutes', 25);
@@ -135,7 +137,7 @@ class DeviceApiControllerTest extends TestCase
             'event_uuid' => 'e1',
             'employee_no' => 'DEV-100',
             'direction' => 'in',
-            'timestamp' => '2026-10-29 ' . $time,
+            'timestamp' => '2026-10-29 '.$time,
             'confidence' => 0.99,
             'liveness' => true,
         ];

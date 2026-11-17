@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Domains\Attendance\Events\AttendanceRecorded;
 use App\Domains\Attendance\Services\AttendanceService;
-use App\Domains\Biometric\Services\BiometricService;
 use App\Domains\Notifications\Services\NotificationService;
 use App\Domains\Notifications\Services\TelegramService;
 use App\Models\AppNotification;
 use App\Models\AttendanceRecord;
 use App\Models\BiometricDevice;
+use App\Models\BiometricEvent;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
@@ -29,7 +30,9 @@ class NotificationsTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected NotificationService $notifications;
+
     protected TelegramService $telegram;
 
     protected function setUp(): void
@@ -138,7 +141,7 @@ class NotificationsTest extends TestCase
             'status' => 'online',
         ]);
 
-        $event = \App\Models\BiometricEvent::create([
+        $event = BiometricEvent::create([
             'device_id' => $device->id,
             'employee_id' => $employee->id,
             'event_uuid' => 'late-ev-1',
@@ -152,7 +155,7 @@ class NotificationsTest extends TestCase
         $record = $service->applyEvent($employee, $event);
 
         $event->forceFill(['processing_status' => 'processed'])->save();
-        event(new \App\Domains\Attendance\Events\AttendanceRecorded($record, $event));
+        event(new AttendanceRecorded($record, $event));
 
         $this->assertSame('late', $record->status->value);
 
@@ -180,9 +183,9 @@ class NotificationsTest extends TestCase
         $code = $this->telegram->issueLinkCode($employee);
 
         $this->assertNotNull($employee->fresh()->telegram_link_code);
-        $this->assertStringContainsString('?start=' . $code, $this->telegram->deepLink($code));
+        $this->assertStringContainsString('?start='.$code, $this->telegram->deepLink($code));
 
-        $reply = $this->telegram->resolveCommand('/start ' . $code, '777333');
+        $reply = $this->telegram->resolveCommand('/start '.$code, '777333');
 
         $this->assertStringContainsString('Привязка выполнена', $reply);
         $this->assertSame('777333', $employee->fresh()->telegram_chat_id);
@@ -196,7 +199,7 @@ class NotificationsTest extends TestCase
 
         Carbon::setTestNow(Carbon::parse('2026-11-02 11:00:00')); // +1ч — TTL истёк
 
-        $reply = $this->telegram->resolveCommand('/start ' . $code, '555555');
+        $reply = $this->telegram->resolveCommand('/start '.$code, '555555');
         $this->assertStringContainsString('истёк', $reply);
         $this->assertNull($employee->fresh()->telegram_chat_id);
 

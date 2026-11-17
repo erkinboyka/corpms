@@ -86,6 +86,7 @@ class Sidebar
             // ['_', 'Заголовок секции']
             if ($item[0] === '_') {
                 $sectionLabel = $item[1];
+
                 continue;
             }
 

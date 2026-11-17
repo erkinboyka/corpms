@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SalaryComponent extends Model
 {
     protected $table = 'salary_components';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
 
     protected function casts(): array

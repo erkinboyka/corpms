@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Domains\Attendance\Services;
 
 use App\Domains\Audit\Services\AuditService;
+use App\Domains\Notifications\Services\NotificationService;
 use App\Models\AttendanceCorrection;
 use App\Models\AttendanceRecord;
+use App\Models\Employee;
 use App\Shared\Enums\CorrectionStatus;
 use App\Support\PermissionService;
-use App\Domains\Notifications\Services\NotificationService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -30,8 +31,7 @@ class AttendanceCorrectionService
         protected PermissionService $permissions,
         protected AuditService $audit,
         protected NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     /**
      * Подача заявки на корректировку.
@@ -39,8 +39,8 @@ class AttendanceCorrectionService
      * @throws LogicException если поле недопустимо или есть незакрытая заявка по этому полю
      */
     public function request(
-        \App\Models\Employee $requester,
-        \App\Models\Employee $target,
+        Employee $requester,
+        Employee $target,
         string $field,
         string $date,
         ?Carbon $oldValue,
@@ -48,7 +48,7 @@ class AttendanceCorrectionService
         string $reason,
     ): AttendanceCorrection {
         if (! in_array($field, self::FIELDS, true)) {
-            throw new LogicException('Недопустимое поле корректировки: ' . $field);
+            throw new LogicException('Недопустимое поле корректировки: '.$field);
         }
 
         $openExists = AttendanceCorrection::query()
@@ -86,7 +86,7 @@ class AttendanceCorrectionService
      * Решение по заявке. При согласовании — обновляет табель и пересчитывает показатели.
      */
     public function decide(
-        \App\Models\Employee $decider,
+        Employee $decider,
         AttendanceCorrection $correction,
         bool $approve,
         ?string $comment = null,
@@ -134,7 +134,7 @@ class AttendanceCorrectionService
                     $correction->requestedBy,
                     'attendance.correction.decided',
                     $approve ? 'Корректировка согласована' : 'Корректировка отклонена',
-                    sprintf('%s: %s (%s)', trim($correction->employee->last_name . ' ' . $correction->employee->first_name), $correction->field, $comment ?? '—'),
+                    sprintf('%s: %s (%s)', trim($correction->employee->last_name.' '.$correction->employee->first_name), $correction->field, $comment ?? '—'),
                     $correction,
                 );
             }

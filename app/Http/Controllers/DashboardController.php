@@ -6,14 +6,21 @@ namespace App\Http\Controllers;
 
 use App\Domains\Analytics\Services\AnalyticsService;
 use App\Models\AttendanceRecord;
+use App\Models\BiometricDevice;
+use App\Models\BiometricEvent;
+use App\Models\BiometricProfile;
 use App\Models\Document;
 use App\Models\DocumentSignatureRequest;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\Task;
 use App\Models\User;
+use App\Shared\Enums\DeviceStatus;
 use App\Support\PermissionService;
+use App\Support\SettingsService;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -24,8 +31,7 @@ class DashboardController extends Controller
     public function __construct(
         protected AnalyticsService $analytics,
         protected PermissionService $permissions,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {
@@ -69,7 +75,7 @@ class DashboardController extends Controller
         $heatmapTo = now()->toDateString();
         if ($attendanceScopeIds->isNotEmpty()) {
             $today = now()->startOfDay();
-            $startWeek = $today->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->subWeeks(11);
+            $startWeek = $today->copy()->startOfWeek(Carbon::MONDAY)->subWeeks(11);
             $heatmapFrom = $startWeek->toDateString();
 
             $rows = AttendanceRecord::query()
@@ -102,6 +108,7 @@ class DashboardController extends Controller
                     $day = $weekStart->copy()->addDays($d);
                     if ($day->gt($today)) {
                         $days[] = null; /* будущие дни текущей недели не показываем */
+
                         continue;
                     }
                     $key = $day->toDateString();
@@ -138,7 +145,7 @@ class DashboardController extends Controller
         $companyId = $employee?->company_id;
         if ($this->permissions->check($user, 'audit.view') && $companyId !== null) {
             $activityFrom = $heatmapFrom ?? now()->subDays(83)->toDateString();
-            $byUser = \Illuminate\Support\Facades\DB::table('audit_logs')
+            $byUser = DB::table('audit_logs')
                 ->leftJoin('users', 'users.id', '=', 'audit_logs.user_id')
                 ->leftJoin('employees', 'employees.user_id', '=', 'users.id')
                 ->whereNotNull('audit_logs.user_id')
@@ -199,17 +206,17 @@ class DashboardController extends Controller
         $biometrics = null;
         if ($employee !== null && $companyId !== null && $this->permissions->check($user, 'biometry.dashboard.view')) {
             $biometrics = [
-                'devices_total' => \App\Models\BiometricDevice::query()->where('company_id', $companyId)->count(),
-                'devices_online' => \App\Models\BiometricDevice::query()
+                'devices_total' => BiometricDevice::query()->where('company_id', $companyId)->count(),
+                'devices_online' => BiometricDevice::query()
                     ->where('company_id', $companyId)
-                    ->where('status', \App\Shared\Enums\DeviceStatus::Online->value)
-                    ->where('last_seen_at', '>=', now()->subMinutes((int) app(\App\Support\SettingsService::class)->get('corpms.biometric.offline_after_minutes', 15)))
+                    ->where('status', DeviceStatus::Online->value)
+                    ->where('last_seen_at', '>=', now()->subMinutes((int) app(SettingsService::class)->get('corpms.biometric.offline_after_minutes', 15)))
                     ->count(),
-                'profiles' => \App\Models\BiometricProfile::query()
+                'profiles' => BiometricProfile::query()
                     ->whereHas('employee', fn ($q) => $q->where('company_id', $companyId))
                     ->where('status', 'enrolled')
                     ->count(),
-                'events_today' => \App\Models\BiometricEvent::query()
+                'events_today' => BiometricEvent::query()
                     ->whereHas('device', fn ($q) => $q->where('company_id', $companyId))
                     ->whereDate('occurred_at', CarbonImmutable::today())
                     ->count(),

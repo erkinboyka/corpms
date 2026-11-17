@@ -20,8 +20,7 @@ class AiController extends Controller
     public function __construct(
         protected AiAssistantService $assistant,
         protected AiPanelService $panel,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

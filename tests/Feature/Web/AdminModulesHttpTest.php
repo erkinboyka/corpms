@@ -14,6 +14,7 @@ use App\Models\DocumentWorkflowStep;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use Database\Seeders\RbacSeeder;
@@ -31,9 +32,13 @@ class AdminModulesHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected WorkSchedule $schedule;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
+
     protected Employee $worker;
 
     protected function setUp(): void
@@ -116,7 +121,7 @@ class AdminModulesHttpTest extends TestCase
         // шагов больше 8 нельзя
         $many = [];
         for ($i = 0; $i < 10; $i++) {
-            $many[] = ['name' => 'Шаг ' . $i, 'actor_type' => 'author', 'required_action' => 'review'];
+            $many[] = ['name' => 'Шаг '.$i, 'actor_type' => 'author', 'required_action' => 'review'];
         }
         $this->post('/workflows', ['name' => 'Длинный', 'steps' => $many])->assertSessionHasErrors(['steps']);
     }
@@ -158,7 +163,7 @@ class AdminModulesHttpTest extends TestCase
         self::assertSame(['employee_name', 'vacation_period'], $template->variables);
 
         // генерация документа из шаблона
-        $this->post('/documents/templates/' . $template->id . '/create', [
+        $this->post('/documents/templates/'.$template->id.'/create', [
             'title' => 'Заявление на отпуск',
             'variables' => [
                 'employee_name' => 'Иванов И.',
@@ -169,7 +174,7 @@ class AdminModulesHttpTest extends TestCase
         $this->get('/documents/mine')->assertOk()->assertSee('Заявление на отпуск');
 
         // отсутствующая переменная — ошибка
-        $this->post('/documents/templates/' . $template->id . '/create', [
+        $this->post('/documents/templates/'.$template->id.'/create', [
             'variables' => ['employee_name' => 'Иванов И.'],
         ])->assertRedirect()->assertSessionHasErrors(['variables']);
 
@@ -208,7 +213,7 @@ class AdminModulesHttpTest extends TestCase
         self::assertSame($user->id, $candidate->user_id);
 
         $oldHash = $user->password;
-        $this->post('/users/' . $user->id . '/password', [
+        $this->post('/users/'.$user->id.'/password', [
             'password' => 'super-secret-9',
         ])->assertRedirect();
 
@@ -260,7 +265,7 @@ class AdminModulesHttpTest extends TestCase
             ->assertSee('вход');
 
         // фильтр по устройству
-        $this->get('/biometrics/events?device_id=' . $device->id)->assertOk()->assertSee('Исполнитель');
+        $this->get('/biometrics/events?device_id='.$device->id)->assertOk()->assertSee('Исполнитель');
 
         // сотрудник-localhost со scope own: BiometricEvent привязан к его employee_id
         $this->actingAs(User::query()->whereKey($this->worker->user_id)->firstOrFail());
@@ -318,8 +323,8 @@ class AdminModulesHttpTest extends TestCase
             'event_retention_days' => 365,
         ])->assertRedirect()->assertSessionHas('status');
 
-        self::assertSame('30', \App\Models\Setting::query()->where('key', 'biometric.image_retention_days')->value('value'));
-        self::assertSame('1', \App\Models\Setting::query()->where('key', 'biometric.require_liveness')->value('value'));
+        self::assertSame('30', Setting::query()->where('key', 'biometric.image_retention_days')->value('value'));
+        self::assertSame('1', Setting::query()->where('key', 'biometric.require_liveness')->value('value'));
 
         // форма с очисткой
         $this->post('/biometrics/privacy', [
@@ -332,7 +337,8 @@ class AdminModulesHttpTest extends TestCase
 
         self::assertNull(BiometricEvent::query()->where('event_uuid', 'uuid-priv-1')->value('image_ref'));
         Storage::disk('local')->assertMissing('biometric/old.jpg');
-        Storage::disk('local')->assertExists('biometric/fresh.jpg');        self::assertNotNull(BiometricEvent::query()->where('event_uuid', 'uuid-priv-2')->value('image_ref'));
+        Storage::disk('local')->assertExists('biometric/fresh.jpg');
+        self::assertNotNull(BiometricEvent::query()->where('event_uuid', 'uuid-priv-2')->value('image_ref'));
 
         // страница показывает параметры
         $this->get('/biometrics/privacy')->assertOk()->assertSee('Приватность биометрии');

@@ -4,23 +4,25 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Shared\Enums\AssigneeType;
+use App\Shared\Enums\TaskAssignmentRole;
+use App\Shared\Enums\TaskAssignmentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TaskAssignment extends Model
 {
     protected $table = 'task_assignments';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
-            'assignee_type' => \App\Shared\Enums\AssigneeType::class,
-            'role' => \App\Shared\Enums\TaskAssignmentRole::class,
-            'assignment_status' => \App\Shared\Enums\TaskAssignmentStatus::class,
-            'acknowledged_at' => 'datetime'
+            'assignee_type' => AssigneeType::class,
+            'role' => TaskAssignmentRole::class,
+            'assignment_status' => TaskAssignmentStatus::class,
+            'acknowledged_at' => 'datetime',
         ];
     }
 
@@ -38,5 +40,4 @@ class TaskAssignment extends Model
     {
         return $this->belongsTo(Department::class, 'department_id');
     }
-
 }

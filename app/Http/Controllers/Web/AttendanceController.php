@@ -9,11 +9,12 @@ use App\Domains\Audit\Services\AuditService;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceAnomaly;
 use App\Models\AttendanceRecord;
-use App\Models\Company;
+use App\Models\BiometricEvent;
 use App\Models\Employee;
-use App\Shared\Enums\AnomalyStatus;
 use App\Shared\Enums\PermissionScope;
 use App\Support\PermissionService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -28,8 +29,7 @@ class AttendanceController extends Controller
         protected AttendanceService $attendance,
         protected PermissionService $permissions,
         protected AuditService $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -53,7 +53,7 @@ class AttendanceController extends Controller
         $records = $query->orderBy('clock_in_at')->get();
 
         // Live-виджет: последние биометрические события дня (только своей компании)
-        $events = \App\Models\BiometricEvent::query()
+        $events = BiometricEvent::query()
             ->with(['device', 'employee'])
             ->whereDate('occurred_at', now())
             ->whereHas('device', fn ($q) => $q->where('company_id', $me->company_id))
@@ -70,7 +70,7 @@ class AttendanceController extends Controller
      * Live-обновление (JSON): вызывается со страницы посещаемости каждые N секунд,
      * отдаёт последние события и сводку по scope текущего пользователя.
      */
-    public function liveFeed(Request $request): \Illuminate\Http\JsonResponse
+    public function liveFeed(Request $request): JsonResponse
     {
         $me = $request->user()->employee;
         \assert($me !== null);
@@ -90,7 +90,7 @@ class AttendanceController extends Controller
 
         $records = $query->orderBy('clock_in_at')->get();
 
-        $events = \App\Models\BiometricEvent::query()
+        $events = BiometricEvent::query()
             ->with(['device', 'employee'])
             ->whereDate('occurred_at', now())
             ->whereHas('device', fn ($q) => $q->where('company_id', $me->company_id))
@@ -103,14 +103,14 @@ class AttendanceController extends Controller
         return response()->json([
             'counters' => $statusCounts,
             'records' => $records->map(static fn (AttendanceRecord $r) => [
-                'employee' => trim(($r->employee->last_name ?? '') . ' ' . ($r->employee->first_name ?? '')),
+                'employee' => trim(($r->employee->last_name ?? '').' '.($r->employee->first_name ?? '')),
                 'clock_in_at' => $r->clock_in_at?->format('H:i') ?? '—',
                 'clock_out_at' => $r->clock_out_at?->format('H:i') ?? '—',
                 'status' => $r->status->value,
                 'worked_minutes' => $r->worked_minutes,
                 'late_minutes' => $r->late_minutes,
             ])->values(),
-            'events' => $events->map(static fn (\App\Models\BiometricEvent $e) => [
+            'events' => $events->map(static fn (BiometricEvent $e) => [
                 'direction' => (string) $e->direction,
                 'employee' => $e->employee?->last_name ?? 'не опознан',
                 'device' => $e->device?->name ?? '—',
@@ -122,7 +122,7 @@ class AttendanceController extends Controller
     }
 
     /** Табель за месяц (п.28, 33): мой или по выбору сотрудника по scope. */
-    public function timesheet(Request $request, int $employeeId = null): View
+    public function timesheet(Request $request, ?int $employeeId = null): View
     {
         $me = $request->user()->employee;
         \assert($me !== null);
@@ -132,12 +132,12 @@ class AttendanceController extends Controller
         $selectedId = (int) ($request->input('employee_id') ?? $employeeId ?? $me->id);
 
         // База выборки: только сотрудники своей компании (анти-IDOR табеля, P0-3).
-        $employeeQuery = \App\Models\Employee::query()->where('company_id', $me->company_id);
+        $employeeQuery = Employee::query()->where('company_id', $me->company_id);
 
         if ($scope === PermissionScope::Own && $selectedId !== (int) $me->id) {
             $selectedId = $me->id;
         } elseif ($scope === PermissionScope::Department) {
-            $deptIds = \App\Models\Employee::query()
+            $deptIds = Employee::query()
                 ->where('company_id', $me->company_id)
                 ->where('department_id', $me->department_id)
                 ->pluck('id');
@@ -225,7 +225,7 @@ class AttendanceController extends Controller
             'month' => $month,
         ]);
 
-        $filename = 'timesheet_' . $year . '-' . str_pad((string) $month, 2, '0', STR_PAD_LEFT) . '.csv';
+        $filename = 'timesheet_'.$year.'-'.str_pad((string) $month, 2, '0', STR_PAD_LEFT).'.csv';
 
         return response()->streamDownload(function () use ($employees, $records, $daysInMonth) {
             $out = fopen('php://output', 'w');
@@ -241,7 +241,7 @@ class AttendanceController extends Controller
             foreach ($employees as $employee) {
                 $row = [
                     $employee->employee_no,
-                    trim($employee->last_name . ' ' . $employee->first_name),
+                    trim($employee->last_name.' '.$employee->first_name),
                 ];
                 $perDay = ($records->get($employee->id) ?? collect())->keyBy(fn ($r) => Carbon::parse($r->date)->day);
 
@@ -294,7 +294,7 @@ class AttendanceController extends Controller
     }
 
     /** Разрешение аномалии (корректировка, п.30 ТЗ: HR фиксирует). */
-    public function resolveAnomaly(Request $request, AttendanceAnomaly $anomaly): \Illuminate\Http\RedirectResponse
+    public function resolveAnomaly(Request $request, AttendanceAnomaly $anomaly): RedirectResponse
     {
         $validated = $request->validate([
             'resolution' => ['required', 'string', 'max:500'],
@@ -302,7 +302,7 @@ class AttendanceController extends Controller
 
         $anomaly->update([
             'status' => 'resolved',
-            'description' => $anomaly->description . ' | Решение: ' . $validated['resolution'],
+            'description' => $anomaly->description.' | Решение: '.$validated['resolution'],
         ]);
 
         return back()->with('status', 'Аномалия разобрана (п.30 ТЗ)');

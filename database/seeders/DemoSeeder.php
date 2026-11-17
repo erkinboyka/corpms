@@ -88,14 +88,14 @@ class DemoSeeder extends Seeder
 
             // директор отдела
             $deptDirector = $this->makeEmployee($company, [
-                'first_name' => 'Фарру', 'last_name' => 'Ахмов' . $i, 'middle_name' => 'Расулович',
-                'email' => $d['code'] . '-director@corpms.demo',
+                'first_name' => 'Фарру', 'last_name' => 'Ахмов'.$i, 'middle_name' => 'Расулович',
+                'email' => $d['code'].'-director@corpms.demo',
                 'department_id' => $dept->id,
                 'position_id' => $positionIds[2],
-                'position' => 'Директор ' . $d['name'],
+                'position' => 'Директор '.$d['name'],
                 'role' => $d['code'] === 'hr' ? ['department_director', 'hr_manager'] : 'department_director',
                 'manager_id' => $ceo->id,
-                'employee_no' => '100' . ($i + 1),
+                'employee_no' => '100'.($i + 1),
                 'joint' => $d['name'],
             ], $schedule->id);
 
@@ -105,14 +105,14 @@ class DemoSeeder extends Seeder
             foreach ($positionsByDept[$d['code']] as $j => [$title, $posId]) {
                 $slug = preg_replace('/[^a-z]+/', '', strtolower($title)) ?: 'emp';
                 $this->makeEmployee($company, [
-                    'first_name' => 'Сотрудник ' . ($j + 1), 'last_name' => $d['code'] . 'ов', 'middle_name' => null,
-                    'email' => $d['code'] . '-emp' . ($j + 1) . '@corpms.demo',
+                    'first_name' => 'Сотрудник '.($j + 1), 'last_name' => $d['code'].'ов', 'middle_name' => null,
+                    'email' => $d['code'].'-emp'.($j + 1).'@corpms.demo',
                     'department_id' => $dept->id,
                     'position_id' => $posId,
                     'position' => $title,
                     'role' => 'employee',
                     'manager_id' => $deptDirector->id,
-                    'employee_no' => '200' . $i . ($j + 1),
+                    'employee_no' => '200'.$i.($j + 1),
                 ], $schedule->id);
             }
         }
@@ -135,7 +135,7 @@ class DemoSeeder extends Seeder
     private function makeEmployee(Company $company, array $data, int $scheduleId): Employee
     {
         $user = User::create([
-            'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')),
+            'name' => trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
             'email' => $data['email'],
             'password' => Hash::make('password'),
         ]);

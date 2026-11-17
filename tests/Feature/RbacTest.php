@@ -6,9 +6,13 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeePermissionOverride;
+use App\Models\Permission;
 use App\Models\Role;
+use App\Models\RolePermission;
 use App\Models\User;
 use App\Shared\Enums\PermissionScope;
+use App\Shared\Permissions\PermissionMatrix;
 use App\Support\PermissionService;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,7 +28,7 @@ class RbacTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new PermissionService();
+        $this->service = new PermissionService;
         $this->seed(RbacSeeder::class);
 
         // источники структуры для FK
@@ -36,7 +40,7 @@ class RbacTest extends TestCase
         $employee = Employee::create([
             'company_id' => 1,
             'user_id' => $user->id,
-            'employee_no' => 'T-' . uniqid(),
+            'employee_no' => 'T-'.uniqid(),
             'first_name' => 'Тест',
             'last_name' => 'Тестов',
             'status' => 'active',
@@ -52,8 +56,8 @@ class RbacTest extends TestCase
     public function test_roles_and_permissions_seeded(): void
     {
         $this->assertDatabaseCount('roles', 7);
-        $this->assertDatabaseCount('permissions', count(\App\Shared\Permissions\PermissionMatrix::all()));
-        $this->assertDatabaseCount('role_permissions', count(\App\Models\RolePermission::all()));
+        $this->assertDatabaseCount('permissions', count(PermissionMatrix::all()));
+        $this->assertDatabaseCount('role_permissions', count(RolePermission::all()));
     }
 
     public function test_super_admin_has_everything(): void
@@ -97,8 +101,8 @@ class RbacTest extends TestCase
         $user = User::factory()->create();
         $employee = $this->employee($user, 'employee');
 
-        $perm = \App\Models\Permission::query()->where('slug', 'employees.view')->first();
-        \App\Models\EmployeePermissionOverride::create([
+        $perm = Permission::query()->where('slug', 'employees.view')->first();
+        EmployeePermissionOverride::create([
             'employee_id' => $employee->id,
             'permission_id' => $perm->id,
             'scope' => PermissionScope::Department->value,

@@ -110,7 +110,7 @@ class SettingsService
 
         // 2) config('corpms.<dot-key>')
         if ($dotKey !== null) {
-            $configValue = config('corpms.' . $dotKey);
+            $configValue = config('corpms.'.$dotKey);
             if ($configValue !== null) {
                 $this->resolved[$fullKey] = $configValue;
 
@@ -170,7 +170,7 @@ class SettingsService
 
     protected function castOut(?string $dotKey, string $raw): mixed
     {
-        $definition = $dotKey === null ? null : $this->definitions()['corpms.' . $dotKey] ?? null;
+        $definition = $dotKey === null ? null : $this->definitions()['corpms.'.$dotKey] ?? null;
 
         $type = $definition['type'] ?? null;
         if ($type === 'int') {
@@ -185,7 +185,7 @@ class SettingsService
 
     protected function castIn(?string $dotKey, mixed $value): string
     {
-        $definition = $dotKey === null ? null : $this->definitions()['corpms.' . $dotKey] ?? null;
+        $definition = $dotKey === null ? null : $this->definitions()['corpms.'.$dotKey] ?? null;
 
         if (($definition['type'] ?? null) === 'bool') {
             return $value ? '1' : '0';

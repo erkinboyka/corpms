@@ -6,14 +6,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TaskStatusHistory extends Model
 {
     protected $table = 'task_status_history';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     public $timestamps = false;
 
     public function task(): BelongsTo
@@ -25,5 +24,4 @@ class TaskStatusHistory extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id');
     }
-
 }

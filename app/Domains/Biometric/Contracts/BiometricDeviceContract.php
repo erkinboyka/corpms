@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domains\Biometric\Contracts;
 
 use App\Models\BiometricDevice;
-use Illuminate\Http\Request;
 
 /**
  * Абстракция биометрического устройства (п. 25, 74 ТЗ).

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PayrollLine extends Model
 {
     protected $table = 'payroll_lines';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
 
     protected function casts(): array

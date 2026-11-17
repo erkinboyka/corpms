@@ -9,7 +9,6 @@ use App\Models\AttendanceRecord;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEvent;
 use App\Models\Company;
-use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\RfidCard;
@@ -30,10 +29,15 @@ class RfidHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected WorkSchedule $schedule;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
+
     protected User $workerUser;
+
     protected Employee $worker;
 
     protected function setUp(): void
@@ -90,7 +94,7 @@ class RfidHttpTest extends TestCase
     {
         [, $token] = app(BiometricService::class)->registerDevice([
             'company_id' => $this->company->id,
-            'name' => 'Ридер ' . $serial,
+            'name' => 'Ридер '.$serial,
             'serial_number' => $serial,
             'device_type' => $deviceType,
             'direction' => $direction,
@@ -136,13 +140,13 @@ class RfidHttpTest extends TestCase
         self::assertSame(1, RfidCard::query()->count());
 
         // отзыв
-        $this->post('/rfid/' . $card->id . '/revoke')->assertRedirect()->assertSessionHas('status');
+        $this->post('/rfid/'.$card->id.'/revoke')->assertRedirect()->assertSessionHas('status');
         $card->refresh();
         self::assertSame(RfidCardStatus::Disabled->value, $card->status->value);
         $this->assertDatabaseHas('audit_logs', ['action' => 'rfid.card.revoked']);
 
         // повторный отзыв — ошибка
-        $this->post('/rfid/' . $card->id . '/revoke')->assertSessionHasErrors(['card_uid']);
+        $this->post('/rfid/'.$card->id.'/revoke')->assertSessionHasErrors(['card_uid']);
     }
 
     /* -------------------- API: ингресс -------------------- */
@@ -156,7 +160,7 @@ class RfidHttpTest extends TestCase
             'card_uid' => 'GHOST-CARD',
             'direction' => 'in',
             'timestamp' => '2026-11-03 08:00:00',
-        ], ['Authorization' => 'Bearer ' . $token])
+        ], ['Authorization' => 'Bearer '.$token])
             ->assertStatus(422)
             ->assertJsonPath('status', 'unknown_card');
 
@@ -175,7 +179,7 @@ class RfidHttpTest extends TestCase
             'card_uid' => 'CARD-OK1',
         ])->assertRedirect();
 
-        $headers = ['Authorization' => 'Bearer ' . $token];
+        $headers = ['Authorization' => 'Bearer '.$token];
 
         // вход
         $this->postJson('/api/v1/biometric/device/rfid', [
@@ -234,7 +238,7 @@ class RfidHttpTest extends TestCase
             'card_uid' => 'CARD-DIS',
             'direction' => 'in',
             'timestamp' => '2026-11-03 08:55:00',
-        ], ['Authorization' => 'Bearer ' . $token])
+        ], ['Authorization' => 'Bearer '.$token])
             ->assertStatus(422)
             ->assertJsonPath('status', 'card_disabled');
 
@@ -255,7 +259,7 @@ class RfidHttpTest extends TestCase
             'card_uid' => 'CARD-DIR',
             'direction' => 'in',
             'timestamp' => '2026-11-03 08:55:00',
-        ], ['Authorization' => 'Bearer ' . $token])
+        ], ['Authorization' => 'Bearer '.$token])
             ->assertStatus(422)
             ->assertJsonPath('status', 'skipped')
             ->assertJsonPath('event.processing_status', 'skipped');

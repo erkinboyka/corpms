@@ -27,8 +27,7 @@ class DocumentTemplateController extends Controller
         protected DocumentService $documents,
         protected AuditService $audit,
         protected PermissionService $permissions,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -72,7 +71,7 @@ class DocumentTemplateController extends Controller
             'code' => $validated['code'],
         ]);
 
-        return redirect()->route('documents.templates')->with('status', 'Категория «' . $category->name . '» создана');
+        return redirect()->route('documents.templates')->with('status', 'Категория «'.$category->name.'» создана');
     }
 
     public function storeTemplate(Request $request): RedirectResponse
@@ -114,7 +113,7 @@ class DocumentTemplateController extends Controller
             'variables' => $variables,
         ]);
 
-        return redirect()->route('documents.templates')->with('status', 'Шаблон «' . $template->name . '» создан');
+        return redirect()->route('documents.templates')->with('status', 'Шаблон «'.$template->name.'» создан');
     }
 
     /** Генерация документа из шаблона с подстановкой переменных. */
@@ -150,6 +149,6 @@ class DocumentTemplateController extends Controller
 
         return redirect()
             ->route('documents.show', $document)
-            ->with('status', 'Документ ' . $document->document_number . ' создан из шаблона');
+            ->with('status', 'Документ '.$document->document_number.' создан из шаблона');
     }
 }

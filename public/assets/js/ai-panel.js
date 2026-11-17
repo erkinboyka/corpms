@@ -111,6 +111,13 @@
         return html.join('');
     }
 
+    /* D6: текстовый блок (черновики документов) — plain text с сохранением переносов */
+    function renderText(block) {
+        var content = String(block.content || '');
+        if (!content) { return null; }
+        return '<pre class="ai-text">' + escapeHtml(content) + '</pre>';
+    }
+
     function renderActions(block) {
         var items = block.items || [];
         if (items.length === 0) { return null; }
@@ -135,6 +142,7 @@
             var body = '';
             if (block.type === 'chart') { body = renderChart(block); }
             else if (block.type === 'table') { body = renderTable(block); }
+            else if (block.type === 'text') { body = renderText(block); }
             else if (block.type === 'actions') { body = renderActions(block); }
             if (!body) { continue; }
 

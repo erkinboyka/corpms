@@ -38,7 +38,7 @@ class AiPanelService extends AiAssistantService
     /**
      * Ответ панели: намерения → LLM (если настроен) → сохранение в ai_conversations.
      *
-     * @return array{ok: bool, reply: string, blocks: array<int, array<string, mixed>>, facts: array<string, mixed>, grounded: bool}
+     * @return array{ok: bool, reply: string, blocks: array<int, array<string, mixed>>, facts: array<string, mixed>, grounded: bool, local_only?: bool}
      */
     public function respond(Employee $asker, string $question): array
     {
@@ -61,7 +61,7 @@ class AiPanelService extends AiAssistantService
 
     /* -------------------- сборка ответа -------------------- */
 
-    /** @return array{ok: bool, reply: string, blocks: array<int, array<string, mixed>>, facts: array<string, mixed>, grounded: bool} */
+    /** @return array{ok: bool, reply: string, blocks: array<int, array<string, mixed>>, facts: array<string, mixed>, grounded: bool, local_only?: bool} */
     protected function build(Employee $asker, string $question): array
     {
         $facts = $this->collectFacts($asker);
@@ -69,9 +69,11 @@ class AiPanelService extends AiAssistantService
 
         $reply = $local['reply'] ?? null;
         $blocks = $local['blocks'] ?? [];
+        // D6: детерминированные команды (память) не переопределяются LLM
+        $localOnly = (bool) ($local['local_only'] ?? false);
         $grounded = false;
 
-        if ($this->llmEnabled()) {
+        if (! $localOnly && $this->llmEnabled()) {
             $llmText = null;
             $llmBlocks = null;
             // память диалога: предыдущие реплики уходят в контекст LLM (S10)
@@ -98,7 +100,7 @@ class AiPanelService extends AiAssistantService
             $blocks = $this->hintActions($asker);
         }
 
-        return ['ok' => true, 'reply' => $reply, 'blocks' => $blocks, 'facts' => $facts, 'grounded' => $grounded];
+        return ['ok' => true, 'reply' => $reply, 'blocks' => $blocks, 'facts' => $facts, 'grounded' => $grounded, 'local_only' => $localOnly];
     }
 
     /** История + аудит — как в AiAssistantService::ask(), но с блоками в query_used. */
@@ -122,8 +124,9 @@ class AiPanelService extends AiAssistantService
                 ]);
             }
 
-            // D3: LLM настроен, но синхронно не ответил — фоновый повтор в очереди
-            if (! (bool) ($payload['grounded'] ?? false)) {
+            // D3: LLM настроен, но синхронно не ответил — фоновый повтор в очереди;
+            // D6: детерминированные локальные команды (память) не ретраим
+            if (! (bool) ($payload['grounded'] ?? false) && ! (bool) ($payload['local_only'] ?? false)) {
                 $this->queueRetry($conversation, panel: true);
             }
         } catch (Throwable) {
@@ -139,18 +142,105 @@ class AiPanelService extends AiAssistantService
         $q = mb_strtolower($question);
 
         foreach ([
+            fn (): ?array => $this->intentMemory($asker, $question),
             fn (): ?array => $this->intentSearch($asker, $question, $q),
             fn (): ?array => $this->intentCreateEdit($asker, $q),
+            fn (): ?array => $this->intentDocGenerator($asker, $q, $facts),
             fn (): ?array => $this->intentAttendance($asker, $q, $facts),
             fn (): ?array => $this->intentTasks($asker, $q, $facts),
             fn (): ?array => $this->intentHeadcount($asker, $q, $facts),
             fn (): ?array => $this->intentLeaves($asker, $q, $facts),
+            fn (): ?array => $this->intentInsights($asker, $q, $facts),
+            fn (): ?array => $this->intentSummaryReport($asker, $q, $facts),
             fn (): ?array => $this->intentNavigate($asker, $q),
         ] as $intent) {
             $result = $intent();
             if ($result !== null) {
                 return $result;
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * D6 (AI Memory): «запомни X» / «забудь X» / «что помнишь» — управление
+     * долговременной памятью ассистента о сотруднике (только явные команды).
+     */
+    protected function intentMemory(Employee $asker, string $question): ?array
+    {
+        // regex на оригинальном вопросе (/iu — регистронезависимо): ключи и значения
+        // памяти сохраняются с исходным регистром пользователя
+        if (preg_match('/(?:^|\s)(?:что\s+(?:ты\s+)?помнишь|вспомни|покажи\s+память|моя\s+память)/ui', $question)) {
+            $memories = $this->memory->recall($asker);
+
+            if ($memories->isEmpty()) {
+                return [
+                    'reply' => 'Я пока ничего о вас не помню. Скажите, например: «Запомни: мой проект — Альфа».',
+                    'blocks' => [],
+                    'local_only' => true,
+                ];
+            }
+
+            $rows = $memories->map(static fn ($m): array => [(string) $m->memory_key, (string) $m->memory_value])->all();
+
+            return [
+                'reply' => sprintf('Я помню о вас %d записей. Что-то можно забыть командой «забудь …».', $memories->count()),
+                'blocks' => [['type' => 'table', 'title' => 'Память ассистента', 'rows' => $rows]],
+                'local_only' => true,
+            ];
+        }
+
+        if (preg_match('/(?:^|\s)(?:забудь|забыть|удали\s+из\s+памяти)\s*:?\s*(.{0,})$/ui', $question, $m)) {
+            $key = trim($m[1], " \t.,!?:;\"'«»");
+
+            if (mb_strlen($key) < 2) {
+                return [
+                    'reply' => 'Что забыть? Напишите: «забудь …» — ключ записи из памяти.',
+                    'blocks' => [],
+                    'local_only' => true,
+                ];
+            }
+
+            $removed = $this->memory->forget($asker, $key);
+
+            return [
+                'reply' => $removed
+                    ? sprintf('Запись «%s» удалена из памяти.', $this->memory->normalizeKey($key))
+                    : sprintf('Записи «%s» и так нет в памяти.', $this->memory->normalizeKey($key)),
+                'blocks' => [],
+                'local_only' => true,
+            ];
+        }
+
+        if (preg_match('/(?:^|\s)(?:запомни|запомнить|сохрани|сохранить)\s*:?\s*(.{2,})$/ui', $question, $m)) {
+            $payload = trim($m[1], " \t.,!?:;\"'«»");
+
+            // «ключ — значение» / «ключ: значение» / «ключ = значение»
+            $key = $payload;
+            $value = $payload;
+            if (preg_match('/^(.{2,64}?)\s*(?:—|–|=|:)\s*(.{1,})$/u', $payload, $p)) {
+                $key = trim($p[1]);
+                $value = trim($p[2]);
+            }
+
+            $memory = $this->memory->remember($asker, $key, $value);
+
+            if ($memory === null) {
+                return [
+                    'reply' => 'Не удалось запомнить — проверьте формулировку («запомни: ключ — значение»).',
+                    'blocks' => [],
+                    'local_only' => true,
+                ];
+            }
+
+            return [
+                'reply' => sprintf('Запомнил: %s — %s.', $memory->memory_key, $memory->memory_value),
+                'blocks' => [['type' => 'table', 'title' => 'Память обновлена', 'rows' => [
+                    [$memory->memory_key, $memory->memory_value],
+                ]]],
+                'local_only' => true,
+            ];
         }
 
         return null;
@@ -283,6 +373,80 @@ class AiPanelService extends AiAssistantService
         }
 
         return null;
+    }
+
+    /**
+     * D6 (Doc Generator): «сформируй справку/приказ/служебную записку» —
+     * детерминированный черновик из фактов как блок type=text.
+     * Без записи в БД (консистентно с D5): пользователь создаёт документ
+     * из шаблонов в существующем UI.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    protected function intentDocGenerator(Employee $asker, string $q, array $facts): ?array
+    {
+        if (! $this->mentions($q, ['справк', 'приказ', 'служебн', 'записк'])) {
+            return null;
+        }
+
+        if (! $this->mentions($q, ['сформируй', 'сформировать', 'составь', 'составить', 'сгенерируй', 'выпиши', 'подготовь', 'напиши', 'создай документ'])) {
+            return null;
+        }
+
+        $title = 'Служебная записка';
+        if ($this->mentions($q, ['справк'])) {
+            $title = 'Справка';
+        } elseif ($this->mentions($q, ['приказ'])) {
+            $title = 'Приказ';
+        }
+
+        $lines = [];
+        $date = now()->format('d.m.Y');
+
+        $lines[] = $title.' о деятельности';
+        $lines[] = 'по состоянию на '.$date;
+        $lines[] = '';
+        $lines[] = 'Сведения (по данным системы):';
+
+        if (is_array($headcount = $facts['headcount'] ?? null)) {
+            $lines[] = sprintf('1. Численность: активных %d из %d сотрудников в области доступа.', $headcount['active'], $headcount['total']);
+        }
+        if (is_array($a = $facts['attendance_today'] ?? null)) {
+            $lines[] = sprintf('2. Посещаемость сегодня: на месте %d из %d, опоздали %d, удалённо %d, без отметок %d.', $a['present'], $a['total'], $a['late'], $a['remote'], $a['absent_from_schedule']);
+        } elseif (is_array($my = $facts['my_attendance_today'] ?? null)) {
+            $lines[] = sprintf('2. Посещаемость сегодня: отметка «%s», приход %s, опоздание %d мин.', $my['status'], $my['clock_in_at'] ?? '—', $my['late_minutes']);
+        }
+        if (is_array($tasks = $facts['tasks'] ?? $facts['my_tasks'] ?? null) && $tasks !== []) {
+            $total = array_sum(array_map('intval', $tasks));
+            $lines[] = sprintf('3. Задачи: всего в статусах %d, выполнено %d, просрочено %d.', $total, (int) ($tasks['completed'] ?? 0), (int) ($tasks['overdue'] ?? 0));
+        }
+        if (is_array($leaves = $facts['leaves'] ?? null)) {
+            $lines[] = sprintf('4. Отпуска: ожидает решения %d, согласовано %d.', (int) ($leaves['pending'] ?? 0), (int) ($leaves['approved'] ?? 0));
+        }
+
+        $lines[] = '';
+        $lines[] = 'Документ подготовлен ИИ-ассистентом как черновик и требует проверки.';
+
+        $blocks = [['type' => 'text', 'title' => 'Черновик: '.$title, 'content' => implode("\n", $lines)]];
+
+        $actions = [];
+        if ($asker->user !== null) {
+            if ($this->permissions->check($asker->user, 'documents.templates.view')) {
+                $actions[] = $this->action('Создать из шаблона', route('documents.templates'), 'ti-file');
+            }
+            if ($this->permissions->check($asker->user, 'documents.view')) {
+                $actions[] = $this->action('Открыть документы', route('documents.index'), 'ti-files');
+            }
+        }
+        if ($actions !== []) {
+            $blocks[] = ['type' => 'actions', 'items' => $actions];
+        }
+
+        return [
+            'reply' => sprintf('Черновик «%s» подготовлен (текст ниже). В систему ничего не записано — откройте шаблоны и подтвердите создание.', $title),
+            'blocks' => $blocks,
+            'local_only' => true,
+        ];
     }
 
     /** Посещаемость: диаграмма + таблица + ссылки. @param array<string, mixed> $facts */
@@ -515,6 +679,160 @@ class AiPanelService extends AiAssistantService
         return ['reply' => $reply, 'blocks' => $blocks];
     }
 
+    /**
+     * D6 (AI Insights): «на что обратить / что не так / инсайты / сводка дня» —
+     * детерминированные наблюдения по фактам с учётом scope.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    protected function intentInsights(Employee $asker, string $q, array $facts): ?array
+    {
+        if (! $this->mentions($q, ['инсайт', 'на что обратить', 'что не так', 'что пошло', 'аномал', 'сводк дня', 'сводку дня', 'обратить внимани', 'порекомендуй'])) {
+            return null;
+        }
+
+        $insights = [];
+        $actions = [];
+        $own = ($facts['scope'] ?? null) === 'own';
+
+        $tasks = $facts['tasks'] ?? $facts['my_tasks'] ?? null;
+        if (is_array($tasks)) {
+            $overdue = (int) ($tasks['overdue'] ?? 0);
+            $review = (int) ($tasks['review'] ?? 0);
+            if ($overdue > 0) {
+                $insights[] = sprintf('Просрочено задач: %d — стоит пересмотреть дедлайны.', $overdue);
+            }
+            if ($review > 0) {
+                $insights[] = sprintf('Задач ждут проверки: %d — закройте цикл ревью.', $review);
+            }
+            if (! $own && $asker->user !== null && $overdue > 0 && $this->permissions->check($asker->user, 'tasks.view')) {
+                $actions[] = $this->action('Просроченные задачи', route('tasks.overdue'), 'ti-alarm');
+            }
+        }
+
+        if (is_array($a = $facts['attendance_today'] ?? null)) {
+            if ((int) $a['late'] > 0) {
+                $insights[] = sprintf('Сегодня опоздали: %d — обратите внимание на дисциплину.', $a['late']);
+            }
+            if ((int) $a['absent_from_schedule'] > 0) {
+                $insights[] = sprintf('Без отметок прихода: %d из %d по графику.', $a['absent_from_schedule'], $a['total']);
+            }
+            if ((int) $a['late'] > 0 && $asker->user !== null && $this->permissions->check($asker->user, 'attendance.view')) {
+                $actions[] = $this->action('Посещаемость', route('attendance.index'), 'ti-calendar');
+            }
+        } elseif (($facts['my_attendance_today'] ?? null) === 'нет отметки' && $asker->user !== null && $this->permissions->check($asker->user, 'attendance.view')) {
+            $insights[] = 'У вас нет отметки прихода за сегодня.';
+            $actions[] = $this->action('Отметить посещаемость', route('attendance.index'), 'ti-calendar');
+        }
+
+        if (is_array($leaves = $facts['leaves'] ?? null) && (int) ($leaves['pending'] ?? 0) > 0) {
+            $insights[] = sprintf('Заявок на отпуск ждут решения: %d — согласуйте заранее.', $leaves['pending']);
+            if ($asker->user !== null && $this->permissions->check($asker->user, 'leaves.view')) {
+                $actions[] = $this->action('Заявки на отпуск', route('schedules.leaves'), 'ti-plane');
+            }
+        }
+
+        if ($insights === []) {
+            return [
+                'reply' => 'Критичных отклонений не вижу: задачи в работе, посещаемость в норме, срочных заявок нет.',
+                'blocks' => [],
+                'local_only' => true,
+            ];
+        }
+
+        $numbered = [];
+        foreach ($insights as $index => $insight) {
+            $numbered[] = ($index + 1).'. '.$insight;
+        }
+
+        $blocks = [[
+            'type' => 'text',
+            'title' => 'На что обратить внимание',
+            'content' => implode("\n", $numbered),
+        ]];
+
+        if ($actions !== []) {
+            $blocks[] = ['type' => 'actions', 'title' => 'Быстрые действия', 'items' => $actions];
+        }
+
+        return [
+            'reply' => 'Вижу '.count($insights).' '.(count($insights) === 1 ? 'место' : 'места').' для внимания: '.implode(' ', $insights),
+            'blocks' => $blocks,
+            'local_only' => true,
+        ];
+    }
+
+    /**
+     * D6 (AI Reports): «построй сводный отчёт» — сводный блок по ключевым
+     * метрикам (chart + table) со ссылками на раздел отчётов.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    protected function intentSummaryReport(Employee $asker, string $q, array $facts): ?array
+    {
+        if (! $this->mentions($q, ['сводный отчёт', 'сводный отчет', 'общий отчёт', 'общий отчет', 'сводка по компании', 'полная сводка', 'комплексный отчёт'])) {
+            return null;
+        }
+
+        $headcount = $facts['headcount'] ?? null;
+        $a = $facts['attendance_today'] ?? null;
+
+        if (! is_array($headcount) || ! is_array($a)) {
+            return [
+                'reply' => 'Сводный отчёт по компании недоступен в вашем scope — доступны только личные данные. Обратитесь к руководителю или используйте личные отчёты.',
+                'blocks' => [],
+            ];
+        }
+
+        $tasks = is_array($facts['tasks'] ?? null) ? $facts['tasks'] : [];
+        $leaves = is_array($facts['leaves'] ?? null) ? $facts['leaves'] : [];
+        $tasksTotal = array_sum(array_map('intval', $tasks));
+
+        $chart = [
+            ['label' => 'Активные сотрудники', 'value' => (int) $headcount['active']],
+            ['label' => 'На месте сегодня', 'value' => (int) $a['present']],
+            ['label' => 'Опоздали сегодня', 'value' => (int) $a['late']],
+            ['label' => 'Задач в работе', 'value' => (int) ($tasks['in_progress'] ?? 0)],
+            ['label' => 'Просрочено задач', 'value' => (int) ($tasks['overdue'] ?? 0)],
+            ['label' => 'Отпуска ждут решения', 'value' => (int) ($leaves['pending'] ?? 0)],
+        ];
+
+        $blocks = [
+            ['type' => 'chart', 'title' => 'Сводный отчёт: ключевые показатели', 'data' => $chart],
+            ['type' => 'table', 'title' => 'Сводный отчёт', 'rows' => [
+                ['Численность (активных / всего)', $headcount['active'].' / '.$headcount['total']],
+                ['Посещаемость сегодня', $a['present'].' из '.$a['total']],
+                ['Опоздали сегодня', (string) $a['late']],
+                ['Без отметок', (string) $a['absent_from_schedule']],
+                ['Задачи (всего / в работе)', $tasksTotal.' / '.(int) ($tasks['in_progress'] ?? 0)],
+                ['Просрочено задач', (string) ($tasks['overdue'] ?? 0)],
+                ['Заявки на отпуск (ждут / согласовано)', (int) ($leaves['pending'] ?? 0).' / '.(int) ($leaves['approved'] ?? 0)],
+            ]],
+        ];
+
+        $actions = [];
+        if ($asker->user !== null) {
+            if ($this->permissions->check($asker->user, 'reports.view')) {
+                $actions[] = $this->action('Все отчёты', route('reports.index'), 'ti-report');
+                $actions[] = $this->action('Отчёт по кадрам', route('reports.hr'), 'ti-users');
+            }
+            if ($this->permissions->check($asker->user, 'analytics.view')) {
+                $actions[] = $this->action('Аналитика', route('analytics.index'), 'ti-chart-dots');
+            }
+        }
+        if ($actions !== []) {
+            $blocks[] = ['type' => 'actions', 'items' => $actions];
+        }
+
+        $reply = sprintf(
+            'Сводка по компании: активных %d из %d, сегодня на месте %d (опоздали %d), задач в работе %d, просрочено %d, отпусков ждут %d.',
+            $headcount['active'], $headcount['total'], $a['present'], $a['late'],
+            (int) ($tasks['in_progress'] ?? 0), (int) ($tasks['overdue'] ?? 0), (int) ($leaves['pending'] ?? 0),
+        );
+
+        return ['reply' => $reply, 'blocks' => $blocks];
+    }
+
     /** «открой/перейди к X» — чистая навигация по словарю. */
     protected function intentNavigate(Employee $asker, string $q): ?array
     {
@@ -616,10 +934,12 @@ class AiPanelService extends AiAssistantService
             .'Отвечай на русском, коротко. В конце ответа МОЖНО добавить ровно один fenced-блок ```json '
             .'с объектом {"blocks":[{"type":"chart","title":"...","data":[{"label":"...","value":0}]},'
             .'{"type":"table","title":"...","rows":[["...","..."]]},'
-            .'{"type":"actions","items":[{"label":"...","url":"/path","icon":"ti-..."}]}]} — '
+            .'{"type":"actions","items":[{"label":"...","url":"/path","icon":"ti-..."}]},'
+            .'{"type":"text","title":"...","content":"..."}]} — '
             .'только если данные блоков полностью берутся из фактов. URL — относительные (начинаются с /). '
             .'Больше ничего после json-блока не пиши.'
-            .$this->ragSystemMessage($rag);
+            .$this->ragSystemMessage($rag)
+            .$this->memoryContext($asker);
 
         $message = $this->postWithTools([
             ['role' => 'system', 'content' => $system],
@@ -764,6 +1084,18 @@ class AiPanelService extends AiAssistantService
                 if ($items !== []) {
                     $out[] = ['type' => 'actions', 'title' => $title, 'items' => $items];
                 }
+            } elseif ($block['type'] === 'text') {
+                // D6: текстовый блок (черновики документов) — plain text без разметки
+                $content = isset($block['content']) && is_string($block['content'])
+                    ? trim(preg_replace('/<[^>]*>/u', '', $block['content']) ?? $block['content'])
+                    : '';
+                if ($content !== '') {
+                    $text = ['type' => 'text', 'content' => mb_substr($content, 0, 4000)];
+                    if ($title !== null) {
+                        $text['title'] = $title;
+                    }
+                    $out[] = $text;
+                }
             }
         }
 
@@ -772,9 +1104,40 @@ class AiPanelService extends AiAssistantService
 
     /* -------------------- помощники -------------------- */
 
-    /** @return array{label: string, url: string, icon: string} */
+    /**
+     * Кнопка-ссылка для блоков панели.
+     *
+     * URL нормализуется к относительному пути: рендер панели (ai-panel.js)
+     * показывает только локальные ссылки (первый символ «/»), а route()
+     * возвращает абсолютный URL с хостом.
+     *
+     * @return array{label: string, url: string, icon: string}
+     */
     protected function action(string $label, string $url, string $icon = 'ti-arrow-right'): array
     {
-        return ['label' => $label, 'url' => $url, 'icon' => $icon];
+        return ['label' => $label, 'url' => $this->relativeUrl($url), 'icon' => $icon];
+    }
+
+    /** Абсолютный URL → путь с query/fragment; относительный — без изменений. */
+    protected function relativeUrl(string $url): string
+    {
+        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false || ! isset($parts['path'])) {
+            return '/';
+        }
+
+        $path = $parts['path'];
+        if (isset($parts['query'])) {
+            $path .= '?'.$parts['query'];
+        }
+        if (isset($parts['fragment'])) {
+            $path .= '#'.$parts['fragment'];
+        }
+
+        return $path;
     }
 }

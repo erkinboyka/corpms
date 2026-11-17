@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Shared\Enums\ApprovalStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DocumentApproval extends Model
 {
     protected $table = 'document_approvals';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
-            'status' => \App\Shared\Enums\ApprovalStatus::class,
-            'decided_at' => 'datetime'
+            'status' => ApprovalStatus::class,
+            'decided_at' => 'datetime',
         ];
     }
 
@@ -36,5 +36,4 @@ class DocumentApproval extends Model
     {
         return $this->belongsTo(Employee::class, 'approver_id');
     }
-
 }

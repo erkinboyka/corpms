@@ -6,19 +6,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DocumentVersion extends Model
 {
     protected $table = 'document_versions';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
             'immutable' => 'bool',
-            'sha256' => 'string'
+            'sha256' => 'string',
         ];
     }
 
@@ -31,5 +30,4 @@ class DocumentVersion extends Model
     {
         return $this->belongsTo(Employee::class, 'created_by');
     }
-
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Support\Sidebar;
 use Database\Seeders\DemoSeeder;
 use Database\Seeders\RbacSeeder;
@@ -56,8 +57,8 @@ class AuthFlowTest extends TestCase
         $this->seed(RbacSeeder::class);
         $this->seed(DemoSeeder::class);
 
-        $ceo = \App\Models\User::where('email', 'ceo@corpms.demo')->first();
-        $emp = \App\Models\User::where('email', 'it-emp1@corpms.demo')->first();
+        $ceo = User::where('email', 'ceo@corpms.demo')->first();
+        $emp = User::where('email', 'it-emp1@corpms.demo')->first();
 
         $ceoItems = Sidebar::build($ceo);
         $empItems = Sidebar::build($emp);

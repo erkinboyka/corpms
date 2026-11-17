@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Shared\Enums\AttendanceSource;
+use App\Shared\Enums\AttendanceStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AttendanceRecord extends Model
 {
     protected $table = 'attendance_records';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
-            'status' => \App\Shared\Enums\AttendanceStatus::class,
-            'source' => \App\Shared\Enums\AttendanceSource::class,
+            'status' => AttendanceStatus::class,
+            'source' => AttendanceSource::class,
             'date' => 'date',
             'clock_in_at' => 'datetime',
             'clock_out_at' => 'datetime',
-            'schedule_snapshot' => 'array'
+            'schedule_snapshot' => 'array',
         ];
     }
 
@@ -35,5 +37,4 @@ class AttendanceRecord extends Model
     {
         return $this->hasMany(AttendanceBreak::class, 'attendance_record_id');
     }
-
 }

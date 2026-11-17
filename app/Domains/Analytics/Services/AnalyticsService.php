@@ -15,7 +15,9 @@ use App\Models\TaskTimeLog;
 use App\Models\User;
 use App\Shared\Enums\EmployeeStatus;
 use App\Support\PermissionService;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -27,8 +29,7 @@ class AnalyticsService
 {
     public function __construct(
         protected PermissionService $permissions,
-    ) {
-    }
+    ) {}
 
     /**
      * ID сотрудников, доступных по scope права (null = вся компания).
@@ -108,7 +109,7 @@ class AnalyticsService
                 ->whereDate('date', '>=', $from->toDateString())
                 ->get();
 
-        $byDate = $rows->groupBy(fn ($r) => $r->date instanceof \Carbon\CarbonInterface ? $r->date->toDateString() : (string) $r->date);
+        $byDate = $rows->groupBy(fn ($r) => $r->date instanceof CarbonInterface ? $r->date->toDateString() : (string) $r->date);
 
         $trend = [];
         for ($i = 0; $i < $days; $i++) {
@@ -208,7 +209,7 @@ class AnalyticsService
         }
 
         return LeaveRequest::query()
-            ->selectRaw("status, count(*) as cnt")
+            ->selectRaw('status, count(*) as cnt')
             ->whereIn('employee_id', $ids)
             ->groupBy('status')
             ->pluck('cnt', 'status')
@@ -269,9 +270,10 @@ class AnalyticsService
         foreach ($deadlines as $deadline) {
             if ($deadline === null) {
                 $out['none']++;
+
                 continue;
             }
-            $date = $deadline instanceof \Carbon\CarbonInterface ? $deadline : \Carbon\Carbon::parse($deadline);
+            $date = $deadline instanceof CarbonInterface ? $deadline : Carbon::parse($deadline);
             if ($date->isPast()) {
                 $out['overdue']++;
             } elseif ($date->lte($week)) {
@@ -301,7 +303,7 @@ class AnalyticsService
         $completed = (int) ($rows['completed'] ?? 0);
         $active = 0;
         foreach ($rows as $status => $cnt) {
-            if (!in_array((string) $status, ['completed', 'cancelled'], true)) {
+            if (! in_array((string) $status, ['completed', 'cancelled'], true)) {
                 $active += (int) $cnt;
             }
         }
@@ -335,7 +337,7 @@ class AnalyticsService
 
         return $rows->map(static fn ($row) => [
             'id' => (int) $row->id,
-            'name' => trim($row->last_name . ' ' . $row->first_name),
+            'name' => trim($row->last_name.' '.$row->first_name),
             'count' => (int) $row->cnt,
         ])->all();
     }
@@ -348,6 +350,7 @@ class AnalyticsService
         foreach ($employees as $employee) {
             if ($employee->hired_at === null) {
                 $buckets['не указан']++;
+
                 continue;
             }
             $years = (int) floor($employee->hired_at->diffInYears(now()));

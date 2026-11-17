@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Attendance;
 
 use App\Domains\Attendance\Services\AttendanceService;
+use App\Models\AttendanceAnomaly;
+use App\Models\AttendanceRecord;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEvent;
 use App\Models\Company;
@@ -26,7 +28,9 @@ class AttendanceServiceTest extends TestCase
     use RefreshDatabase;
 
     protected AttendanceService $service;
+
     protected Employee $employee;
+
     protected WorkSchedule $schedule;
 
     protected function setUp(): void
@@ -34,7 +38,7 @@ class AttendanceServiceTest extends TestCase
         parent::setUp();
 
         $this->seed(RbacSeeder::class);
-        $this->service = new AttendanceService();
+        $this->service = new AttendanceService;
 
         $company = Company::create(['name' => 'Test Co', 'code' => 'testco']);
         $this->schedule = WorkSchedule::create([
@@ -167,8 +171,8 @@ class AttendanceServiceTest extends TestCase
 
         $this->assertEquals(1, $count);
         $this->assertEquals(1, $count2);
-        $this->assertTrue(\App\Models\AttendanceAnomaly::query()->where('employee_id', $this->employee->id)->whereDate('date', '2026-10-29')->where('type', 'missing_checkout')->exists());
-        $this->assertTrue(\App\Models\AttendanceAnomaly::query()->where('employee_id', $this->employee->id)->whereDate('date', '2026-10-30')->where('type', 'missing_checkout')->exists());
+        $this->assertTrue(AttendanceAnomaly::query()->where('employee_id', $this->employee->id)->whereDate('date', '2026-10-29')->where('type', 'missing_checkout')->exists());
+        $this->assertTrue(AttendanceAnomaly::query()->where('employee_id', $this->employee->id)->whereDate('date', '2026-10-30')->where('type', 'missing_checkout')->exists());
     }
 
     /** повторный пересчёт — детерминирован (без нарастаний) */
@@ -208,7 +212,7 @@ class AttendanceServiceTest extends TestCase
         $event = BiometricEvent::create([
             'device_id' => $device->id,
             'employee_id' => $this->employee->id,
-            'event_uuid' => 'uuid-' . $direction . '-' . $time,
+            'event_uuid' => 'uuid-'.$direction.'-'.$time,
             'occurred_at' => $time,
             'direction' => $direction,
             'raw_payload' => [],
@@ -226,17 +230,17 @@ class AttendanceServiceTest extends TestCase
     {
         return BiometricDevice::firstOrCreate([
             'company_id' => 1,
-            'name' => 'Main ' . $direction,
-            'serial_number' => 'SN-' . $direction . '-001',
+            'name' => 'Main '.$direction,
+            'serial_number' => 'SN-'.$direction.'-001',
             'direction' => $direction,
-            'api_token_hash' => 'x' . $direction,
+            'api_token_hash' => 'x'.$direction,
             'status' => 'online',
         ]);
     }
 
     private function todayRecord(string $date = '2026-10-29')
     {
-        return \App\Models\AttendanceRecord::query()->where('employee_id', $this->employee->id)
+        return AttendanceRecord::query()->where('employee_id', $this->employee->id)
             ->whereDate('date', $date)->first();
     }
 }

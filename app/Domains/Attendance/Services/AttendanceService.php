@@ -13,9 +13,7 @@ use App\Models\ScheduleAssignment;
 use App\Models\WorkSchedule;
 use App\Shared\Enums\AnomalyType;
 use App\Shared\Enums\AttendanceStatus;
-use App\Shared\Enums\DeviceDirection;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 
 /**
  * Обработка биометрических событий → табель (п. 27, 28, 29, 71 ТЗ).
@@ -99,6 +97,7 @@ class AttendanceService
         $schedule ??= $this->scheduleFor($record->employee, $day->toDateString());
         $this->recalculateForDate($record, $schedule, $day);
         $record->save();
+
         return $record;
     }
 
@@ -115,6 +114,7 @@ class AttendanceService
 
         if ($record->clock_in_at === null || $record->clock_out_at === null) {
             $zero($record);
+
             return;
         }
 
@@ -122,6 +122,7 @@ class AttendanceService
             $zero($record);
             $record->worked_minutes = (int) $record->clock_in_at->diffInMinutes($record->clock_out_at, true);
             $record->status = AttendanceStatus::Present;
+
             return;
         }
 

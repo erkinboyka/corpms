@@ -23,7 +23,7 @@ return new class extends Migration
             $table->foreignId('author_id')->nullable()->constrained('employees')->nullOnDelete();
             $table->foreignId('document_id')->nullable();
             $table->json('meta')->nullable();
-            $table->enum('status', ['new', 'planned', 'in_progress', 'review', 'returned', 'completed', 'cancelled','overdue'])
+            $table->enum('status', ['new', 'planned', 'in_progress', 'review', 'returned', 'completed', 'cancelled', 'overdue'])
                 ->default('new');
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();

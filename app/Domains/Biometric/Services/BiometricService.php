@@ -7,7 +7,6 @@ namespace App\Domains\Biometric\Services;
 use App\Models\BiometricDevice;
 use App\Models\BiometricProfile;
 use App\Models\Employee;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -27,7 +26,7 @@ class BiometricService
                 ->all()
         );
 
-        $token = 'bio_' . Str::random(60);
+        $token = 'bio_'.Str::random(60);
 
         $device->forceFill([
             'api_token_hash' => hash('sha256', $token),

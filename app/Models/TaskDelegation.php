@@ -6,13 +6,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TaskDelegation extends Model
 {
     protected $table = 'task_delegations';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
 
     public function task(): BelongsTo
@@ -29,5 +27,4 @@ class TaskDelegation extends Model
     {
         return $this->belongsTo(Employee::class, 'to_employee_id');
     }
-
 }

@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Shared\Enums\EnrollmentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class BiometricEnrollment extends Model
 {
     protected $table = 'biometric_enrollments';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
-            'status' => \App\Shared\Enums\EnrollmentStatus::class
+            'status' => EnrollmentStatus::class,
         ];
     }
 
@@ -30,5 +30,4 @@ class BiometricEnrollment extends Model
     {
         return $this->belongsTo(BiometricDevice::class, 'device_id');
     }
-
 }

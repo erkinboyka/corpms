@@ -5,8 +5,8 @@
 declare(strict_types=1);
 
 $base = dirname(__DIR__);
-$enumDir = $base . '/app/Shared/Enums';
-$modelDir = $base . '/app/Models';
+$enumDir = $base.'/app/Shared/Enums';
+$modelDir = $base.'/app/Models';
 
 @mkdir($enumDir, 0777, true);
 @mkdir($modelDir, 0777, true);
@@ -57,8 +57,8 @@ foreach ($enums as $name => $cases) {
     foreach ($cases as [$case, $value]) {
         $lines[] = "    case {$case} = '{$value}';";
     }
-    $body = "enum {$name}: string\n{\n" . implode("\n", $lines) . "\n}\n";
-    file_put_contents($enumDir . '/' . $name . '.php', "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$ns};\n\n" . $body);
+    $body = "enum {$name}: string\n{\n".implode("\n", $lines)."\n}\n";
+    file_put_contents($enumDir.'/'.$name.'.php', "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$ns};\n\n".$body);
 }
 
 /* ------------------------- Models ------------------------- */
@@ -311,16 +311,16 @@ foreach ($models as $name => $spec) {
     $methods = [];
 
     $props[] = "    protected \$table = '{$spec['table']}';";
-    $props[] = "    protected \$guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок";
+    $props[] = '    protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок';
 
-    if (!empty($spec['softDeletes'])) {
-        $props[] = "    use \\Illuminate\\Database\\Eloquent\\SoftDeletes;";
+    if (! empty($spec['softDeletes'])) {
+        $props[] = '    use \\Illuminate\\Database\\Eloquent\\SoftDeletes;';
     }
-    if (!empty($spec['noTimestamps'])) {
-        $props[] = "    public \$timestamps = false;";
+    if (! empty($spec['noTimestamps'])) {
+        $props[] = '    public $timestamps = false;';
     }
-    if (!empty($spec['casts'])) {
-        $props[] = "    protected function casts(): array\n    {\n        return [\n" . castLines($spec['casts']) . "\n        ];\n    }";
+    if (! empty($spec['casts'])) {
+        $props[] = "    protected function casts(): array\n    {\n        return [\n".castLines($spec['casts'])."\n        ];\n    }";
     }
 
     foreach (explode(' | ', $spec['relations'] ?? '') as $rel) {
@@ -332,13 +332,13 @@ foreach ($models as $name => $spec) {
 
     $php = "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$modelsNs};\n\nuse Illuminate\\Database\\Eloquent\\Model;\nuse Illuminate\\Database\\Eloquent\\Relations\\BelongsTo;\nuse Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany;\nuse Illuminate\\Database\\Eloquent\\Relations\\HasMany;\nuse Illuminate\\Database\\Eloquent\\Relations\\HasOne;\n\n";
     $php .= "class {$name} extends Model\n{\n";
-    $php .= implode("\n", $props) . "\n";
+    $php .= implode("\n", $props)."\n";
     if ($methods) {
-        $php .= "\n" . implode("", $methods);
+        $php .= "\n".implode('', $methods);
     }
     $php .= "}\n";
 
-    file_put_contents($modelDir . '/' . $name . '.php', $php);
+    file_put_contents($modelDir.'/'.$name.'.php', $php);
 }
 
 function castLines(array $casts): string
@@ -351,6 +351,7 @@ function castLines(array $casts): string
             $lines[] = "            '{$field}' => \\App\\Shared\\Enums\\{$cast}::class";
         }
     }
+
     return implode(",\n", $lines);
 }
 
@@ -361,6 +362,7 @@ function relationMethod(string $rel): string
 
     if ($kind === 'mt') {
         [$class, $method, $pivot, $fk, $rk] = $parts;
+
         return "    public function {$method}(): BelongsToMany\n    {\n        return \$this->belongsToMany({$class}::class, '{$pivot}', '{$fk}', '{$rk}');\n    }\n\n";
     }
 
@@ -377,6 +379,6 @@ function relationMethod(string $rel): string
     return "    public function {$method}(): {$type}\n    {\n        return \$this->{$ret}({$cls}, '{$fk}');\n    }\n\n";
 }
 
-echo 'Enums written: ' . count($enums) . PHP_EOL;
-echo 'Models written: ' . count($models) . PHP_EOL;
+echo 'Enums written: '.count($enums).PHP_EOL;
+echo 'Models written: '.count($models).PHP_EOL;
 echo "Done\n";

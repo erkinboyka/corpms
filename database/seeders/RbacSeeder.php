@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\RolePermission;
 use App\Shared\Permissions\PermissionMatrix;
 use Illuminate\Database\Seeder;
 
@@ -16,18 +19,18 @@ class RbacSeeder extends Seeder
     {
         // --- permissions ---
         foreach (PermissionMatrix::all() as $slug => [$name, $group]) {
-            \App\Models\Permission::updateOrCreate(
+            Permission::updateOrCreate(
                 ['slug' => $slug],
                 ['name' => $name, 'group' => $group],
             );
         }
 
         $rules = self::rules();
-        $pIds = \App\Models\Permission::query()->pluck('id', 'slug');
+        $pIds = Permission::query()->pluck('id', 'slug');
 
         // --- roles ---
         foreach ($rules['roles'] as $role) {
-            \App\Models\Role::updateOrCreate(
+            Role::updateOrCreate(
                 ['slug' => $role],
                 [
                     'name' => $rules['roleNames'][$role],
@@ -37,12 +40,12 @@ class RbacSeeder extends Seeder
             );
         }
 
-        $rIds = \App\Models\Role::query()->pluck('id', 'slug');
+        $rIds = Role::query()->pluck('id', 'slug');
 
         // --- role_permissions ---
         foreach ($rules['matrix'] as $roleSlug => $permScopes) {
             foreach ($permScopes as $permSlug => $scope) {
-                \App\Models\RolePermission::updateOrCreate(
+                RolePermission::updateOrCreate(
                     ['role_id' => $rIds[$roleSlug], 'permission_id' => $pIds[$permSlug]],
                     ['scope' => $scope],
                 );

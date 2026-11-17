@@ -23,7 +23,9 @@ use LogicException;
 final class WorkflowEngine
 {
     public const SUBJECT_DOCUMENT = 'document';
+
     public const SUBJECT_LEAVE = 'leave_request';
+
     public const SUBJECT_PAYROLL = 'payroll_period';
 
     /**

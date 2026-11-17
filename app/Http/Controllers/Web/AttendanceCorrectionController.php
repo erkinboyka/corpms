@@ -11,6 +11,7 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Shared\Enums\PermissionScope;
 use App\Support\PermissionService;
+use App\Support\TenantGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -75,7 +76,7 @@ class AttendanceCorrectionController extends Controller
         if (($validated['employee_id'] ?? null) !== null && (int) $validated['employee_id'] !== (int) $me->id) {
             $target = Employee::query()->findOrFail($validated['employee_id']);
             // тенант-проверка до scope: чужая компания — 403 независимо от scope
-            \App\Support\TenantGuard::ensureEmployee($target, $me);
+            TenantGuard::ensureEmployee($target, $me);
             if ($this->canTouch($request->user(), $target, 'attendance.correct') === false) {
                 abort(403, 'Нет прав на корректировку этого сотрудника');
             }

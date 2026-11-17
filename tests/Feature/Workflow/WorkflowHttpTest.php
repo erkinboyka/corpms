@@ -12,6 +12,7 @@ use App\Models\DocumentWorkflow;
 use App\Models\DocumentWorkflowStep;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
+use App\Models\LeaveRequest;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RbacSeeder;
@@ -28,7 +29,9 @@ class WorkflowHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
 
     protected function setUp(): void
@@ -91,10 +94,10 @@ class WorkflowHttpTest extends TestCase
     {
         $document = $this->makeDocument('Приказ №1');
 
-        $this->post('/documents/' . $document->id . '/submit')->assertRedirect()->assertSessionHas('status');
-        $this->post('/documents/' . $document->id . '/decide', ['decision' => 'approved'])->assertRedirect()->assertSessionHas('status');
-        $this->post('/documents/' . $document->id . '/register')->assertRedirect()->assertSessionHas('status');
-        $this->post('/documents/' . $document->id . '/archive')->assertRedirect()->assertSessionHas('status');
+        $this->post('/documents/'.$document->id.'/submit')->assertRedirect()->assertSessionHas('status');
+        $this->post('/documents/'.$document->id.'/decide', ['decision' => 'approved'])->assertRedirect()->assertSessionHas('status');
+        $this->post('/documents/'.$document->id.'/register')->assertRedirect()->assertSessionHas('status');
+        $this->post('/documents/'.$document->id.'/archive')->assertRedirect()->assertSessionHas('status');
 
         $this->assertSame('archived', $document->refresh()->status->value);
 
@@ -115,7 +118,7 @@ class WorkflowHttpTest extends TestCase
         $this->assertSame($this->adminUser->id, $history->last()->actor_user_id);
 
         // таймлайн виден в карточке документа
-        $this->get('/documents/' . $document->id)
+        $this->get('/documents/'.$document->id)
             ->assertOk()
             ->assertSee('История согласования')
             ->assertSee('Отправлено на согласование')
@@ -134,7 +137,7 @@ class WorkflowHttpTest extends TestCase
             'reason' => 'Отдых',
         ])->assertRedirect();
 
-        $leave = \App\Models\LeaveRequest::query()->sole();
+        $leave = LeaveRequest::query()->sole();
         $this->assertSame('pending', $leave->status->value);
 
         // журнал: создание заявки (null → pending)
@@ -144,13 +147,13 @@ class WorkflowHttpTest extends TestCase
         $this->assertSame(['pending'], $history->pluck('to_status')->all());
 
         // согласование
-        $this->put('/leaves/' . $leave->id . '/decision', ['decision' => 'approved'])
+        $this->put('/leaves/'.$leave->id.'/decision', ['decision' => 'approved'])
             ->assertRedirect()
             ->assertSessionHas('status');
         $this->assertSame('approved', $leave->refresh()->status->value);
 
         // повторное решение — ошибка формы (не 500), статус не меняется
-        $decision = $this->put('/leaves/' . $leave->id . '/decision', ['decision' => 'rejected'])
+        $decision = $this->put('/leaves/'.$leave->id.'/decision', ['decision' => 'rejected'])
             ->assertRedirect()
             ->assertSessionHasErrors('field');
         $this->assertSame('approved', $leave->refresh()->status->value);
@@ -179,30 +182,30 @@ class WorkflowHttpTest extends TestCase
         $document = $this->makeDocument('Приказ №2');
 
         // черновик нельзя зарегистрировать
-        $this->post('/documents/' . $document->id . '/register')
+        $this->post('/documents/'.$document->id.'/register')
             ->assertRedirect()
             ->assertSessionHasErrors('field');
         $this->assertSame('draft', $document->refresh()->status->value);
 
         // повторная отправка на согласование
-        $this->post('/documents/' . $document->id . '/submit')->assertRedirect();
-        $this->post('/documents/' . $document->id . '/submit')
+        $this->post('/documents/'.$document->id.'/submit')->assertRedirect();
+        $this->post('/documents/'.$document->id.'/submit')
             ->assertRedirect()
             ->assertSessionHasErrors('field');
         $this->assertSame('submitted', $document->refresh()->status->value);
 
         // повторное решение после согласования
-        $this->post('/documents/' . $document->id . '/decide', ['decision' => 'approved'])->assertRedirect();
+        $this->post('/documents/'.$document->id.'/decide', ['decision' => 'approved'])->assertRedirect();
         $this->assertSame('approved', $document->refresh()->status->value);
-        $this->post('/documents/' . $document->id . '/decide', ['decision' => 'approved'])
+        $this->post('/documents/'.$document->id.'/decide', ['decision' => 'approved'])
             ->assertRedirect()
             ->assertSessionHasErrors('field');
         $this->assertSame('approved', $document->refresh()->status->value);
 
         // повторная архивация
-        $this->post('/documents/' . $document->id . '/register')->assertRedirect();
-        $this->post('/documents/' . $document->id . '/archive')->assertRedirect();
-        $this->post('/documents/' . $document->id . '/archive')
+        $this->post('/documents/'.$document->id.'/register')->assertRedirect();
+        $this->post('/documents/'.$document->id.'/archive')->assertRedirect();
+        $this->post('/documents/'.$document->id.'/archive')
             ->assertRedirect()
             ->assertSessionHasErrors('field');
         $this->assertSame('archived', $document->refresh()->status->value);

@@ -15,9 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class DeviceTokenAuth
 {
-    public function __construct(protected BiometricService $biometric)
-    {
-    }
+    public function __construct(protected BiometricService $biometric) {}
 
     public function handle(Request $request, Closure $next): Response
     {

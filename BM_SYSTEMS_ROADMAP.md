@@ -90,7 +90,14 @@
     каждый вызов/отказ пишется в audit_logs, критические операции не пишут
     в БД — **выполнено** (`AiToolRegistry`, один раунд tool_calls в
     `postWithTools`, kill-switch `AI_TOOLS`, тесты `AiToolCallingTest` — 9/9)
-- [ ] **D6** AI Memory (контекст между сессиями), AI Insights, AI Reports/Charts/Doc Generator
+- [x] **D6** AI Memory (контекст между сессиями), AI Insights, AI Reports/Charts/Doc Generator
+  - Критерий: AI помнит контекст пользователя между сессиями (только явные
+    команды «запомни/забудь», изоляция по сотруднику, лимит 50 записей),
+    инсайты и сводный отчёт считаются детерминированно по фактам с учётом
+    прав (`local_only` — не подменяются LLM), генератор документов отдаёт
+    черновик блоком `text` без записи в БД — **выполнено**
+    (`AiMemoryService`, `intentMemory/Insights/SummaryReport/DocGenerator`,
+    тесты `AiMemoryInsightsTest` — 9/9)
 
 ## Фаза E — Целевые модули ТЗ (P4)
 
@@ -107,7 +114,7 @@
 
 ## Инфраструктура (рекомендовано до прод-эксплуатации)
 
-- [ ] Git-репозиторий + CI (Pint, тесты на изменение)
+- [~] Git-репозиторий готов (init + первый коммит `97841f1`), CI (Pint, тесты на изменение) — не настроен
 - [x] **SESSION_SECURE_COOKIE**, CSP (в составе S6)
 - [ ] Очереди/Redis для AI и экспортов
 - [ ] Мониторинг/алерты (сейчас только `db:backup`, `markOverdue`, `detect-missing`)

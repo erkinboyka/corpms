@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PayrollPeriod extends Model
 {
     protected $table = 'payroll_periods';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
 
     protected function casts(): array
@@ -61,6 +62,6 @@ class PayrollPeriod extends Model
     /** Подпись периода: «01.10.2026 — 31.10.2026». */
     public function label(): string
     {
-        return $this->period_start->format('d.m.Y') . ' — ' . $this->period_end->format('d.m.Y');
+        return $this->period_start->format('d.m.Y').' — '.$this->period_end->format('d.m.Y');
     }
 }

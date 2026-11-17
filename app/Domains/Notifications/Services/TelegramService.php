@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domains\Notifications\Services;
 
+use App\Models\AttendanceRecord;
 use App\Models\Employee;
+use App\Models\Task;
+use App\Models\TaskAssignment;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -20,9 +23,7 @@ class TelegramService
     /** Метка кода привязки и время действия (минуты). */
     protected const LINK_CODE_TTL_MINUTES = 30;
 
-    public function __construct(protected NotificationService $notifications)
-    {
-    }
+    public function __construct(protected NotificationService $notifications) {}
 
     /* -------------------- привязка -------------------- */
 
@@ -67,7 +68,7 @@ class TelegramService
             'telegram_link_expires_at' => null,
         ])->save();
 
-        $name = $employee->last_name . ' ' . $employee->first_name;
+        $name = $employee->last_name.' '.$employee->first_name;
 
         return "Привязка выполнена, {$name}. Сейчас тут доступны: /status — сводка за сегодня, /help — справка.";
     }
@@ -79,7 +80,7 @@ class TelegramService
     {
         $message = $update['message'] ?? null;
 
-        if (!isset($message['text']) || !isset($message['chat']['id'])) {
+        if (! isset($message['text']) || ! isset($message['chat']['id'])) {
             return false;
         }
 
@@ -95,7 +96,7 @@ class TelegramService
     {
         // /start XYZ123 (плюс @botname суффикс: "/start@CorpMS_bot ABC")
         if (preg_match('#^/start(?:@\S+)?(?:\s+(\S+))?$#u', $text, $m) === 1) {
-            if (!isset($m[1])) {
+            if (! isset($m[1])) {
                 return 'Отправьте /start <код привязки> (получите код в личном кабинете CorpMS).';
             }
 
@@ -124,35 +125,35 @@ class TelegramService
 
     protected function statusReply(Employee $employee): string
     {
-        $today = \App\Models\AttendanceRecord::query()
+        $today = AttendanceRecord::query()
             ->where('employee_id', $employee->id)
             ->whereDate('date', now()->toDateString())
             ->first();
 
         $lines = [];
 
-        $lines[] = 'Табель за ' . now()->format('d.m.Y') . ':';
+        $lines[] = 'Табель за '.now()->format('d.m.Y').':';
 
         if ($today !== null) {
-            $lines[] = 'Статус: ' . $today->status->value;
-            $lines[] = 'Вход: ' . ($today->clock_in_at?->format('H:i') ?? '—');
-            $lines[] = 'Выход: ' . ($today->clock_out_at?->format('H:i') ?? '—');
-            $lines[] = 'Отработано: ' . $today->worked_minutes . ' мин.';
+            $lines[] = 'Статус: '.$today->status->value;
+            $lines[] = 'Вход: '.($today->clock_in_at?->format('H:i') ?? '—');
+            $lines[] = 'Выход: '.($today->clock_out_at?->format('H:i') ?? '—');
+            $lines[] = 'Отработано: '.$today->worked_minutes.' мин.';
         } else {
             $lines[] = 'Записей нет.';
         }
 
-        $openTasks = \App\Models\Task::query()
-            ->whereIn('id', \App\Models\TaskAssignment::query()
+        $openTasks = Task::query()
+            ->whereIn('id', TaskAssignment::query()
                 ->where('employee_id', $employee->id)
                 ->select('task_id'))
             ->whereIn('status', ['new', 'in_progress', 'review'])
             ->count();
 
-        $lines[] = 'Открытых задач: ' . $openTasks;
+        $lines[] = 'Открытых задач: '.$openTasks;
 
         $unread = $this->notifications->unreadCount($employee);
-        $lines[] = 'Новых уведомлений: ' . $unread;
+        $lines[] = 'Новых уведомлений: '.$unread;
 
         return implode("\n", $lines);
     }

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -30,7 +31,7 @@ class AuditController extends Controller
 
         $action = request('action');
         if ($action !== null && $action !== '') {
-            $q->where('action', 'like', $action . '%');
+            $q->where('action', 'like', $action.'%');
         }
 
         $userId = request('user_id');
@@ -39,11 +40,11 @@ class AuditController extends Controller
         }
 
         if (filled(request('from'))) {
-            $from = \Carbon\Carbon::parse((string) request('from'))->startOfDay();
+            $from = Carbon::parse((string) request('from'))->startOfDay();
             $q->where('created_at', '>=', $from);
         }
         if (filled(request('to'))) {
-            $to = \Carbon\Carbon::parse((string) request('to'))->endOfDay();
+            $to = Carbon::parse((string) request('to'))->endOfDay();
             $q->where('created_at', '<=', $to);
         }
 

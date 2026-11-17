@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Web;
 
 use App\Models\Company;
-use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Position;
@@ -23,7 +22,9 @@ class OrgStructureHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
 
     protected function setUp(): void
@@ -83,10 +84,10 @@ class OrgStructureHttpTest extends TestCase
 
         $this->get('/employees?q=Ива')->assertOk()->assertSee('Иванов');
 
-        $this->get('/employees/' . $employee->id)->assertOk()->assertSee('Профиль');
+        $this->get('/employees/'.$employee->id)->assertOk()->assertSee('Профиль');
 
         $this->followingRedirects()
-            ->patch('/employees/' . $employee->id, [
+            ->patch('/employees/'.$employee->id, [
                 'first_name' => 'Иван',
                 'last_name' => 'Иванов',
                 'employee_no' => 'E-1',
@@ -97,7 +98,7 @@ class OrgStructureHttpTest extends TestCase
 
         $role = Role::query()->where('slug', 'employee')->first();
 
-        $this->put('/employees/' . $employee->id . '/roles', ['role_ids' => [$role->id]])
+        $this->put('/employees/'.$employee->id.'/roles', ['role_ids' => [$role->id]])
             ->assertRedirect()
             ->assertSessionHas('status');
 

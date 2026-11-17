@@ -15,9 +15,7 @@ use App\Shared\Enums\AttendanceStatus;
  */
 class NotifyOnLateArrival
 {
-    public function __construct(protected NotificationService $notifications)
-    {
-    }
+    public function __construct(protected NotificationService $notifications) {}
 
     public function handle(AttendanceRecorded $event): void
     {
@@ -30,7 +28,7 @@ class NotifyOnLateArrival
         $employee = $record->employee;
         $when = $record->clock_in_at?->format('H:i');
         $minutes = (int) $record->late_minutes;
-        $name = $employee->last_name . ' ' . $employee->first_name;
+        $name = $employee->last_name.' '.$employee->first_name;
 
         // сотрудник: тихо, in-app
         $this->notifications->notify(

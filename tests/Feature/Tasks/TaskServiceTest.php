@@ -9,15 +9,18 @@ use App\Domains\Tasks\Services\TaskService;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\EmployeeRole;
+use App\Models\Role;
 use App\Models\Task;
 use App\Models\TaskAssignment;
 use App\Models\TaskTimeLog;
 use App\Models\User;
 use App\Shared\Enums\AssigneeType;
+use App\Shared\Enums\PermissionScope;
 use App\Shared\Enums\TaskAssignmentStatus;
 use App\Shared\Enums\TaskPriority;
 use App\Shared\Enums\TaskStatus;
-use App\Shared\Enums\TaskType;
+use App\Support\PermissionService;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -32,10 +35,15 @@ class TaskServiceTest extends TestCase
     use RefreshDatabase;
 
     protected TaskService $service;
+
     protected Company $company;
+
     protected Department $itDept;
+
     protected Employee $director;
+
     protected Employee $worker;
+
     protected Employee $worker2;
 
     protected function setUp(): void
@@ -304,14 +312,14 @@ class TaskServiceTest extends TestCase
 
     public function test_task_permission_scopes_differ_by_role(): void
     {
-        $permissions = app(\App\Support\PermissionService::class);
+        $permissions = app(PermissionService::class);
 
         $this->attachRole($this->director, 'department_director');
         $this->attachRole($this->worker, 'employee');
 
         // руководитель отдела: dept-скоуп
         $this->assertSame(
-            \App\Shared\Enums\PermissionScope::Department,
+            PermissionScope::Department,
             $permissions->can($this->director->user, 'tasks.view')
         );
         // чтобы закрепить скоуп на объекте: основной задачей с тем же отделом — доступен
@@ -323,16 +331,16 @@ class TaskServiceTest extends TestCase
 
         // рядовой сотрудник: own-скоуп
         $this->assertSame(
-            \App\Shared\Enums\PermissionScope::Own,
+            PermissionScope::Own,
             $permissions->can($this->worker->user, 'tasks.view')
         );
 
         // dept-требование рядовому сотруднику недоступно, own-требование — доступно
         $this->assertFalse(
-            $permissions->checkScope($this->worker->user, 'tasks.view', \App\Shared\Enums\PermissionScope::Department)
+            $permissions->checkScope($this->worker->user, 'tasks.view', PermissionScope::Department)
         );
         $this->assertTrue(
-            $permissions->checkScope($this->worker->user, 'tasks.view', \App\Shared\Enums\PermissionScope::Own)
+            $permissions->checkScope($this->worker->user, 'tasks.view', PermissionScope::Own)
         );
     }
 
@@ -340,9 +348,9 @@ class TaskServiceTest extends TestCase
 
     protected function attachRole(Employee $employee, string $roleSlug): void
     {
-        $roleId = \App\Models\Role::query()->where('slug', $roleSlug)->value('id');
+        $roleId = Role::query()->where('slug', $roleSlug)->value('id');
 
-        \App\Models\EmployeeRole::create([
+        EmployeeRole::create([
             'employee_id' => $employee->id,
             'role_id' => $roleId,
         ]);

@@ -33,6 +33,7 @@ class AiAssistantService
         protected AuditService $audit,
         protected DocumentRagService $rag,
         protected AiToolRegistry $tools,
+        protected AiMemoryService $memory,
     ) {}
 
     public function ask(Employee $asker, string $question): AiConversation
@@ -146,6 +147,23 @@ class AiAssistantService
             .implode("\n", $lines);
     }
 
+    /**
+     * D6 (AI Memory): блок «Память о сотруднике» для системного промпта LLM.
+     * Пустой блок — когда память не заполнена или её не удалось прочитать.
+     */
+    protected function memoryContext(?Employee $asker): string
+    {
+        if ($asker === null) {
+            return '';
+        }
+
+        try {
+            return $this->memory->contextBlock($asker);
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
     /* -------------------- факты -------------------- */
 
     /**
@@ -226,7 +244,8 @@ class AiAssistantService
         $system = 'Ты ассистент HR-аналитики корпоративной системы. '
             .'Отвечай только на основе приведённых фактов; если фактов не хватает — скажи об этом. '
             .'Учитывай предыдущие реплики диалога: уточнения и местоимения относи к уже заданным вопросам.'
-            .$this->ragSystemMessage($rag);
+            .$this->ragSystemMessage($rag)
+            .$this->memoryContext($asker);
 
         $messages = [
             ['role' => 'system', 'content' => $system],

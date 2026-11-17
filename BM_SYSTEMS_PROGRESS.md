@@ -376,13 +376,72 @@
   с результатом поиска, grounded=true, аудит), фолбэк при 500 от LLM
   (Queue::fake, grounded=false, локальный ответ).
 
+### 21. D6 — AI Memory, AI Insights, сводный отчёт, Doc Generator (P3)
+
+- **AI Memory (долговременная память ассистента):**
+  - миграция `2026_11_17_194313_create_ai_memories_table` (**применена**):
+    `employee_id` FK cascade, `memory_key` (64), `memory_value` (500), `source`,
+    unique(employee_id, memory_key);
+  - `app/Models/AiMemory.php` (новый) + `app/Domains/Ai/Services/AiMemoryService.php`
+    (новый): `remember()` — upsert + вытеснение старейших (MAX_MEMORIES=50),
+    `recall()`, `forget()`, `contextBlock()` (CONTEXT_LIMIT=20 записей в промпт),
+    `normalizeKey()`; все операции в try/catch — память не ломает ответ;
+  - `AiAssistantService`: 6-я зависимость `AiMemoryService`, метод
+    `memoryContext(?Employee)`, блок «Память о сотруднике» в системном
+    промпте LLM (`llmAnswer`);
+  - команды в панели (`intentMemory`, работает на оригинальном вопросе —
+    регистр значений сохраняется): «запомни: ключ — значение» / «запомни …»
+    (сплит по `—`/`:`/`=`), «забудь …», «что помнишь?» / «покажи память»;
+  - изоляция: память привязана к сотруднику, чужие записи не видны и не
+    удаляются; пишется **только по явной команде** (автосохранения нет);
+  - флаг `local_only`: детерминированные команды не переопределяются
+    LLM-ответом и не ставят фоновый повтор `RetryAiAnswer`;
+  - `AiPanelService::llmAnswerPanel` также получает `memoryContext($asker)`.
+- **AI Insights («на что обратить внимание»):** `intentInsights` — ключи
+  «инсайт/на что обратить/что не так/аномал/сводка дня/порекомендуй»;
+  сигналы: просроченные/жищущие проверки задачи, опоздавшие/отсутствующие,
+  заявки на отпуск без решения, own-scope «нет отметки прихода»; ответ —
+  блок `text` (нумерованный список) + `actions` с проверкой прав;
+  «спокойный» ответ, когда отклонений нет. `local_only`.
+- **Сводный отчёт:** `intentSummaryReport` — ключи «сводный/общий отчёт,
+  сводка по компании, полная сводка»; chart (ключевые показатели) + table +
+  actions (`reports.index`, `reports.hr`, `analytics.index` при правах);
+  при scope own — вежливый отказ. `local_only`.
+- **Doc Generator:** `intentDocGenerator` — «сформируй справку/приказ/
+  служебную записку» → детерминированный черновик из фактов как блок
+  `type=text` + deep-link `documents.templates` (право
+  `documents.templates.view`) / `documents.index`; **без записи в БД**
+  (консистентно с D5). `local_only`.
+- **Контракт панели:** новый блок `type=text` — `renderText()` в
+  `ai-panel.js` (`<pre class="ai-text">`, escapeHtml, pre-wrap), стиль
+  `.ai-text` в `ai-panel.css`; `sanitizeBlocks` принимает `text` (strip HTML,
+  ≤4000 символов, заголовок ≤80); 3 новых чипа-подсказки в
+  `partials/ai-panel.blade.php` («Инсайты», «Сводный отчёт», «Запомнить»).
+- **Исправлен существующий баг URL:** `route()` возвращает абсолютный URL
+  (`http://corpms.local/...`), а `ai-panel.js` рендерит только пути с `/` —
+  хелпер `action()` теперь нормализует через `relativeUrl()` (path + query +
+  fragment). Ранее кнопки-ссылки в блоках `actions` могли не отображаться.
+- `app/Domains/Ai/Services/AiPanelService.php`: цепочка intent-ов дополнена
+  `intentMemory → … → intentDocGenerator → … → intentInsights →
+  intentSummaryReport → navigate`; `build()` возвращает `local_only`;
+  `persist()` не делает `queueRetry` при `local_only`.
+- `tests/Feature/Web/AiMemoryInsightsTest.php` (новый): **9 тестов, 51
+  assertion** — remember/recall/forget через панель, изоляция между
+  сотрудниками, memory-команды без LLM/ретрая (`Http::assertNothingSent` +
+  `Queue::assertNothingPushed`), память в system-промпте LLM
+  (`Http::assertSent`), insights own-scope (просроченная задача + нет
+  отметки, `local_only`), insights «спокойный» ответ (созданы present-записи
+  обоим сотрудникам), сводный отчёт (chart+table+actions `/reports`),
+  docgen без записи в documents (0 строк), санитизация LLM `text`-блока
+  (нет `<`, ≤4000, actions с внешним URL отброшен).
+
 ## Проверки
 
 | Проверка | Результат |
 |---|---|
-| `php artisan test --compact` (после всех правок и Pint) | **320/320, 1647 assertions** |
-| `vendor/bin/pint <изменённые файлы>` | выполнено, стилизация применена |
-| `php artisan migrate` | миграции маскировки и `document_chunks` применены |
+| `php artisan test --compact` (после всех правок и Pint) | **329/329, 1698 assertions** |
+| `vendor/bin/pint --format agent` (весь проект) | выполнено, стилизация применена |
+| `php artisan migrate` | миграции маскировки, `document_chunks` и `ai_memories` применены |
 
 ## Изменённые файлы (сессия 17.11.2026)
 
@@ -390,10 +449,12 @@
 app/Domains/Audit/Services/AuditService.php
 app/Domains/Ai/Jobs/RetryAiAnswer.php (новый)
 app/Domains/Ai/Services/AiAssistantService.php
+app/Domains/Ai/Services/AiMemoryService.php (новый)
 app/Domains/Ai/Services/AiPanelService.php
 app/Domains/Ai/Services/AiToolRegistry.php (новый)
 app/Domains/Ai/Services/DocumentRagService.php (новый)
 app/Console/Commands/IndexAiDocuments.php (новый)
+app/Models/AiMemory.php (новый)
 app/Models/DocumentChunk.php (новый)
 app/Models/Document.php
 app/Domains/Documents/Services/DocumentService.php
@@ -414,6 +475,7 @@ app/Support/HtmlSanitizer.php
 config/corpms.php
 database/migrations/2026_11_16_215115_mask_secret_values_in_audit_logs.php
 database/migrations/2026_11_17_073209_create_document_chunks_table.php (новый)
+database/migrations/2026_11_17_194313_create_ai_memories_table.php (новый)
 resources/views/auth/forgot-password.blade.php (новый)
 resources/views/auth/login.blade.php
 resources/views/auth/reset-password.blade.php (новый)
@@ -430,6 +492,7 @@ resources/views/partials/sidebar.blade.php
 resources/views/payroll/period.blade.php
 resources/views/admin/users.blade.php
 resources/views/tasks/index.blade.php
+public/assets/css/ai-panel.css
 public/assets/css/effects.css
 public/assets/js/ai-panel.js
 public/assets/js/corpms.js
@@ -442,6 +505,7 @@ tests/Feature/TenantIsolationHttpTest.php
 tests/Feature/TenantListScopeHttpTest.php
 tests/Feature/Web/AnalyticsAndSystemHttpTest.php
 tests/Feature/Web/AiAndLiveFeedHttpTest.php
+tests/Feature/Web/AiMemoryInsightsTest.php (новый)
 tests/Feature/Web/AiRetryQueueTest.php (новый)
 tests/Feature/Web/AiRagRetrievalTest.php (новый)
 tests/Feature/Web/AiToolCallingTest.php (новый)
@@ -471,7 +535,7 @@ BM_SYSTEMS_PROGRESS.md (новый)
   палитра Ctrl+K с permission-фильтром и поиском; Kanban-перенос для тач-устройств
   (меню на карточке, DnD сохранён); скелетоны/`aria-busy` для AJAX-блоков
   (поиск, AI-панель, kanban). Фаза C закрыта.
-- Фаза D (AI): **S10, D3, D4, D5 выполнены** — история диалога в контексте LLM (оба вызова:
+- Фаза D (AI): **S10, D3, D4, D5, D6 выполнены** — история диалога в контексте LLM (оба вызова:
   `/ai` и `/ai/message`), честный `grounded`; синхронный вызов LLM ограничен
   потолком 8 с, при сбое — локальный фолбэк + фоновый повтор `RetryAiAnswer`
   в очереди (database); RAG — чанки документов + embeddings (`DocumentRagService`,
@@ -479,21 +543,23 @@ BM_SYSTEMS_PROGRESS.md (новый)
   `ai:index-documents`); tool calling — белый список инструментов
   (`AiToolRegistry`: валидация аргументов, аудит вызовов, один раунд
   tool_calls в LLM-запросе, критические операции только через deep-link
-  подтверждения — ИИ не пишет в БД). Фаза D: остаётся D6 (AI Memory).
-- Тесты: **320/320, 1647 assertions**.
+  подтверждения — ИИ не пишет в БД); AI Memory (`AiMemoryService`, только
+  явные команды, изоляция по сотруднику, память в промпте LLM), AI Insights
+  и сводный отчёт (`local_only`, детерминированные), Doc Generator (черновик
+  `text`-блоком без записи в БД), исправлен баг абсолютных URL в actions
+  панели (`relativeUrl()`). **Фаза D закрыта.**
+- Тесты: **329/329, 1698 assertions**.
 
 ## Следующая задача (высший приоритет)
 
-**D6 — AI Memory (контекст между сессиями), AI Insights, AI Reports (P3).**
-Критерий: AI помнит предпочтения/контекст пользователя между сессиями,
-insights/отчёты на данных компании с учётом прав. Git-репозиторий остаётся
-заблокированным (git не установлен в системе). Затем — фаза E (модули ТЗ:
-ERP → CRM → Finance).
+**Фаза E — модули ТЗ: E1 ERP → E2 CRM → E3 Finance** (склады/остатки/закупки,
+клиенты/сделки/воронка, счета/платежи/бюджеты), затем E4 Accounting →
+E5 Projects. Параллельно — инфраструктура: CI (Pint + тесты на коммит),
+worker `queue:work` для фоновых AI-повторов и экспортов, Redis/мониторинг.
+Git-репозиторий готов (первый коммит `97841f1`), CI ещё не настроен.
 
 ## Известные ограничения
 
-- Нет git → нет веток и `pint --dirty`; изменения отслеживаются в этом файле.
-  Git не установлен в системе — задача «Git-репозиторий» заблокирована до установки.
 - `.env`: живой AI-ключ, `APP_DEBUG=true`, БД root без пароля — не изменялось (секреты).
 - Очередь настроена (`queue.default=database`, таблицы `jobs`/`failed_jobs` есть),
   но worker (`php artisan queue:work`) не запущен — фоновые AI-повторы

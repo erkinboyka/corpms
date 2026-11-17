@@ -12,6 +12,7 @@ use App\Models\DocumentWorkflowStep;
 use App\Models\Role;
 use App\Shared\Enums\WorkflowAction;
 use App\Shared\Enums\WorkflowActorType;
+use App\Support\PermissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,12 +28,11 @@ class WorkflowController extends Controller
 
     public function __construct(
         protected AuditService $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
-        $me = app(\App\Support\PermissionService::class)->employee($request->user());
+        $me = app(PermissionService::class)->employee($request->user());
         if ($me === null) {
             abort(403, 'Нет карточки сотрудника');
         }
@@ -71,7 +71,7 @@ class WorkflowController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $me = app(\App\Support\PermissionService::class)->employee($user);
+        $me = app(PermissionService::class)->employee($user);
         if ($me === null) {
             abort(403, 'Нет карточки сотрудника');
         }
@@ -79,7 +79,7 @@ class WorkflowController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'applicable_categories' => ['nullable', 'string', 'max:200'],
-            'steps' => ['required', 'array', 'min:1', 'max:' . self::MAX_STEPS],
+            'steps' => ['required', 'array', 'min:1', 'max:'.self::MAX_STEPS],
             'steps.*.name' => ['required', 'string', 'max:150'],
             'steps.*.actor_type' => ['required', 'in:role,department,employee,author,ceo'],
             'steps.*.role_id' => ['nullable', 'exists:roles,id'],
@@ -124,6 +124,6 @@ class WorkflowController extends Controller
             'steps' => count($validated['steps']),
         ]);
 
-        return redirect()->route('workflows.index')->with('status', 'Маршрут «' . $workflow->name . '» создан');
+        return redirect()->route('workflows.index')->with('status', 'Маршрут «'.$workflow->name.'» создан');
     }
 }

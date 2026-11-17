@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Shared\Enums\PermissionScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RolePermission extends Model
 {
     protected $table = 'role_permissions';
+
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
+
     protected function casts(): array
     {
         return [
-            'scope' => \App\Shared\Enums\PermissionScope::class
+            'scope' => PermissionScope::class,
         ];
     }
 
@@ -30,5 +30,4 @@ class RolePermission extends Model
     {
         return $this->belongsTo(Permission::class, 'permission_id');
     }
-
 }

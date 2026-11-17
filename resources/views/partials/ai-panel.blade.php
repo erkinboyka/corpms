@@ -44,6 +44,15 @@
             <button type="button" class="crm-ai__chip" data-ai-chip="Численность по отделам">
                 <i class="ti ti-users me-1"></i>Численность по отделам
             </button>
+            <button type="button" class="crm-ai__chip" data-ai-chip="На что обратить внимание?">
+                <i class="ti ti-bulb me-1"></i>Инсайты
+            </button>
+            <button type="button" class="crm-ai__chip" data-ai-chip="Построй сводный отчёт">
+                <i class="ti ti-report me-1"></i>Сводный отчёт
+            </button>
+            <button type="button" class="crm-ai__chip" data-ai-chip="Запомни: мой проект — Альфа">
+                <i class="ti ti-brain me-1"></i>Запомнить
+            </button>
         </div>
 
         <div class="ai-typing" id="ai-typing" hidden role="status" aria-label="Ассистент печатает">

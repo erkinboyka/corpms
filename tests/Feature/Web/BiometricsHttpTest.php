@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Domains\Biometric\Services\BiometricService;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEnrollment;
+use App\Models\BiometricEvent;
 use App\Models\BiometricProfile;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\WorkSchedule;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,9 +27,13 @@ class BiometricsHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
+
     protected User $workerUser;
+
     protected Employee $worker;
 
     protected function setUp(): void
@@ -47,7 +54,7 @@ class BiometricsHttpTest extends TestCase
         $this->workerUser = User::factory()->create();
         $this->worker = $this->employee('W-1', 'Пётр', 'Работников', $this->workerUser->id);
 
-        $schedule = \App\Models\WorkSchedule::create([
+        $schedule = WorkSchedule::create([
             'company_id' => $this->company->id,
             'name' => 'std',
             'type' => 'standard',
@@ -84,7 +91,7 @@ class BiometricsHttpTest extends TestCase
         return BiometricDevice::create($attributes + [
             'company_id' => $this->company->id,
             'name' => 'Турникет lobby',
-            'serial_number' => 'SN-' . uniqid(),
+            'serial_number' => 'SN-'.uniqid(),
             'device_type' => 'face_terminal',
             'vendor' => 'generic',
             'direction' => 'both',
@@ -169,7 +176,7 @@ class BiometricsHttpTest extends TestCase
     {
         $device = $this->device();
 
-        $this->post('/biometrics/devices/' . $device->id, [
+        $this->post('/biometrics/devices/'.$device->id, [
             'status' => 'disabled',
             'location' => '2 этаж',
         ])->assertRedirect()->assertSessionHas('status', 'Устройство обновлено');
@@ -179,7 +186,7 @@ class BiometricsHttpTest extends TestCase
         self::assertSame('2 этаж', $device->location);
         $this->assertDatabaseHas('audit_logs', ['action' => 'device.updated']);
 
-        $this->post('/biometrics/devices/' . $device->id . '/delete')->assertRedirect();
+        $this->post('/biometrics/devices/'.$device->id.'/delete')->assertRedirect();
         self::assertSoftDeletedOrGone($device);
         $this->assertDatabaseHas('audit_logs', ['action' => 'device.deleted']);
     }
@@ -249,12 +256,12 @@ class BiometricsHttpTest extends TestCase
     {
         $device = $this->device();
 
-        app(\App\Domains\Biometric\Services\BiometricService::class)
+        app(BiometricService::class)
             ->enrollProfile($this->worker, 'generic', null, hash('sha256', 't'));
 
         $profile = BiometricProfile::query()->where('employee_id', $this->worker->id)->firstOrFail();
 
-        $this->post('/biometrics/profiles/' . $profile->id . '/disable')->assertRedirect();
+        $this->post('/biometrics/profiles/'.$profile->id.'/disable')->assertRedirect();
         $profile->refresh();
 
         $this->assertDatabaseHas('biometric_profiles', [
@@ -263,7 +270,7 @@ class BiometricsHttpTest extends TestCase
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'biometry.disabled']);
 
-        $this->post('/biometrics/profiles/' . $profile->id . '/delete')->assertRedirect();
+        $this->post('/biometrics/profiles/'.$profile->id.'/delete')->assertRedirect();
         self::assertNull($profile->fresh(), 'профиль должен быть удалён');
         $this->assertDatabaseHas('audit_logs', ['action' => 'biometry.deleted']);
     }
@@ -272,7 +279,7 @@ class BiometricsHttpTest extends TestCase
 
     public function test_device_api_token_works_and_repeats_uuid_is_idempotent(): void
     {
-        [, $token] = app(\App\Domains\Biometric\Services\BiometricService::class)
+        [, $token] = app(BiometricService::class)
             ->registerDevice([
                 'company_id' => $this->company->id,
                 'name' => 'API Terminal',
@@ -291,22 +298,22 @@ class BiometricsHttpTest extends TestCase
         ];
 
         $first = $this->postJson('/api/v1/biometric/device/events', $payload, [
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
         ]);
         $first->assertStatus(200);
 
         $second = $this->postJson('/api/v1/biometric/device/events', $payload, [
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
         ]);
         $second->assertStatus(200);
 
         // событие одно — идемпотентность по event_uuid
-        self::assertSame(1, \App\Models\BiometricEvent::query()->where('event_uuid', 'evt-idem-1')->count());
+        self::assertSame(1, BiometricEvent::query()->where('event_uuid', 'evt-idem-1')->count());
     }
 
     public function test_liveness_failure_is_rejected_with_422(): void
     {
-        [, $token] = app(\App\Domains\Biometric\Services\BiometricService::class)
+        [, $token] = app(BiometricService::class)
             ->registerDevice([
                 'company_id' => $this->company->id,
                 'name' => 'Liveness Terminal',
@@ -323,7 +330,7 @@ class BiometricsHttpTest extends TestCase
             'timestamp' => now()->toDateTimeString(),
             'liveness' => false,
         ], [
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
         ])->assertStatus(422)
             ->assertJsonPath('status', 'liveness_failed');
     }

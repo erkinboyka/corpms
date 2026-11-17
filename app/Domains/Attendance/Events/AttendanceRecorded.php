@@ -21,6 +21,5 @@ class AttendanceRecorded
     public function __construct(
         public AttendanceRecord $record,
         public BiometricEvent $event
-    ) {
-    }
+    ) {}
 }

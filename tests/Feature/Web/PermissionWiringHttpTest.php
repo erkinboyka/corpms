@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Web;
 
 use App\Domains\Biometric\Services\BiometricService;
+use App\Models\BiometricProfile;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Document;
@@ -36,10 +37,15 @@ class PermissionWiringHttpTest extends TestCase
     use RefreshDatabase;
 
     protected Company $company;
+
     protected WorkSchedule $schedule;
+
     protected User $adminUser;
+
     protected Employee $adminEmployee;
+
     protected User $workerUser;
+
     protected Employee $worker;
 
     protected function setUp(): void
@@ -166,11 +172,11 @@ class PermissionWiringHttpTest extends TestCase
     public function test_biometric_profile_disable_gated_by_profiles_manage(): void
     {
         app(BiometricService::class)->enrollProfile($this->worker, 'generic', null, hash('sha256', 'tpl'));
-        $profile = \App\Models\BiometricProfile::query()->where('employee_id', $this->worker->id)->sole();
+        $profile = BiometricProfile::query()->where('employee_id', $this->worker->id)->sole();
 
         // сотрудник без biometry.profiles.manage — 403
         $this->actingAs($this->workerUser);
-        $this->post('/biometrics/profiles/' . $profile->id . '/disable')->assertForbidden();
+        $this->post('/biometrics/profiles/'.$profile->id.'/disable')->assertForbidden();
         self::assertSame('enrolled', $profile->fresh()->status->value);
 
         // новый грант hr_manager: biometry.profiles.manage=company — отключает профиль
@@ -178,7 +184,7 @@ class PermissionWiringHttpTest extends TestCase
         [$hrUser] = $this->holder($hrRole, 'HR-1', 'Ирина', 'Кадровая');
         $this->actingAs($hrUser);
 
-        $this->post('/biometrics/profiles/' . $profile->id . '/disable')->assertRedirect();
+        $this->post('/biometrics/profiles/'.$profile->id.'/disable')->assertRedirect();
         $this->assertDatabaseHas('biometric_profiles', ['id' => $profile->id, 'status' => 'disabled']);
     }
 
@@ -198,19 +204,19 @@ class PermissionWiringHttpTest extends TestCase
 
         // исполнитель переводит в работу
         $this->actingAs($this->workerUser);
-        $this->put('/tasks/' . $task->id . '/status', ['status' => 'in_progress'])
+        $this->put('/tasks/'.$task->id.'/status', ['status' => 'in_progress'])
             ->assertRedirect()
             ->assertSessionHas('status');
 
         // исполнитель-не-автор завершить не может (нет tasks.complete/manage)
-        $this->put('/tasks/' . $task->id . '/status', ['status' => 'completed'])
+        $this->put('/tasks/'.$task->id.'/status', ['status' => 'completed'])
             ->assertRedirect()
             ->assertSessionHasErrors('status');
         self::assertSame('in_progress', $task->fresh()->status->value);
 
         // автор завершает
         $this->actingAs($this->adminUser);
-        $this->put('/tasks/' . $task->id . '/status', ['status' => 'completed'])
+        $this->put('/tasks/'.$task->id.'/status', ['status' => 'completed'])
             ->assertRedirect()
             ->assertSessionHas('status');
         self::assertSame('completed', $task->fresh()->status->value);
@@ -265,7 +271,7 @@ class PermissionWiringHttpTest extends TestCase
         ])->assertRedirect();
 
         $document = Document::query()->where('title', 'Приказ №5')->sole();
-        $this->post('/documents/' . $document->id . '/submit')->assertRedirect();
+        $this->post('/documents/'.$document->id.'/submit')->assertRedirect();
         $this->assertSame('submitted', $document->fresh()->status->value);
 
         // роль с documents.approve, но без documents.reject — отказ в согласовании 403
@@ -273,14 +279,14 @@ class PermissionWiringHttpTest extends TestCase
         [$user] = $this->holder($role, 'AP-1', 'Аркадий', 'Согласовант');
 
         $this->actingAs($user);
-        $this->post('/documents/' . $document->id . '/decide', [
+        $this->post('/documents/'.$document->id.'/decide', [
             'decision' => 'rejected', 'comment' => 'нет план',
         ])->assertForbidden();
         self::assertSame('submitted', $document->fresh()->status->value);
 
         // у супер-админа documents.reject есть — отказ проходит
         $this->actingAs($this->adminUser);
-        $this->post('/documents/' . $document->id . '/decide', [
+        $this->post('/documents/'.$document->id.'/decide', [
             'decision' => 'rejected', 'comment' => 'Переделать',
         ])->assertRedirect()->assertSessionHas('status');
         self::assertSame('revision', $document->fresh()->status->value);
@@ -299,17 +305,17 @@ class PermissionWiringHttpTest extends TestCase
         $this->actingAs($user);
 
         // переименование — реквизиты, работаем без structure.manage
-        $this->patch('/departments/' . $dept->id, ['name' => 'IT-отдел'])
+        $this->patch('/departments/'.$dept->id, ['name' => 'IT-отдел'])
             ->assertRedirect()
             ->assertSessionHas('status');
 
         // перенос под родителя — 403
-        $this->patch('/departments/' . $dept->id, ['name' => 'IT-отдел', 'parent_id' => $parent->id])
+        $this->patch('/departments/'.$dept->id, ['name' => 'IT-отдел', 'parent_id' => $parent->id])
             ->assertForbidden();
 
         // супер-админ переносит
         $this->actingAs($this->adminUser);
-        $this->patch('/departments/' . $dept->id, ['name' => 'IT-отдел', 'parent_id' => $parent->id])
+        $this->patch('/departments/'.$dept->id, ['name' => 'IT-отдел', 'parent_id' => $parent->id])
             ->assertRedirect()
             ->assertSessionHas('status');
         self::assertSame($parent->id, $dept->fresh()->parent_id);
@@ -329,7 +335,7 @@ class PermissionWiringHttpTest extends TestCase
         [$user] = $this->holder($role, 'SV-1', 'Степан', 'Обозреватель');
         $this->actingAs($user);
 
-        $this->get('/employees/' . $this->adminEmployee->id)
+        $this->get('/employees/'.$this->adminEmployee->id)
             ->assertOk()
             ->assertSee('Реквизиты скрыты')
             ->assertDontSee('boss.root@corpms.local')
@@ -337,7 +343,7 @@ class PermissionWiringHttpTest extends TestCase
 
         // держащий view_props — видит
         $this->actingAs($this->adminUser);
-        $this->get('/employees/' . $this->adminEmployee->id)
+        $this->get('/employees/'.$this->adminEmployee->id)
             ->assertOk()
             ->assertSee('boss.root@corpms.local');
     }
@@ -359,25 +365,25 @@ class PermissionWiringHttpTest extends TestCase
         $this->actingAs($user);
 
         // documents.view есть, signatures.view нет → блок подписей скрыт
-        $this->get('/documents/' . $document->id)
+        $this->get('/documents/'.$document->id)
             ->assertOk()
             ->assertDontSee('Подписи');
 
         // супер-админ видит блок
         $this->actingAs($this->adminUser);
-        $this->get('/documents/' . $document->id)->assertOk()->assertSee('Подписи');
+        $this->get('/documents/'.$document->id)->assertOk()->assertSee('Подписи');
 
         // запрос подписи → сам подписант видит блок («свой» путь)
-        $this->post('/documents/' . $document->id . '/submit')->assertRedirect();
-        $this->post('/documents/' . $document->id . '/decide', ['decision' => 'approved'])
+        $this->post('/documents/'.$document->id.'/submit')->assertRedirect();
+        $this->post('/documents/'.$document->id.'/decide', ['decision' => 'approved'])
             ->assertRedirect()->assertSessionHas('status');
-        $this->post('/documents/' . $document->id . '/register')->assertRedirect();
-        $this->post('/documents/' . $document->id . '/signatures/request', [
+        $this->post('/documents/'.$document->id.'/register')->assertRedirect();
+        $this->post('/documents/'.$document->id.'/signatures/request', [
             'signer_ids' => [$viewer->id],
         ])->assertRedirect();
 
         $this->actingAs($user);
-        $this->get('/documents/' . $document->id)->assertOk()->assertSee('Подписи');
+        $this->get('/documents/'.$document->id)->assertOk()->assertSee('Подписи');
     }
 
     /* -------------------- biometry.dashboard.view -------------------- */

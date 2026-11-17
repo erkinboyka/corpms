@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\Employee;
-use App\Models\EmployeeRole;
 use App\Models\EmployeePermissionOverride;
+use App\Models\EmployeeRole;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use App\Shared\Enums\PermissionScope;
 use App\Shared\Permissions\PermissionMatrix;
+use Illuminate\Support\Collection;
 
 /**
  * Центральный сервис авторизации: RBAC + scopes (OWN / DEPARTMENT / COMPANY).
@@ -30,7 +31,7 @@ class PermissionService
      */
     protected array $employeeCache = [];
 
-    /** @var array<int, \Illuminate\Support\Collection> */
+    /** @var array<int, Collection> */
     protected array $roleNamesCache = [];
 
     /** @var array<string, PermissionScope|false> */
@@ -38,7 +39,7 @@ class PermissionService
 
     public function can(User $user, string $permission): PermissionScope|false
     {
-        $key = $user->id . '|' . $permission;
+        $key = $user->id.'|'.$permission;
 
         if (array_key_exists($key, $this->canCache)) {
             return $this->canCache[$key];
@@ -127,7 +128,7 @@ class PermissionService
     }
 
     /** Slug'и ролей сотрудника. */
-    public function roleNames(User $user): \Illuminate\Support\Collection
+    public function roleNames(User $user): Collection
     {
         $employee = $this->employee($user);
         if ($employee === null) {

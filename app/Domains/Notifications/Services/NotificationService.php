@@ -6,6 +6,7 @@ namespace App\Domains\Notifications\Services;
 
 use App\Models\AppNotification;
 use App\Models\Employee;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -18,7 +19,9 @@ use Throwable;
 class NotificationService
 {
     public const CHANNEL_APP = 'app';
+
     public const CHANNEL_TELEGRAM = 'telegram';
+
     public const CHANNEL_EMAIL = 'email';
 
     public function notify(
@@ -83,7 +86,7 @@ class NotificationService
         $response = Http::timeout(5)
             ->post("https://api.telegram.org/bot{$token}/sendMessage", [
                 'chat_id' => $chatId,
-                'text' => $body === null ? $title : $title . "\n\n" . $body,
+                'text' => $body === null ? $title : $title."\n\n".$body,
                 'parse_mode' => 'HTML',
             ]);
 
@@ -113,7 +116,7 @@ class NotificationService
             ->count();
     }
 
-    public function recentFor(Employee $recipient, int $limit = 20): \Illuminate\Support\Collection
+    public function recentFor(Employee $recipient, int $limit = 20): Collection
     {
         return AppNotification::query()
             ->where('recipient_id', $recipient->id)

@@ -4,8 +4,8 @@ namespace App\Providers;
 
 use App\Domains\Attendance\Events\AttendanceRecorded;
 use App\Domains\Attendance\Listeners\NotifyOnLateArrival;
+use App\Support\EnumLabels;
 use App\Support\PermissionService;
-use App\Domains\Audit\Services\AuditService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(AttendanceRecorded::class, NotifyOnLateArrival::class);
 
         // русский хелпер подписей enum-ов для всех шаблонов
-        View::share('crm_label', static fn (?string $group = null, ?string $value = null) => $group === null ? '' : \App\Support\EnumLabels::label($group, $value));
+        View::share('crm_label', static fn (?string $group = null, ?string $value = null) => $group === null ? '' : EnumLabels::label($group, $value));
 
         // Blade-гейт @can('checkBoxPermission', 'slug.permission'):
         // UI-кнопки гейтятся той же матрицей прав, что и HTTP-middleware.

@@ -11,8 +11,8 @@ use App\Models\BiometricDevice;
 use App\Models\BiometricEvent;
 use App\Models\Employee;
 use App\Models\RfidCard;
-use App\Shared\Enums\RfidCardStatus;
 use App\Shared\Enums\PermissionScope;
+use App\Shared\Enums\RfidCardStatus;
 use App\Support\PermissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,8 +29,7 @@ class RfidController extends Controller
         protected RfidService $rfid,
         protected PermissionService $permissions,
         protected AuditService $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -141,7 +140,7 @@ class RfidController extends Controller
         ]);
 
         return redirect()->route('rfid.index')
-            ->with('status', 'Карта ' . $card->card_uid . ' выдана: ' . $owner->last_name);
+            ->with('status', 'Карта '.$card->card_uid.' выдана: '.$owner->last_name);
     }
 
     /** Отзыв карты (disabled, журнал сохраняется). */
@@ -164,6 +163,6 @@ class RfidController extends Controller
             'card_uid' => $card->card_uid,
         ]);
 
-        return back()->with('status', 'Карта ' . $card->card_uid . ' отозвана');
+        return back()->with('status', 'Карта '.$card->card_uid.' отозвана');
     }
 }

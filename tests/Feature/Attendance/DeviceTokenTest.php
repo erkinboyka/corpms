@@ -6,11 +6,8 @@ namespace Tests\Feature\Attendance;
 
 use App\Domains\Biometric\Services\BiometricService;
 use App\Models\Company;
-use App\Models\Employee;
-use App\Models\User;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -41,6 +38,6 @@ class DeviceTokenTest extends TestCase
         $this->assertSame($device->id, app(BiometricService::class)->deviceByToken($token)->id);
 
         // чужой токен не подбирается
-        $this->assertNull(app(BiometricService::class)->deviceByToken('bio_unknown' . str_repeat('x', 40)));
+        $this->assertNull(app(BiometricService::class)->deviceByToken('bio_unknown'.str_repeat('x', 40)));
     }
 }
