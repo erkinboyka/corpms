@@ -3,6 +3,10 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Web\AccountingChartController;
+use App\Http\Controllers\Web\AccountingDocumentController;
+use App\Http\Controllers\Web\AccountingEntryController;
+use App\Http\Controllers\Web\AccountingReportController;
 use App\Http\Controllers\Web\AiController;
 use App\Http\Controllers\Web\AnalyticsController;
 use App\Http\Controllers\Web\AttendanceController;
@@ -199,6 +203,23 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/finance/budgets', [FinBudgetController::class, 'index'])->middleware('permission:finance.view')->name('finance.budgets.index');
     Route::post('/finance/budgets', [FinBudgetController::class, 'store'])->middleware('permission:finance.manage@company')->name('finance.budgets.store');
+
+    /* ---------- бухгалтерия (E4) ---------- */
+    Route::get('/accounting/chart', [AccountingChartController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.chart.index');
+    Route::post('/accounting/chart', [AccountingChartController::class, 'store'])->middleware('permission:accounting.manage@company')->name('accounting.chart.store');
+    Route::post('/accounting/chart/default', [AccountingChartController::class, 'seedDefault'])->middleware('permission:accounting.manage@company')->name('accounting.chart.default');
+    Route::post('/accounting/chart/{account}/toggle', [AccountingChartController::class, 'toggle'])->middleware('permission:accounting.manage@company')->name('accounting.chart.toggle');
+
+    Route::get('/accounting/entries', [AccountingEntryController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.entries.index');
+    Route::post('/accounting/entries', [AccountingEntryController::class, 'store'])->middleware('permission:accounting.manage@company')->name('accounting.entries.store');
+    Route::post('/accounting/sync', [AccountingEntryController::class, 'sync'])->middleware('permission:accounting.manage@company')->name('accounting.sync');
+    Route::get('/accounting/entries/{entry}', [AccountingEntryController::class, 'show'])->middleware('permission:accounting.view')->name('accounting.entries.show');
+
+    Route::get('/accounting/documents', [AccountingDocumentController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.documents.index');
+    Route::post('/accounting/documents', [AccountingDocumentController::class, 'store'])->middleware('permission:accounting.manage@company')->name('accounting.documents.store');
+    Route::delete('/accounting/documents/{document}', [AccountingDocumentController::class, 'destroy'])->middleware('permission:accounting.manage@company')->name('accounting.documents.destroy');
+
+    Route::get('/accounting/reports', [AccountingReportController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.reports.index');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');

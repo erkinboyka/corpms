@@ -69,6 +69,12 @@ class Sidebar
         ['finance.budgets.index', 'Бюджеты', 'target', 'finance.view'],
         ['finance.categories.index', 'Статьи', 'category', 'finance.view'],
 
+        ['_', 'Бухгалтерия'],
+        ['accounting.chart.index', 'План счетов', 'list-numbers', 'accounting.view'],
+        ['accounting.entries.index', 'Проводки', 'book-2', 'accounting.view'],
+        ['accounting.documents.index', 'Первичные документы', 'files', 'accounting.view'],
+        ['accounting.reports.index', 'Отчёты', 'report-analytics', 'accounting.view'],
+
         ['_', 'Задачи'],
         ['tasks.index', 'Все задачи', 'list-check', 'tasks.view'],
         ['tasks.mine', 'Мои задачи', 'user-check', 'tasks.view'],

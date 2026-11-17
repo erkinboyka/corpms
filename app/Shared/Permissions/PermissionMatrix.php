@@ -28,6 +28,7 @@ final class PermissionMatrix
         'inventory' => 'Склад и закупки',
         'crm' => 'CRM',
         'finance' => 'Финансы',
+        'accounting' => 'Бухгалтерия',
         'system' => 'Система',
     ];
 
@@ -139,6 +140,10 @@ final class PermissionMatrix
         'finance.view' => ['Просмотр кассы, счетов и бюджетов', 'finance'],
         'finance.manage' => ['Управление счетами, операциями и бюджетами', 'finance'],
         'finance.invoices.manage' => ['Выставление счетов и приём платежей', 'finance'],
+
+        // --- Бухгалтерия (Этап E4) ---
+        'accounting.view' => ['Просмотр плана счетов, проводок и отчётов', 'accounting'],
+        'accounting.manage' => ['Управление планом счетов, проводками и документами', 'accounting'],
 
         // --- Система ---
         'audit.view' => ['История действий', 'system'],

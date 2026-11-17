@@ -212,6 +212,17 @@ final class EnumLabels
         'fin_transaction_source' => [
             'manual' => 'Ручной ввод', 'invoice_payment' => 'Оплата счёта',
         ],
+        'acc_account_kind' => [
+            'asset' => 'Актив', 'liability' => 'Пассив', 'equity' => 'Капитал',
+            'income' => 'Доход', 'expense' => 'Расход',
+        ],
+        'acc_entry_source' => [
+            'manual' => 'Ручная', 'finance' => 'Из финансов',
+        ],
+        'acc_document_kind' => [
+            'invoice' => 'Счёт', 'act' => 'Акт',
+            'payment_order' => 'Платёжное поручение', 'other' => 'Другое',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string
