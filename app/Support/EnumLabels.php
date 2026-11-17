@@ -158,6 +158,17 @@ final class EnumLabels
         'payroll_line_source' => [
             'auto' => 'Расчёт', 'manual' => 'Вручную',
         ],
+        'product_kind' => [
+            'goods' => 'Товар', 'service' => 'Услуга',
+        ],
+        'stock_movement_type' => [
+            'in' => 'Приход', 'out' => 'Расход',
+            'adjustment' => 'Корректировка', 'write_off' => 'Списание',
+        ],
+        'purchase_order_status' => [
+            'draft' => 'Черновик', 'ordered' => 'Размещён',
+            'received' => 'Принят', 'cancelled' => 'Отменён',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string

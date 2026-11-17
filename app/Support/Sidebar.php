@@ -48,6 +48,14 @@ class Sidebar
         ['payroll.index', 'Ведомости', 'wallet', 'payroll.view'],
         ['payroll.salaries', 'Оклады и компоненты', 'coins', 'payroll.view'],
 
+        ['_', 'Склад'],
+        ['inventory.index', 'Остатки', 'package', 'inventory.view'],
+        ['inventory.products', 'Товары', 'box', 'inventory.view'],
+        ['inventory.movements', 'Движения', 'arrows-exchange', 'inventory.view'],
+        ['inventory.warehouses', 'Склады', 'building-warehouse', 'inventory.view'],
+        ['inventory.suppliers', 'Поставщики', 'truck-delivery', 'inventory.view'],
+        ['purchases.index', 'Закупки', 'shopping-cart', 'purchases.view'],
+
         ['_', 'Задачи'],
         ['tasks.index', 'Все задачи', 'list-check', 'tasks.view'],
         ['tasks.mine', 'Мои задачи', 'user-check', 'tasks.view'],

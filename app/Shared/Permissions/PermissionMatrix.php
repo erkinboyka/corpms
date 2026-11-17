@@ -25,6 +25,7 @@ final class PermissionMatrix
         'analytics' => 'Аналитика',
         'reports' => 'Отчёты',
         'payroll' => 'Зарплата',
+        'inventory' => 'Склад и закупки',
         'system' => 'Система',
     ];
 
@@ -119,6 +120,13 @@ final class PermissionMatrix
         'payroll.view' => ['Просмотр зарплатных ведомостей', 'payroll'],
         'payroll.manage' => ['Расчёт зарплатных ведомостей', 'payroll'],
         'payroll.approve' => ['Согласование и выплата ведомостей', 'payroll'],
+
+        // --- Склад и закупки (Этап E1: ERP) ---
+        'inventory.view' => ['Просмотр склада и остатков', 'inventory'],
+        'inventory.manage' => ['Управление справочниками склада', 'inventory'],
+        'inventory.move' => ['Складские операции (приход/расход)', 'inventory'],
+        'purchases.view' => ['Просмотр закупочных заказов', 'inventory'],
+        'purchases.manage' => ['Управление закупочными заказами', 'inventory'],
 
         // --- Система ---
         'audit.view' => ['История действий', 'system'],

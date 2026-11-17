@@ -15,8 +15,10 @@ use App\Http\Controllers\Web\DocumentController;
 use App\Http\Controllers\Web\DocumentTemplateController;
 use App\Http\Controllers\Web\EmployeeController;
 use App\Http\Controllers\Web\IntegrationController;
+use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\PayrollController;
+use App\Http\Controllers\Web\PurchaseController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\RfidController;
 use App\Http\Controllers\Web\ScheduleController;
@@ -117,6 +119,30 @@ Route::middleware('auth')->group(function () {
     Route::post('/payroll/periods/{period}/approve', [PayrollController::class, 'approve'])->middleware('permission:payroll.approve@company')->name('payroll.approve');
     Route::post('/payroll/periods/{period}/pay', [PayrollController::class, 'pay'])->middleware('permission:payroll.approve@company')->name('payroll.pay');
     Route::get('/payroll/periods/{period}/export', [PayrollController::class, 'export'])->middleware('permission:payroll.view')->name('payroll.export');
+
+    /* ---------- склад и закупки (E1: ERP) ---------- */
+    Route::get('/inventory', [InventoryController::class, 'index'])->middleware('permission:inventory.view')->name('inventory.index');
+    Route::get('/inventory/products', [InventoryController::class, 'products'])->middleware('permission:inventory.view')->name('inventory.products');
+    Route::post('/inventory/products', [InventoryController::class, 'storeProduct'])->middleware('permission:inventory.manage@company')->name('inventory.products.store');
+    Route::patch('/inventory/products/{product}', [InventoryController::class, 'updateProduct'])->middleware('permission:inventory.manage@company')->name('inventory.products.update');
+    Route::post('/inventory/products/{product}/toggle', [InventoryController::class, 'toggleProduct'])->middleware('permission:inventory.manage@company')->name('inventory.products.toggle');
+    Route::get('/inventory/warehouses', [InventoryController::class, 'warehouses'])->middleware('permission:inventory.view')->name('inventory.warehouses');
+    Route::post('/inventory/warehouses', [InventoryController::class, 'storeWarehouse'])->middleware('permission:inventory.manage@company')->name('inventory.warehouses.store');
+    Route::post('/inventory/warehouses/{warehouse}/toggle', [InventoryController::class, 'toggleWarehouse'])->middleware('permission:inventory.manage@company')->name('inventory.warehouses.toggle');
+    Route::get('/inventory/suppliers', [InventoryController::class, 'suppliers'])->middleware('permission:inventory.view')->name('inventory.suppliers');
+    Route::post('/inventory/suppliers', [InventoryController::class, 'storeSupplier'])->middleware('permission:inventory.manage@company')->name('inventory.suppliers.store');
+    Route::post('/inventory/suppliers/{supplier}/toggle', [InventoryController::class, 'toggleSupplier'])->middleware('permission:inventory.manage@company')->name('inventory.suppliers.toggle');
+    Route::get('/inventory/movements', [InventoryController::class, 'movements'])->middleware('permission:inventory.view')->name('inventory.movements');
+    Route::post('/inventory/movements', [InventoryController::class, 'storeMovement'])->middleware('permission:inventory.move@company')->name('inventory.movements.store');
+
+    Route::get('/purchases', [PurchaseController::class, 'index'])->middleware('permission:purchases.view')->name('purchases.index');
+    Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('permission:purchases.manage@company')->name('purchases.store');
+    Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->middleware('permission:purchases.view')->name('purchases.show');
+    Route::post('/purchases/{order}/order', [PurchaseController::class, 'order'])->middleware('permission:purchases.manage@company')->name('purchases.order');
+    Route::post('/purchases/{order}/receive', [PurchaseController::class, 'receive'])->middleware('permission:purchases.manage@company')->name('purchases.receive');
+    Route::post('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->middleware('permission:purchases.manage@company')->name('purchases.cancel');
+    Route::post('/purchases/{order}/items', [PurchaseController::class, 'addItem'])->middleware('permission:purchases.manage@company')->name('purchases.items.store');
+    Route::post('/purchases/{order}/items/{item}/remove', [PurchaseController::class, 'removeItem'])->middleware('permission:purchases.manage@company')->name('purchases.items.remove');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');
