@@ -17,3 +17,6 @@ Schedule::call(function () {
 
 // ТЗ §11 «резервное копирование»: ежедневный снимок БД с ротацией
 Schedule::command('db:backup')->dailyAt('03:30')->name('db.backup')->withoutOverlapping();
+
+// Инфраструктура: алерт о нездоровом приложении (БД, миграции, очередь, storage)
+Schedule::command('corpms:health')->everyFifteenMinutes()->withoutOverlapping()->name('ops.health');

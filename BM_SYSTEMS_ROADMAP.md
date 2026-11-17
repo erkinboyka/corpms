@@ -149,7 +149,13 @@
 
 ## Инфраструктура (рекомендовано до прод-эксплуатации)
 
-- [~] Git-репозиторий готов (init + первый коммит `97841f1`), CI (Pint, тесты на изменение) — не настроен
+- [x] Git-репозиторий + **CI**: `.github/workflows/ci.yml` — Pint `--test` и полный
+      прогон тестов на push/PR (Ubuntu, PHP 8.4, SQLite в памяти)
 - [x] **SESSION_SECURE_COOKIE**, CSP (в составе S6)
-- [ ] Очереди/Redis для AI и экспортов
-- [ ] Мониторинг/алерты (сейчас только `db:backup`, `markOverdue`, `detect-missing`)
+- [x] **Worker очереди** запущен (`queue:work`, database), фоновые AI-повторы
+      обрабатываются; команда перезапуска — в `BM_SYSTEMS_PROGRESS.md`
+- [ ] Redis: расширение `phpredis` установлено, но сервер Redis локально не
+      запущен — очередь/кэш остаются на `database`; переключение только через `.env`
+- [x] **Мониторинг**: `php artisan corpms:health` (БД, миграции, очередь, storage,
+      `--json`), расписание каждые 15 минут, warning в лог при проблемах; `/up`
+      как HTTP health-check

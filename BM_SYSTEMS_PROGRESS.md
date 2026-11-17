@@ -839,10 +839,39 @@ Git-репозиторий готов (первый коммит `97841f1`), CI 
 | `tests/Feature/Web/AiModuleToolsTest.php` | 5/5 (права, CRM, финансы/склад, проекты/бухгалтерия/BI, аудит отказов) |
 | `vendor/bin/pint --dirty --format agent` | выполнено |
 
-### Дальше (инфраструктура)
+### Инфраструктура — выполнена
 
-**CI + эксплуатация:** GitHub Actions (Pint + тесты на каждый коммит), запуск
-worker `queue:work` (фоновые AI-повторы), Redis/мониторинг и алерты; опционально
-наполнение демо-данными новых модулей через сидеры.
+- **CI** — `.github/workflows/ci.yml`: на `push`/`pull_request` — Ubuntu, PHP 8.4,
+  `composer install`, `vendor/bin/pint --test --format agent`,
+  `php artisan test --compact` (SQLite в памяти из `phpunit.xml`), кэш Composer.
+- **Worker очереди** — запущен `php artisan queue:work --sleep=3 --tries=3
+  --timeout=120` (драйвер `database`), фоновые AI-повторы обрабатываются.
+  Проверено: worker разбирает очередь; 3 устаревших AI-повтора прошлой сессии
+  не смогли достучаться до LLM и были удалены (`queue:clear`), ещё один исчерпал
+  попытки и удалён из failed (`queue:flush`); очередь пуста, failed 0.
+  Перезапуск после перезагрузки машины:
+  `php artisan queue:work --sleep=3 --tries=3 --timeout=120`.
+- **Мониторинг/алерты** — `php artisan corpms:health`: БД, миграции, очередь
+  (backlog/failed с порогом `--max-jobs`), запись в storage; флаг `--json` для
+  внешнего мониторинга; при проблемах exit code 1 и warning в лог. Расписание —
+  каждые 15 минут (`ops.health`), HTTP health-check — встроенный `/up`.
+  В `routes/console.php` рядом с `db:backup`, `markOverdue`, `detect-missing`.
+- **Redis** — расширение `phpredis` установлено, но сервер Redis на машине не
+  запущен (порт 6379 закрыт), поэтому очередь и кэш остаются на `database`.
+  В `.env.example` добавлен комментарий, как переключить `CACHE_STORE` и
+  `QUEUE_CONNECTION` на Redis без изменения кода.
+
+### Проверки (инфраструктура)
+
+| Проверка | Результат |
+|---|---|
+| `php artisan test --compact` | **379/379, 2376 assertions** |
+| `tests/Feature/CorpmsHealthTest.php` | 3/3 (здоровое окружение, failed jobs, порог backlog) |
+| `vendor/bin/pint --test --format agent` (весь проект) | passed — CI-стиль-шаг пройдёт |
+| `php artisan corpms:health` | database/migrations/queue/storage — ok |
+| `php artisan queue:work` | запущен, очередь пуста, failed 0 |
+
+CI-пайплайн добавлен в репозиторий; фактический прогон на GitHub выполнится при
+первом push (локальный эквивалент всех шагов проходит).
 
 
