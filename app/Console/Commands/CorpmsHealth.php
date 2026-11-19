@@ -139,7 +139,7 @@ class CorpmsHealth extends Command
         $notWritable = [];
 
         foreach ($paths as $label => $path) {
-            if (is_dir($path) && ! is_writable($path)) {
+            if (! is_dir($path) || ! is_writable($path)) {
                 $notWritable[] = $label;
             }
         }

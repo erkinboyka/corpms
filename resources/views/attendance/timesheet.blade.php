@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Табель — ' . $employee->last_name)
 
@@ -17,11 +18,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Посещаемость</div>
-            <h2 class="page-title mt-1">Табель · {{ $monthNames[$month] }} {{ $year }}</h2>
+            <h1 class="page-title mt-1">Табель · {{ $monthNames[$month] }} {{ $year }}</h1>
             <div class="text-secondary mt-1">{{ $employee->last_name }} {{ $employee->first_name }} · {{ $employee->employee_no }}</div>
-        </div>
-        <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary" href="{{ route('attendance.index') }}"><i class="ti ti-arrow-left me-1"></i>Сегодня</a>
         </div>
     </div>
 </div>
@@ -88,15 +86,15 @@
 
 <div class="card">
     <div class="card-header">
-        <strong>Сетка за месяц</strong>
+        <h2 class="card-title bm-section-title">Сетка за месяц</h2>
         <span class="crm-chip ms-auto">{{ count($grid) }} дней</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th>День</th><th>Статус</th><th>Вход</th><th>Выход</th>
-                    <th class="text-end">Отраб.</th><th class="text-end">Опозд.</th><th class="text-end">Ранний уход</th><th class="text-end">Сверх</th>
+                    <th scope="col">День</th><th scope="col">Статус</th><th scope="col">Вход</th><th scope="col">Выход</th>
+                    <th scope="col" class="text-end">Отраб.</th><th scope="col" class="text-end">Опозд.</th><th scope="col" class="text-end">Ранний уход</th><th scope="col" class="text-end">Сверх</th>
                 </tr>
             </thead>
             <tbody>

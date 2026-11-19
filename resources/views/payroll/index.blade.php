@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Зарплата — Ведомости')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Зарплата</div>
-            <h2 class="page-title mt-1">Расчётные ведомости</h2>
+            <h1 class="page-title mt-1">Расчётные ведомости</h1>
             <div class="text-secondary mt-1">Детерминированный расчёт из табеля и окладов: черновик → расчёт → согласование → выплата</div>
         </div>
         <div class="col-auto d-print-none">
@@ -20,12 +21,12 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-wallet"></i>Начислено всего</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-wallet"></i>Начислено всего</div>
         <div class="crm-metric__value">{{ $showAmounts ? number_format($totals['gross'], 2, ',', ' ') : '—' }}</div>
         <div class="crm-metric__hint">{{ $showAmounts ? 'по всем ведомостям' : 'суммы скрыты вашим доступом' }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-cash-banknote"></i>К выплате</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>К выплате</div>
         <div class="crm-metric__value">{{ $showAmounts ? number_format($totals['net'], 2, ',', ' ') : '—' }}</div>
         <div class="crm-metric__hint">{{ $showAmounts ? 'после удержаний' : 'только ваш отдел' }}</div>
     </div>
@@ -43,16 +44,16 @@
 
 <div class="card">
     <div class="card-header">
-        <strong>Ведомости</strong>
+        <h2 class="card-title bm-section-title">Ведомости</h2>
         <span class="crm-chip ms-auto">{{ $periods->count() }} всего</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th>Период</th><th>Статус</th><th class="text-end">Сотрудников</th>
-                    <th class="text-end">Начислено</th><th class="text-end">Удержано</th><th class="text-end">К выплате</th>
-                    <th class="text-end">Обновлено</th>
+                    <th scope="col">Период</th><th scope="col">Статус</th><th scope="col" class="text-end">Сотрудников</th>
+                    <th scope="col" class="text-end">Начислено</th><th scope="col" class="text-end">Удержано</th><th scope="col" class="text-end">К выплате</th>
+                    <th scope="col" class="text-end">Обновлено</th>
                 </tr>
             </thead>
             <tbody>

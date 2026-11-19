@@ -1,50 +1,505 @@
-/*
- * Боковая AI-панель (док справа): toggle, отправка JSON на /ai/message,
- * рендер ответа и блоков (текст, SVG-диаграмма, таблица, кнопки-ссылки).
- * Разметка: partials/ai-panel.blade.php, стили: assets/css/ai-panel.css.
- */
-(function () {
+(() => {
     'use strict';
 
-    var panel = document.getElementById('ai-panel');
-    if (!panel) { return; }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let cancelActiveVoice = null;
 
-    var scrim = document.getElementById('ai-panel-scrim');
-    var messages = document.getElementById('ai-messages');
-    var typing = document.getElementById('ai-typing');
-    var form = document.getElementById('ai-form');
-    var input = document.getElementById('ai-input');
-    var sendBtn = document.getElementById('ai-send');
-    var toggleBtn = document.querySelector('[data-ai-toggle]');
-    var OPEN_KEY = 'crm-ai-panel-open';
+    function bindDictation(form, onListening = () => {}, onTranscript = () => {}, onNotice = () => {}) {
+        const mic = form.querySelector('[data-ai-voice]');
+        const status = form.querySelector('[data-ai-voice-status]');
+        const input = form.elements.question;
+        let active;
 
-    /* ---------- открытие/закрытие ---------- */
+        function announce(text) {
+            status.textContent = text;
+            status.hidden = !text;
+            onNotice(text);
+        }
 
-    function setOpen(open) {
-        panel.classList.toggle('is-open', open);
-        if (scrim) { scrim.classList.toggle('is-open', open); }
-        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
-        if (toggleBtn) { toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
-        try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch (e) { /* private mode */ }
-        if (open && input) { input.focus(); }
+        function resetIndicator() {
+            mic.setAttribute('aria-pressed', 'false');
+            mic.title = 'Диктовать сообщение';
+            onListening(false);
+        }
+
+        function finish() {
+            active = null;
+            if (cancelActiveVoice === cancel) cancelActiveVoice = null;
+            resetIndicator();
+        }
+
+        function cancel() {
+            if (!active) return;
+            const recognition = active;
+            finish();
+            recognition.abort();
+            announce('');
+        }
+
+        mic.addEventListener('click', () => {
+            if (active) {
+                active.stop();
+                return;
+            }
+            if (!SpeechRecognition) {
+                announce('Этот браузер не поддерживает диктовку.');
+                return;
+            }
+            if (input.readOnly) return;
+
+            cancelActiveVoice?.();
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ru-RU';
+            recognition.interimResults = false;
+            recognition.continuous = false;
+
+            recognition.onstart = () => {
+                if (active !== recognition) return;
+                announce('Слушаю…');
+            };
+            recognition.onresult = event => {
+                if (active !== recognition || input.readOnly) return;
+                const transcript = Array.from(event.results).slice(event.resultIndex)
+                    .filter(result => result.isFinal).map(result => result[0].transcript.trim()).join(' ').trim();
+                if (!transcript) return;
+
+                const start = input.selectionStart ?? input.value.length;
+                const end = input.selectionEnd ?? start;
+                const before = input.value.slice(0, start);
+                const after = input.value.slice(end);
+                const prefix = before && !/\s$/.test(before) ? ' ' : '';
+                const suffix = after && !/^\s/.test(after) ? ' ' : '';
+                const room = input.maxLength - before.length - after.length;
+                if (room > prefix.length) {
+                    input.setRangeText((prefix + transcript + suffix).slice(0, room), start, end, 'end');
+                    onTranscript();
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.focus();
+                    announce('Текст добавлен. Проверьте его перед отправкой.');
+                } else {
+                    announce('В сообщении уже достигнут предел длины.');
+                }
+            };
+            recognition.onerror = event => {
+                if (active !== recognition) return;
+                const errors = {
+                    'not-allowed': window.isSecureContext
+                        ? 'Разрешите браузеру доступ к микрофону для этого сайта.'
+                        : 'Для доступа к микрофону откройте сайт по доверенному HTTPS.',
+                    'service-not-allowed': window.isSecureContext
+                        ? 'Распознавание речи недоступно для этого сайта.'
+                        : 'Для доступа к микрофону откройте сайт по доверенному HTTPS.',
+                    'audio-capture': 'Браузер не нашёл доступный микрофон.',
+                    'no-speech': 'Речь не распознана. Попробуйте снова.',
+                    network: 'Служба распознавания речи недоступна. Можно ввести текст.',
+                };
+                finish();
+                announce(errors[event.error] || 'Диктовку не удалось завершить.');
+            };
+            recognition.onend = () => {
+                if (active !== recognition) return;
+                finish();
+                if (status.textContent === 'Слушаю…' || status.textContent === 'Включаю микрофон…') {
+                    announce('Речь не распознана. Попробуйте снова.');
+                }
+            };
+
+            try {
+                active = recognition;
+                cancelActiveVoice = cancel;
+                mic.setAttribute('aria-pressed', 'true');
+                mic.title = 'Завершить диктовку';
+                onListening(true);
+                announce('Включаю микрофон…');
+                recognition.start();
+            } catch {
+                finish();
+                announce('Браузер не смог начать диктовку.');
+            }
+        });
+
+        form.addEventListener('submit', () => {
+            cancel();
+            announce('');
+        });
+        return cancel;
     }
 
-    function isOpen() { return panel.classList.contains('is-open'); }
+    const emotions = { smile: 'Улыбается', wink: 'Подмигивает', thinking: 'Задумался', surprise: 'Удивлён' };
+    const emotionNames = Object.keys(emotions);
+    document.addEventListener('click', event => {
+        const face = event.target.closest('[data-bumi-face]');
+        if (!face) return;
+        const next = emotionNames[(emotionNames.indexOf(face.dataset.bumiEmotion) + 1) % emotionNames.length];
+        face.dataset.bumiEmotion = next;
+        face.setAttribute('aria-description', emotions[next]);
+    });
 
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', function () { setOpen(!isOpen()); });
+    const workspace = document.querySelector('[data-ai-workspace]');
+    if (workspace) {
+        const history = workspace.querySelector('[data-ai-history]');
+        const form = workspace.querySelector('form');
+        const send = form.querySelector('button[type=submit]');
+        const input = form.elements.question;
+        const mic = form.querySelector('[data-ai-voice]');
+        const copyStatus = workspace.querySelector('[data-ai-copy-status]');
+        const prompts = workspace.querySelectorAll('[data-ai-prompt]');
+        let submitting = false;
+        const scrollToLatest = () => { history.scrollTop = history.scrollHeight; };
+        scrollToLatest();
+        workspace.querySelector('[data-ai-latest]')?.addEventListener('click', scrollToLatest);
+
+        function updateComposer() {
+            send.disabled = submitting || input.value.trim().length < 3;
+            prompts.forEach(button => { button.disabled = submitting || !!input.value.trim(); });
+        }
+        updateComposer();
+        bindDictation(form);
+        input.addEventListener('input', updateComposer);
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229 && !send.disabled) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+        prompts.forEach(button => {
+            button.addEventListener('click', () => {
+                input.value = button.dataset.aiPrompt;
+                updateComposer();
+                input.focus({ preventScroll: true });
+            });
+        });
+        workspace.querySelectorAll('[data-ai-copy]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const answer = button.closest('.ai-msg__bubble').querySelector('.bm-assistant__answer');
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(answer.innerText);
+                    } else {
+                        const range = document.createRange();
+                        range.selectNodeContents(answer);
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        if (!document.execCommand('copy')) {
+                            copyStatus.textContent = 'Ответ выделен. Нажмите Ctrl+C.';
+                            return;
+                        }
+                        selection.removeAllRanges();
+                    }
+                    copyStatus.textContent = 'Ответ скопирован';
+                    const icon = button.querySelector('i');
+                    icon.classList.replace('ti-copy', 'ti-check');
+                    setTimeout(() => icon.classList.replace('ti-check', 'ti-copy'), 1200);
+                } catch {
+                    copyStatus.textContent = 'Не удалось скопировать ответ.';
+                }
+            });
+        });
+        form.addEventListener('submit', event => {
+            if (send.disabled) {
+                event.preventDefault();
+                return;
+            }
+            submitting = true;
+            mic.disabled = true;
+            send.setAttribute('aria-label', 'Отправка вопроса');
+            send.querySelector('i').className = 'ti ti-loader-2';
+            updateComposer();
+        });
+        window.addEventListener('pageshow', () => {
+            submitting = false;
+            mic.disabled = false;
+            send.setAttribute('aria-label', 'Отправить вопрос');
+            send.querySelector('i').className = 'ti ti-arrow-up';
+            updateComposer();
+        });
     }
-    document.addEventListener('click', function (event) {
-        var closer = event.target.closest ? event.target.closest('[data-ai-close]') : null;
-        if (closer) { setOpen(false); }
+
+    const companion = document.querySelector('[data-ai-companion]');
+    if (!companion) return;
+
+    const panel = companion.querySelector('#ai-panel');
+    const messages = companion.querySelector('#ai-messages');
+    const form = companion.querySelector('#ai-form');
+    const input = companion.querySelector('#ai-input');
+    const sendBtn = companion.querySelector('#ai-send');
+    const toggleBtn = companion.querySelector('[data-ai-toggle]');
+    const status = companion.querySelector('[data-ai-pet-status]');
+    const reaction = companion.querySelector('[data-ai-reaction]');
+    const petSprite = companion.querySelector('[data-mini-avatar]').content.firstElementChild;
+    const dock = companion.querySelector('.bm-mini-dock');
+    const writeBtn = dock.querySelector('[data-ai-write]');
+    const recordBtn = dock.querySelector('[data-mini-record]');
+    const mic = form.querySelector('[data-ai-voice]');
+    const actions = form.querySelector('#mini-actions');
+    const moreBtn = form.querySelector('[data-mini-actions]');
+    const thread = panel.querySelector('[data-mini-thread]');
+    const motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+    let headCenter = { x: 0, y: 0 };
+    let landingTimer;
+    const positionKey = 'bm-ai-pet-position';
+    const margin = 12;
+    const gap = 8;
+    const panelWidth = 400;
+    let position = { x: 1, y: 1 };
+    let drag;
+    let ignoreClick = false;
+    let reactionTimer;
+    const stateLines = {
+        idle: 'На связи',
+        thinking: 'Думаю…',
+        ready: 'Ответ готов',
+        error: 'Попробуем ещё?',
+    };
+    const cancelVoice = bindDictation(form, active => {
+        companion.toggleAttribute('data-listening', active);
+        recordBtn.setAttribute('aria-pressed', String(active));
+        mic.querySelector('[data-mini-voice-label]').textContent = active ? 'Завершить диктовку' : 'Диктовать';
+        recordBtn.setAttribute('aria-label', active ? 'Завершить диктовку' : 'Диктовать сообщение');
+        status.textContent = active ? 'Диктовка' : stateLines[companion.dataset.state];
+        placeBubble();
+    }, () => setOpen(true), text => {
+        if (panel.hidden) showReaction(text, text ? 4200 : 0);
     });
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && isOpen()) { setOpen(false); }
-    });
+    window.addEventListener('pagehide', () => cancelActiveVoice?.());
+
+    function viewport() {
+        const view = window.visualViewport;
+        return view
+            ? { left: view.offsetLeft, top: view.offsetTop, width: view.width, height: view.height }
+            : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    function petBounds() {
+        const view = viewport();
+        const left = view.left + margin;
+        const top = view.top + margin;
+        const x = Math.max(0, view.width - companion.offsetWidth - 2 * margin);
+        const y = Math.max(0, view.height - companion.offsetHeight - 2 * margin);
+        return { view, left, top, x, y };
+    }
+
+    function placeBubble() {
+        const view = viewport();
+        const rect = companion.getBoundingClientRect();
+        const center = rect.left + rect.width / 2;
+        headCenter = { x: center, y: rect.top + toggleBtn.offsetHeight * .36 };
+        const available = Math.max(1, view.width - 2 * margin);
+        const width = Math.min(panelWidth, available);
+        const editorWidth = Math.min(330, available);
+        const align = size => clamp(center - size / 2, view.left + margin, view.left + view.width - margin - size);
+        const editorLeft = align(editorWidth);
+        companion.style.setProperty('--mini-editor-width', editorWidth + 'px');
+        companion.style.setProperty('--mini-editor-left', (editorLeft - rect.left) + 'px');
+        const left = align(width);
+        const above = rect.top - view.top - margin - gap;
+        const below = view.top + view.height - margin - rect.bottom - gap;
+        const placeAbove = above >= 512 || above >= below;
+        companion.dataset.side = placeAbove ? 'above' : 'below';
+        companion.style.setProperty('--pet-panel-width', width + 'px');
+        companion.style.setProperty('--pet-panel-left', (left - editorLeft) + 'px');
+        companion.style.setProperty('--pet-panel-room', Math.max(0, placeAbove ? above : below) + 'px');
+        const reactionLeft = clamp(rect.left, view.left + margin, view.left + view.width - margin - 120);
+        companion.style.setProperty('--pet-reaction-left', (reactionLeft - rect.left) + 'px');
+    }
+
+    function placePet() {
+        const bounds = petBounds();
+        companion.style.left = bounds.left + bounds.x * position.x + 'px';
+        companion.style.top = bounds.top + bounds.y * position.y + 'px';
+        placeBubble();
+    }
+
+    function movePet(left, top) {
+        const bounds = petBounds();
+        position = {
+            x: bounds.x ? clamp((left - bounds.left) / bounds.x, 0, 1) : 0,
+            y: bounds.y ? clamp((top - bounds.top) / bounds.y, 0, 1) : 0,
+        };
+        placePet();
+    }
+
+    function savePosition() {
+        try { localStorage.setItem(positionKey, JSON.stringify(position)); } catch { /* private mode */ }
+    }
+
     try {
-        if (localStorage.getItem(OPEN_KEY) === '1') { setOpen(true); }
-    } catch (e) { /* private mode */ }
+        const saved = JSON.parse(localStorage.getItem(positionKey));
+        if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) {
+            position = { x: clamp(saved.x, 0, 1), y: clamp(saved.y, 0, 1) };
+        }
+    } catch { /* invalid or unavailable storage */ }
 
+    status.textContent = stateLines.idle;
+    placePet();
+    new ResizeObserver(placePet).observe(companion);
+    window.addEventListener('resize', placePet, { passive: true });
+    window.visualViewport?.addEventListener('resize', placePet, { passive: true });
+    window.visualViewport?.addEventListener('scroll', () => {
+        if (window.visualViewport.scale !== 1 || window.visualViewport.offsetTop || window.visualViewport.offsetLeft) {
+            placePet();
+        }
+    }, { passive: true });
+
+    function showReaction(text, duration = 1800) {
+        clearTimeout(reactionTimer);
+        reaction.textContent = text;
+        if (duration) reactionTimer = setTimeout(() => { reaction.textContent = ''; }, duration);
+    }
+
+    function showAssistantState(state) {
+        companion.dataset.state = state;
+        status.textContent = stateLines[state];
+        showReaction(stateLines[state], state === 'thinking' ? 0 : 3300);
+    }
+
+    function setActions(open) {
+        actions.hidden = !open;
+        moreBtn.setAttribute('aria-expanded', String(open));
+    }
+
+    function setOpen(open, restoreFocus = false) {
+        if (!open) {
+            cancelVoice();
+            form.querySelector('[data-ai-voice-status]').hidden = true;
+        }
+        setActions(false);
+        panel.hidden = !open;
+        dock.hidden = open;
+        companion.toggleAttribute('data-open', open);
+        toggleBtn.setAttribute('aria-expanded', String(open));
+        writeBtn.setAttribute('aria-expanded', String(open));
+        placePet();
+        if (open) {
+            scrollDown();
+            input.focus({ preventScroll: true });
+        } else if (restoreFocus) {
+            writeBtn.focus({ preventScroll: true });
+        }
+    }
+
+    function look(x, y) {
+        if (!motion.matches) return;
+        const horizontal = clamp(x, -1, 1) * (companion.dataset.facing === 'left' ? -1 : 1);
+        const vertical = clamp(y, -1, 1);
+        companion.style.setProperty('--mini-turn-x', horizontal * 10 + 'px');
+        companion.style.setProperty('--mini-yaw', horizontal * 5 + 'deg');
+        companion.style.setProperty('--mini-tilt', horizontal * 7 + 'deg');
+        companion.style.setProperty('--mini-eye-x', horizontal * 14 + 'px');
+        companion.style.setProperty('--mini-eye-y', vertical * 8 + 'px');
+    }
+
+    let gazeFrame = 0;
+    let pointer;
+    document.addEventListener('pointermove', event => {
+        if (drag || event.pointerType !== 'mouse' || !motion.matches) return;
+        pointer = { x: event.clientX, y: event.clientY };
+        if (gazeFrame) return;
+        gazeFrame = requestAnimationFrame(() => {
+            gazeFrame = 0;
+            if (!drag) look((pointer.x - headCenter.x) / 145, (pointer.y - headCenter.y) / 115);
+        });
+    }, { passive: true });
+
+    writeBtn.addEventListener('click', () => setOpen(true));
+    recordBtn.addEventListener('click', () => mic.click());
+    moreBtn.addEventListener('click', () => {
+        setActions(actions.hidden);
+        form.querySelector('[data-ai-voice-status]').hidden = true;
+        if (!actions.hidden) actions.querySelector('button:not(:disabled)').focus();
+    });
+    mic.addEventListener('click', () => {
+        setActions(false);
+        if (!panel.hidden) input.focus();
+    });
+    actions.querySelector('[data-mini-fold]').addEventListener('click', () => setOpen(false, true));
+
+    toggleBtn.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        ignoreClick = false;
+        clearTimeout(landingTimer);
+        companion.removeAttribute('data-landing');
+        const rect = companion.getBoundingClientRect();
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, left: rect.left, top: rect.top, moved: false };
+        toggleBtn.setPointerCapture(event.pointerId);
+    });
+    toggleBtn.addEventListener('pointermove', event => {
+        if (!drag || drag.id !== event.pointerId) return;
+        const x = event.clientX - drag.x;
+        const y = event.clientY - drag.y;
+        if (!drag.moved && Math.hypot(x, y) < 6) return;
+        if (!drag.moved) {
+            drag.moved = true;
+            companion.setAttribute('data-dragging', '');
+            showReaction('');
+        }
+        const dx = event.clientX - drag.lastX;
+        const dy = event.clientY - drag.lastY;
+        if (Math.abs(dx) >= 1) companion.dataset.facing = dx < 0 ? 'left' : 'right';
+        if (dx || dy) look(dx / 6, dy / 8);
+        drag.lastX = event.clientX;
+        drag.lastY = event.clientY;
+        movePet(drag.left + x, drag.top + y);
+    });
+
+    function finishDrag(event) {
+        if (!drag || drag.id !== event.pointerId) return;
+        companion.removeAttribute('data-dragging');
+        if (drag.moved) {
+            ignoreClick = true;
+            savePosition();
+            look(0, 0);
+            if (event.type === 'pointerup') {
+                companion.setAttribute('data-landing', '');
+                landingTimer = setTimeout(() => companion.removeAttribute('data-landing'), 540);
+            }
+        }
+        drag = null;
+    }
+
+    toggleBtn.addEventListener('pointerup', finishDrag);
+    toggleBtn.addEventListener('pointercancel', finishDrag);
+    toggleBtn.addEventListener('lostpointercapture', finishDrag);
+    toggleBtn.addEventListener('click', event => {
+        if (ignoreClick && event.detail > 0) return;
+        setOpen(panel.hidden, true);
+    });
+    toggleBtn.addEventListener('keydown', event => {
+        const shifts = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        if (!Object.hasOwn(shifts, event.key)) return;
+        event.preventDefault();
+        const [dx, dy] = shifts[event.key];
+        const rect = companion.getBoundingClientRect();
+        movePet(rect.left + dx * 20, rect.top + dy * 20);
+        savePosition();
+        showReaction('Я здесь!');
+    });
+
+    companion.querySelector('[data-ai-close]').addEventListener('click', () => setOpen(false, true));
+    document.addEventListener('pointerdown', event => {
+        if (!panel.hidden && !companion.contains(event.target)) setOpen(false);
+        else if (!actions.contains(event.target) && !moreBtn.contains(event.target)) setActions(false);
+    });
+    companion.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        if (!actions.hidden) {
+            setActions(false);
+            moreBtn.focus();
+        } else if (!panel.hidden) setOpen(false, true);
+        else if (companion.hasAttribute('data-listening')) cancelVoice();
+        else if (event.target === toggleBtn) {
+            position = { x: 1, y: 1 };
+            placePet();
+            savePosition();
+            showReaction('Вернулся!');
+        }
+    });
     /* ---------- утилиты ---------- */
 
     function escapeHtml(value) {
@@ -127,6 +582,11 @@
             var href = String(item.url || '#');
             /* только локальные ссылки — чужие схемы/домены не пропускаем */
             if (href.charAt(0) !== '/' && href.charAt(0) !== '#') { continue; }
+            try {
+                if (new URL(href, window.location.href).origin !== window.location.origin) continue;
+            } catch (error) {
+                continue;
+            }
             html.push('<a class="ai-action" href="' + escapeHtml(href) + '">' +
                 '<i class="ti ' + escapeHtml(String(item.icon || 'ti-arrow-right')) + '"></i>' +
                 escapeHtml(String(item.label || href)) + '</a>');
@@ -152,102 +612,117 @@
         return out;
     }
 
-    /* ---------- лента сообщений ---------- */
 
-    function addMessage(side, html, isError) {
-        var wrap = document.createElement('div');
+    function addMessage(side, html, isError = false) {
+        const wrap = document.createElement('div');
         wrap.className = 'ai-msg ai-msg--' + side + (isError ? ' ai-msg--error' : '');
-        wrap.innerHTML =
-            '<div class="ai-msg__avatar"><i class="ti ti-' + (side === 'me' ? 'user' : 'sparkles') + '"></i></div>' +
-            '<div class="ai-msg__bubble">' + html + '</div>';
-        messages.insertBefore(wrap, typing);
+        if (side === 'ai') {
+            const avatar = petSprite.cloneNode(true);
+            if (isError) avatar.dataset.bumiEmotion = 'thinking';
+            wrap.append(avatar);
+        }
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-msg__bubble';
+        bubble.innerHTML = html;
+        wrap.append(bubble);
+        messages.append(wrap);
+        placeBubble();
         scrollDown();
-        return wrap;
     }
 
-    function showTyping(show) {
-        if (typing) { typing.hidden = !show; }
-        if (show) { scrollDown(); }
-    }
-
-    /* ---------- отправка ---------- */
-
-    var inFlight = false;
+    let inFlight = false;
 
     function setBusy(busy) {
         inFlight = busy;
-        if (input) { input.disabled = busy; }
-        if (sendBtn) { sendBtn.disabled = busy; }
-        /* C5: контейнер сообщений сигнализирует скринридерам о загрузке ответа */
-        if (messages) { messages.setAttribute('aria-busy', busy ? 'true' : 'false'); }
+        input.readOnly = busy;
+        form.querySelector('[data-ai-example]').disabled = busy || !!input.value.trim();
+        sendBtn.disabled = busy || input.value.trim().length < 3;
+        recordBtn.disabled = busy;
+        form.querySelector('[data-ai-voice]').disabled = busy;
+        form.classList.toggle('is-busy', busy);
+        messages.setAttribute('aria-busy', String(busy));
     }
 
-    function send(question) {
-        question = String(question || '').trim();
-        if (question.length < 3 || inFlight) { return; }
+    function responseError(response, data) {
+        if (response.status === 422) {
+            const validation = Object.values(data.errors || {})[0];
+            return validation?.[0] || 'Проверьте длину вопроса.';
+        }
+        if (response.status === 401 || response.status === 419) return 'Сессия истекла. Обновите страницу и войдите снова.';
+        if (response.status === 403) return 'У вас нет доступа к этому действию.';
+        if (response.status === 429) return 'Слишком много запросов. Попробуйте чуть позже.';
+        return 'Ассистент пока недоступен. Попробуйте ещё раз.';
+    }
 
+    async function send(question, fromInput = false) {
+        question = String(question || '').trim();
+        if (question.length < 3 || question.length > 500 || inFlight) return;
+        const token = form.querySelector('input[name="_token"]').value;
+        cancelVoice();
+        thread.hidden = false;
+        input.placeholder = 'Сообщение для Bumi';
         addMessage('me', formatText(question));
         setBusy(true);
-        showTyping(true);
+        showAssistantState('thinking');
 
-        var token = form ? (form.querySelector('input[name="_token"]') || {}).value : '';
-
-        fetch(form.getAttribute('action'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': token || '',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({ question: question })
-        })
-            .then(function (response) {
-                return response.json().catch(function () { return {}; }).then(function (data) {
-                    return { status: response.status, data: data };
-                });
-            })
-            .then(function (result) {
-                showTyping(false);
-                var data = result.data || {};
-
-                if (result.status === 422) {
-                    var first = null;
-                    var errors = data.errors || {};
-                    for (var key in errors) {
-                        if (Object.prototype.hasOwnProperty.call(errors, key)) { first = errors[key][0]; break; }
-                    }
-                    addMessage('ai', escapeHtml(first || 'Проверьте запрос — слишком короткий вопрос.'), true);
-                    return;
-                }
-
-                var reply = data.ok === false && !data.reply
-                    ? 'Не получилось обработать запрос. Попробуйте иначе.'
-                    : (data.reply || '…');
-                addMessage('ai', formatText(reply) + renderBlocks(data.blocks || []));
-            })
-            .catch(function () {
-                showTyping(false);
-                addMessage('ai', escapeHtml('Связь с сервером оборвалась. Попробуйте ещё раз.'), true);
-            })
-            .then(function () {
-                setBusy(false);
-                if (input) { input.value = ''; input.focus(); }
+        let success = false;
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ question }),
             });
+            const data = (await response.json().catch(() => ({}))) || {};
+            if (!response.ok) {
+                addMessage('ai', formatText(responseError(response, data)), true);
+                return;
+            }
+
+            const reply = typeof data.reply === 'string' ? data.reply.trim() : '';
+            success = data.ok === true && Boolean(reply);
+            const blocks = Array.isArray(data.blocks) ? data.blocks : [];
+            const replyHtml = reply && typeof data.reply_html === 'string'
+                ? data.reply_html
+                : formatText(reply || 'Bumi пока не смог ответить. Попробуйте ещё раз.');
+            addMessage('ai', '<div class="ai-markdown">' + replyHtml + '</div>' + renderBlocks(blocks), !success);
+        } catch (error) {
+            addMessage('ai', formatText('Связь с сервером оборвалась. Попробуйте ещё раз.'), true);
+        } finally {
+            if (success && fromInput) input.value = '';
+            setBusy(false);
+            showAssistantState(success ? 'ready' : 'error');
+            if (!panel.hidden && form.contains(document.activeElement)) input.focus();
+        }
     }
 
-    if (form) {
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-            send(input ? input.value : '');
-        });
-    }
-
-    /* быстрые подсказки */
-    document.addEventListener('click', function (event) {
-        var chip = event.target.closest ? event.target.closest('[data-ai-chip]') : null;
-        if (!chip) { return; }
-        if (!isOpen()) { setOpen(true); }
-        send(chip.getAttribute('data-ai-chip'));
+    input.addEventListener('input', () => {
+        sendBtn.disabled = inFlight || input.value.trim().length < 3;
+        form.querySelector('[data-ai-example]').disabled = inFlight || !!input.value.trim();
     });
+    companion.querySelector('[data-ai-example]').addEventListener('click', () => {
+        if (inFlight || input.value.trim()) return;
+        setActions(false);
+        input.value = 'Какие задачи у меня на сегодня?';
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+    });
+
+    input.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        send(input.value, true);
+    });
+
+
 })();

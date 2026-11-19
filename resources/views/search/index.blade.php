@@ -1,24 +1,18 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'lookup')
 
 @section('title', 'Поиск' . ($q !== '' ? ' — ' . $q : ''))
 
 @section('content')
-<div class="page-header mb-2">
-    <div class="row align-items-center">
-        <div class="col"><h2 class="page-title">Поиск</h2></div>
-        <div class="col-auto">
-            <form method="get" class="row g-2">
-                <div class="col-auto">
-                    <div class="input-icon">
-                        <input type="text" name="q" value="{{ $q }}" class="form-control crm-search-input" placeholder="ФИО, задача, документ…" autofocus aria-label="Поиск по системе">
-                        <span class="input-icon-addon"><i class="ti ti-search"></i></span>
-                    </div>
-                </div>
-                <div class="col-auto"><button class="btn btn-primary">Найти</button></div>
-            </form>
+<x-page-header eyebrow="СИСТЕМА" title="Поиск" subtitle="Единый запрос: сотрудники, задачи, документы">
+    <form method="get" class="d-flex gap-2">
+        <div class="input-icon">
+            <input type="text" name="q" value="{{ $q }}" class="form-control crm-search-input" style="width: min(320px, 56vw)" placeholder="ФИО, задача, документ…" autofocus aria-label="Поиск по системе">
+            <span class="input-icon-addon"><i class="ti ti-search"></i></span>
         </div>
-    </div>
-</div>
+        <button class="btn btn-primary">Найти</button>
+    </form>
+</x-page-header>
 
 @if ($q === '')
     <div class="card"><div class="card-body text-secondary">Введите запрос: ФИО, таб.№, номер или название задачи/документа.</div></div>
@@ -32,7 +26,7 @@
         @if (app(\App\Support\PermissionService::class)->check(auth()->user(), 'employees.view'))
             <div class="col-md-4">
                 <div class="card">
-                    <div class="card-header"><strong>Сотрудники</strong> <span class="badge bg-blue-lt ms-2">{{ $employees->count() }}</span></div>
+                    <div class="card-header"><h2 class="card-title bm-section-title">Сотрудники</h2> <span class="badge bg-blue-lt ms-2">{{ $employees->count() }}</span></div>
                     <div class="card-body">
                         @forelse ($employees as $employee)
                             <a class="d-block py-1" href="{{ route('employees.show', $employee) }}">{{ $employee->last_name }} {{ $employee->first_name }} <span class="text-secondary small">({{ $employee->employee_no }})</span></a>
@@ -47,7 +41,7 @@
         @if (app(\App\Support\PermissionService::class)->check(auth()->user(), 'tasks.view'))
             <div class="col-md-4">
                 <div class="card">
-                    <div class="card-header"><strong>Задачи</strong> <span class="badge bg-blue-lt ms-2">{{ $tasks->count() }}</span></div>
+                    <div class="card-header"><h2 class="card-title bm-section-title">Задачи</h2> <span class="badge bg-blue-lt ms-2">{{ $tasks->count() }}</span></div>
                     <div class="card-body">
                         @forelse ($tasks as $task)
                             <a class="d-block py-1" href="{{ route('tasks.show', $task) }}">{{ $task->number }} — {{ \Illuminate\Support\Str::limit($task->title, 40) }}</a>
@@ -62,7 +56,7 @@
         @if (app(\App\Support\PermissionService::class)->check(auth()->user(), 'documents.view'))
             <div class="col-md-4">
                 <div class="card">
-                    <div class="card-header"><strong>Документы</strong> <span class="badge bg-blue-lt ms-2">{{ $documents->count() }}</span></div>
+                    <div class="card-header"><h2 class="card-title bm-section-title">Документы</h2> <span class="badge bg-blue-lt ms-2">{{ $documents->count() }}</span></div>
                     <div class="card-body">
                         @forelse ($documents as $document)
                             <a class="d-block py-1" href="{{ route('documents.show', $document) }}">{{ $document->document_number }} — {{ \Illuminate\Support\Str::limit($document->title, 40) }}</a>

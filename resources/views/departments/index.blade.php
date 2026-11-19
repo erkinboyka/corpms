@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Отделы')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Организация</div>
-            <h2 class="page-title mt-1">Отделы</h2>
+            <h1 class="page-title mt-1">Отделы</h1>
             <div class="text-secondary mt-1">Структура подразделений · {{ $departments->count() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -33,9 +34,9 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table" id="departments-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table" id="departments-table">
             <thead>
-                <tr><th>Подразделение</th><th>Родитель</th><th>Руководитель</th><th>Сотрудников</th><th class="text-end">Действия</th></tr>
+                <tr><th scope="col">Подразделение</th><th scope="col">Родитель</th><th scope="col">Руководитель</th><th scope="col">Сотрудников</th><th scope="col" class="text-end">Действия</th></tr>
             </thead>
             <tbody>
                 @forelse ($departments as $department)
@@ -92,25 +93,29 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Добавить подразделение</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="nd-name">Название подразделения<span class="req">*</span></label>
-                    <input type="text" id="nd-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Отдел разработки" required>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="nd-code">Код<span class="req">*</span></label>
-                    <input type="text" id="nd-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="IT, HR…" required
-                           maxlength="32" autocomplete="off"
-                           data-crm-tags data-crm-tags-hint="Enter — добавить тег кода">
-                </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="nd-parent">Родительский отдел</label>
-                    <select id="nd-parent" name="parent_id" class="form-select">
-                        <option value="">— корневой —</option>
-                        @foreach ($departments as $d)
-                            <option value="{{ $d->id }}" @selected((string) old('parent_id') === (string) $d->id)>{{ $d->name }}</option>
-                        @endforeach
-                    </select>
-                    <div class="form-text">Определяет позицию в оргструктуре.</div>
+                <div class="crm-form__section mb-0">
+                    <h3>Подразделение</h3>
+                    <div class="crm-form__desc">Название и код — как в штатной структуре и документах.</div>
+                    <div class="crm-form__field">
+                        <label class="form-label" for="nd-name">Название подразделения<span class="req">*</span></label>
+                        <input type="text" id="nd-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Отдел разработки" required>
+                    </div>
+                    <div class="crm-form__field">
+                        <label class="form-label" for="nd-code">Код<span class="req">*</span></label>
+                        <input type="text" id="nd-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="IT, HR…" required
+                               maxlength="32" autocomplete="off"
+                               data-crm-tags data-crm-tags-hint="Enter — добавить тег кода">
+                    </div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="nd-parent">Родительский отдел</label>
+                        <select id="nd-parent" name="parent_id" class="form-select">
+                            <option value="">— корневой —</option>
+                            @foreach ($departments as $d)
+                                <option value="{{ $d->id }}" @selected((string) old('parent_id') === (string) $d->id)>{{ $d->name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Определяет позицию в оргструктуре.</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'planning')
 
 @section('title', 'Праздники ' . $year)
 
@@ -9,9 +10,9 @@
         'shortened' => 'crm-chip--orange',
     ];
     $kindTones = [
-        'public' => '#d63939',
-        'operating' => '#4299e1',
-        'shortened' => '#f76707',
+        'public' => 'var(--crm-danger)',
+        'operating' => 'var(--crm-info)',
+        'shortened' => 'var(--crm-warning)',
     ];
 
     // индекс праздников: месяц => день => список
@@ -34,7 +35,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Календарь</div>
-            <h2 class="page-title mt-1">Праздники {{ $year }}</h2>
+            <h1 class="page-title mt-1">Праздники {{ $year }}</h1>
             <div class="text-secondary mt-1">Производственный календарь · {{ $holidays->count() }} дн. в году</div>
         </div>
         <div class="col-auto d-print-none">
@@ -43,10 +44,11 @@
                     <a class="btn btn-ghost-secondary" href="{{ route('schedules.holidays', ['year' => $year - 1]) }}" title="Предыдущий год"><i class="ti ti-chevron-left"></i></a>
                     <form method="get" class="d-flex gap-1 align-items-center">
                         <input class="form-control" type="number" name="year" value="{{ $year }}" style="width: 6.5rem" aria-label="Год">
-                        <button class="btn btn-ghost-secondary">Год</button>
+                        <button class="btn btn-ghost-secondary">Показать</button>
                     </form>
                     <a class="btn btn-ghost-secondary" href="{{ route('schedules.holidays', ['year' => $year + 1]) }}" title="Следующий год"><i class="ti ti-chevron-right"></i></a>
                 </div>
+                <a class="btn btn-outline-secondary" href="{{ route('schedules.holidays', ['year' => now()->year]) }}#month-{{ now()->month }}">Текущий месяц</a>
                 @if ($canManage)
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newHoliday">
                         <i class="ti ti-plus me-1"></i>Добавить праздник
@@ -59,19 +61,19 @@
 
 <div class="crm-metrics mb-3">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #d63939;"><i class="ti ti-flag"></i>Праздничных дней</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-flag"></i>Праздничных дней</div>
         <div class="crm-metric__value">{{ $byKind['public'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-briefcase"></i>Рабочие по календарю</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-briefcase"></i>Рабочие по календарю</div>
         <div class="crm-metric__value">{{ $byKind['operating'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-clock-hour-4"></i>Сокращённые дни</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-clock-hour-4"></i>Сокращённые дни</div>
         <div class="crm-metric__value">{{ $byKind['shortened'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #6c7a91;"><i class="ti ti-calendar-stats"></i>Всего отметок</div>
+        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-calendar-stats"></i>Всего отметок</div>
         <div class="crm-metric__value">{{ $holidays->count() }}</div>
     </div>
 </div>
@@ -86,9 +88,9 @@
             $isCurrentMonth = $year === (int) now()->format('Y') && $m === (int) now()->format('m');
             $todayDay = (int) now()->format('d');
         @endphp
-        <div class="col-6 col-md-4 col-xl-3">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
             <div class="crm-form__section h-100">
-                <h3 class="h5">{{ $monthName }} @if ($isCurrentMonth)<span class="crm-chip crm-chip--green ms-1">сейчас</span>@endif</h3>
+                <h2 id="month-{{ $m }}" tabindex="-1" class="h5">{{ $monthName }} @if ($isCurrentMonth)<span class="crm-chip crm-chip--green ms-1">сейчас</span>@endif</h2>
                 <div class="crm-cal crm-cal--sm mt-2">
                     <div class="crm-cal__head">
                         @foreach (['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as $dow)
@@ -114,7 +116,7 @@
                                  @if ($holiday !== null) title="{{ $holiday->name }} — {{ $holiday->date->format('d.m') }}" @endif>
                                 <span class="crm-cal__day">{{ $day }}</span>
                                 @if ($holiday !== null)
-                                    <span class="crm-cal__dot" style="background: {{ $kindTones[$holiday->kind->value] ?? '#6c7a91' }};"></span>
+                                    <span class="crm-cal__dot" style="background: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};"></span>
                                 @endif
                             </div>
                         @endfor
@@ -131,8 +133,8 @@
     <div class="crm-form__desc">Красные — выходные, синие — рабочие по календарю, оранжевые — сокращённые.</div>
     <div class="crm-queue">
         @forelse ($holidays as $holiday)
-            <div class="crm-queue__item" style="--c: {{ $kindTones[$holiday->kind->value] ?? '#6c7a91' }};">
-                <span class="crm-entity__logo" style="width:38px;height:38px;font-size:13px;border-radius:11px;background: {{ ($kindTones[$holiday->kind->value] ?? '#6c7a91') }}1f; color: {{ $kindTones[$holiday->kind->value] ?? '#6c7a91' }};">
+            <div class="crm-queue__item" style="--c: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};">
+                <span class="crm-entity__logo" style="width:38px;height:38px;font-size:13px;border-radius:11px;background: {{ ($kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)') }}1f; color: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};">
                     <i class="ti ti-{{ $holiday->kind->value === 'operating' ? 'briefcase' : ($holiday->kind->value === 'shortened' ? 'clock-hour-4' : 'flag') }}"></i>
                 </span>
                 <div class="crm-queue__body">
@@ -151,7 +153,7 @@
                 @endif
             </div>
         @empty
-            <div class="crm-queue__item" style="--c: #6c7a91;">
+            <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                 <div class="crm-queue__body">
                     <div class="crm-queue__title">Праздников в году нет</div>
                     <div class="crm-queue__sub">Добавьте первый — календарь подсветит его автоматически.</div>

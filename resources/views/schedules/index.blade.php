@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'planning')
 
 @section('title', 'Графики работы')
 
@@ -12,7 +13,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Планирование</div>
-            <h2 class="page-title mt-1">Графики работы</h2>
+            <h1 class="page-title mt-1">Графики работы</h1>
             <div class="text-secondary mt-1">Шаблоны рабочего времени · {{ $schedules->count() }}</div>
         </div>
         @if ($canManage)
@@ -29,7 +30,7 @@
     @forelse ($schedules as $schedule)
         <div class="col-md-6 col-xl-4">
             <div class="crm-entity h-100">
-                <div class="crm-entity__logo" style="background: #4299e11f; color: #4299e1;">
+                <div class="crm-entity__logo" style="background: color-mix(in srgb, var(--crm-info) 12%, transparent); color: var(--crm-info);">
                     <i class="ti ti-{{ $typeIcons[$schedule->type->value] ?? 'clock' }}"></i>
                 </div>
                 <div class="crm-entity__body">

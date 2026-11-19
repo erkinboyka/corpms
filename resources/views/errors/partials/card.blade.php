@@ -23,10 +23,6 @@
     @endphp
     <div class="row justify-content-center">
         <div class="col-12">
-            <div class="text-center mb-4">
-                <div><span class="navbar-brand d-inline-flex align-items-center fs-2"><i class="ti ti-building-castle me-2"></i>CorpMS</span></div>
-                <div class="crm-tagline">Корпоративная система управления</div>
-            </div>
             <div class="card card-md">
                 <div class="card-body p-4 text-center">
                     <div class="display-5 fw-bold text-secondary mb-2">{{ $code }}</div>

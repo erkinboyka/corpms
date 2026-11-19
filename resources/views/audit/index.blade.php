@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Журнал действий')
 
@@ -11,7 +12,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Система</div>
-            <h2 class="page-title mt-1">Журнал действий</h2>
+            <h1 class="page-title mt-1">Журнал действий</h1>
             <div class="text-secondary mt-1">Audit Log: кто, что и когда изменил — со старыми и новыми значениями</div>
         </div>
         <div class="col-auto d-print-none">
@@ -24,22 +25,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-history"></i>Записей</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-history"></i>Записей</div>
         <div class="crm-metric__value">{{ $logs->total() }}</div>
         <div class="crm-metric__hint">с учётом фильтра · страница {{ $logs->currentPage() }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-users"></i>Пользователей</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-users"></i>Пользователей</div>
         <div class="crm-metric__value">{{ $users->count() }}</div>
         <div class="crm-metric__hint">доступно для фильтра</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-code"></i>Действий</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-code"></i>Действий</div>
         <div class="crm-metric__value">{{ $actions->count() }}</div>
         <div class="crm-metric__hint">уникальных типов в журнале</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-calendar"></i>Период</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-calendar"></i>Период</div>
         <div class="crm-metric__value" style="font-size: 1.1rem; padding-top: 6px;">
             {{ request('from') ?: 'весь' }} — {{ request('to') ?: 'сегодня' }}
         </div>
@@ -87,15 +88,15 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
+        <table data-record-key="2" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
                 <tr>
-                    <th style="width: 150px">Когда</th>
-                    <th>Пользователь</th>
-                    <th>Действие</th>
-                    <th>Объект</th>
-                    <th style="width: 320px">Изменения</th>
-                    <th style="width: 130px">IP</th>
+                    <th scope="col" style="width: 150px">Когда</th>
+                    <th scope="col">Пользователь</th>
+                    <th scope="col">Действие</th>
+                    <th scope="col">Объект</th>
+                    <th scope="col" style="width: 320px">Изменения</th>
+                    <th scope="col" style="width: 130px">IP</th>
                 </tr>
             </thead>
             <tbody>

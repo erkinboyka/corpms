@@ -158,9 +158,16 @@ class ReportController extends Controller
         $user = auth()->user();
         \assert($user instanceof User);
 
+        $reportPermission = request()->routeIs('reports.export') ? 'reports.export' : 'reports.view';
+        abort_unless($this->permissions->check($user, $permission) && $this->permissions->check($user, $reportPermission), 403);
         $access = $this->analytics->accessibleEmployees($user, $permission);
+        $reportAccess = $this->analytics->accessibleEmployees($user, $reportPermission);
+        $allowedIds = $reportAccess['employees']->pluck('id');
+        $employees = $access['employees']->whereIn('id', $allowedIds)->values();
+        $sourceScope = $this->permissions->can($user, $permission);
+        $reportScope = $this->permissions->can($user, $reportPermission);
 
-        return [$access['employees'], $access['scope_value']];
+        return [$employees, $sourceScope->rank() < $reportScope->rank() ? $sourceScope->value : $reportScope->value];
     }
 
     /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */

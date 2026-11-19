@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Отчёт: посещаемость')
 
@@ -16,7 +17,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Отчёты</div>
-            <h2 class="page-title mt-1">Отчёт по посещаемости</h2>
+            <h1 class="page-title mt-1">Отчёт по посещаемости</h1>
             <div class="text-secondary mt-1">Период: {{ $from->format('d.m.Y') }} — {{ $to->format('d.m.Y') }} · scope: {{ $scope === 'company' ? 'компания' : ($scope === 'department' ? 'подразделение' : 'личный') }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -44,27 +45,27 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-calendar-check"></i>Дней отработано</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-calendar-check"></i>Дней отработано</div>
         <div class="crm-metric__value">{{ $totalDays }}</div>
         <div class="crm-metric__hint">по всем сотрудникам за период</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #d63939;"><i class="ti ti-clock-exclamation"></i>Опоздания</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-clock-exclamation"></i>Опоздания</div>
         <div class="crm-metric__value">{{ $totalLate }} <small>мин</small></div>
         <div class="crm-metric__hint">суммарное опоздание</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-clock-off"></i>Ранние уходы</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-clock-off"></i>Ранние уходы</div>
         <div class="crm-metric__value">{{ $totalEarly }} <small>мин</small></div>
         <div class="crm-metric__hint">без учёта отгулов</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-clock-hour-4"></i>Сверхурочные</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-clock-hour-4"></i>Сверхурочные</div>
         <div class="crm-metric__value">{{ $totalOvertime }} <small>мин</small></div>
         <div class="crm-metric__hint">по отметкам выхода</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-door-exit"></i>Незакрытых смен</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-door-exit"></i>Незакрытых смен</div>
         <div class="crm-metric__value">{{ $totalMissing }}</div>
         <div class="crm-metric__hint">нет отметки ухода</div>
     </div>
@@ -72,16 +73,16 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
                 <tr>
-                    <th>Таб.№</th>
-                    <th>Сотрудник</th>
-                    <th class="text-end">Дней</th>
-                    <th class="text-end">Опоздания (мин)</th>
-                    <th class="text-end">Ранние уходы (мин)</th>
-                    <th class="text-end">Сверхурочные (мин)</th>
-                    <th class="text-end">Незакрытых смен</th>
+                    <th scope="col">Таб.№</th>
+                    <th scope="col">Сотрудник</th>
+                    <th scope="col" class="text-end">Дней</th>
+                    <th scope="col" class="text-end">Опоздания (мин)</th>
+                    <th scope="col" class="text-end">Ранние уходы (мин)</th>
+                    <th scope="col" class="text-end">Сверхурочные (мин)</th>
+                    <th scope="col" class="text-end">Незакрытых смен</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,12 +115,12 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="2">Итого</th>
-                    <th class="text-end crm-table-num">{{ $totalDays }}</th>
-                    <th class="text-end crm-table-num">{{ $totalLate }}</th>
-                    <th class="text-end crm-table-num">{{ $totalEarly }}</th>
-                    <th class="text-end crm-table-num">{{ $totalOvertime }}</th>
-                    <th class="text-end crm-table-num">{{ $totalMissing }}</th>
+                    <th scope="col" colspan="2">Итого</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalDays }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalLate }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalEarly }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalOvertime }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalMissing }}</th>
                 </tr>
             </tfoot>
         </table>

@@ -82,6 +82,15 @@ class AiToolCallingTest extends TestCase
         ]);
     }
 
+    public function test_tool_properties_are_json_objects_even_when_empty(): void
+    {
+        $tools = json_decode(json_encode(app(AiToolRegistry::class)->toolsFor($this->adminEmployee)), false);
+        $this->assertNotEmpty($tools);
+        foreach ($tools as $tool) {
+            $this->assertIsObject($tool->function->parameters->properties, $tool->function->name);
+        }
+    }
+
     protected function document(string $title, string $body, string $number, ?Employee $author = null): Document
     {
         return Document::create([

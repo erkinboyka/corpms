@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', request()->routeIs('documents.mine') ? 'Мои документы' : 'Документы')
 
@@ -34,25 +35,25 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Документооборот</div>
-            <h2 class="page-title mt-1">{{ $isMine ? 'Мои документы' : 'Документы' }}</h2>
+            <h1 class="page-title mt-1">{{ $isMine ? 'Мои документы' : 'Документы' }}</h1>
             <div class="text-secondary mt-1">Версии, согласование и подписи · всего {{ $total }} · показано {{ $shown }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('documents.templates') }}"><i class="ti ti-layout-list me-1"></i>Шаблоны</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('workflows.index') }}"><i class="ti ti-git-branch me-1"></i>Маршруты</a>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDocument"><i class="ti ti-plus me-1"></i>Новый документ</button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDocument"><i class="ti ti-plus me-1"></i>Новый документ</button>
         </div>
     </div>
 </div>
 
-<div class="crm-metrics mb-3">
-    @foreach ($metrics as $metric)
-        <div class="crm-metric">
-            <div class="crm-metric__label" style="color: {{ $metric['tone'] }};"><i class="ti ti-{{ $metric['icon'] }}"></i>{{ $metric['label'] }}</div>
-            <div class="crm-metric__value">{{ $metric['value'] }}</div>
-        </div>
-    @endforeach
-</div>
+@if (count($metrics) > 0)
+    <dl class="bm-document-summary" aria-label="Документы по статусам">
+        @foreach ($metrics as $metric)
+            <div>
+                <dt>{{ $metric['label'] }}</dt>
+                <dd>{{ $metric['value'] }}</dd>
+            </div>
+        @endforeach
+    </dl>
+@endif
 
 <form method="get" class="crm-toolbar">
     <div class="input-icon">
@@ -78,8 +79,8 @@
     <div data-view-only="list">
         <div class="card">
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table crm-thead-sticky">
-                    <thead><tr><th>№</th><th>Документ</th><th>Автор</th><th>Конфиденциальность</th><th>Статус</th><th>Обновлён</th><th></th></tr></thead>
+                <table data-record-key="1" class="table table-hover table-vcenter card-table crm-thead-sticky">
+                    <thead><tr><th scope="col">№</th><th scope="col">Документ</th><th scope="col">Автор</th><th scope="col">Конфиденциальность</th><th scope="col">Статус</th><th scope="col">Обновлён</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($documents as $document)
                             <tr>
@@ -117,7 +118,7 @@
             @forelse ($documents as $document)
                 <div class="col-md-6 col-xl-4">
                     <div class="crm-entity h-100">
-                        <div class="crm-entity__logo" style="background: #4299e11f; color: #4299e1;">
+                        <div class="crm-entity__logo" style="background: color-mix(in srgb, var(--crm-info) 12%, transparent); color: var(--crm-info);">
                             <i class="ti ti-file-text"></i>
                         </div>
                         <div class="crm-entity__body">
@@ -178,7 +179,7 @@
                     <div class="crm-form__desc">Текст прямо в системе или загруженный файл — хотя бы одно.</div>
                     <div class="crm-form__field">
                         <label class="form-label" for="nd-body">Текст документа</label>
-                        <textarea id="nd-body" name="body" class="form-control" rows="5" placeholder="Текст документа (или приложите файл)">{{ old('body') }}</textarea>
+                        <textarea data-crm-rich id="nd-body" name="body" class="form-control" rows="5" placeholder="Текст документа (или приложите файл)">{{ old('body') }}</textarea>
                     </div>
                     <div class="crm-form__field">
                         <label class="form-label" for="nd-file">Файл</label>

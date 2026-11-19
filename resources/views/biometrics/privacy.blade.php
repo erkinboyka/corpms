@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'configuration')
 
 @section('title', 'Приватность биометрии')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Биометрические терминалы</div>
-            <h2 class="page-title mt-1">Приватность данных</h2>
+            <h1 class="page-title mt-1">Приватность данных</h1>
             <div class="text-secondary mt-1">Два правила: кто может отметиться и сколько данных хранить.</div>
         </div>
         <div class="col-auto d-print-none">
@@ -21,7 +22,7 @@
     <div class="col-md-6">
         <div class="card crm-panel h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <span class="crm-kpi__icon" style="width:3rem;height:3rem;font-size:1.4rem;background:{{ $requireLiveness ? 'rgba(47,179,68,.14)' : 'rgba(151,163,182,.16)' }};color:{{ $requireLiveness ? '#2fb344' : '#97a3b6' }}">
+                <span class="crm-kpi__icon" style="width:3rem;height:3rem;font-size:1.4rem;background:{{ $requireLiveness ? 'rgba(47,179,68,.14)' : 'rgba(151,163,182,.16)' }};color:{{ $requireLiveness ? 'var(--crm-success)' : 'var(--crm-text-secondary)' }}">
                     <i class="ti ti-{{ $requireLiveness ? 'face-shield' : 'face-id-off' }}"></i>
                 </span>
                 <div>
@@ -35,7 +36,7 @@
     <div class="col-md-6">
         <div class="card crm-panel h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <span class="crm-kpi__icon" style="width:3rem;height:3rem;font-size:1.4rem;background:rgba(66,153,225,.14);color:#4299e1">
+                <span class="crm-kpi__icon" style="width:3rem;height:3rem;font-size:1.4rem;background:rgba(66,153,225,.14);color:var(--crm-info)">
                     <i class="ti ti-clock-hour-4"></i>
                 </span>
                 <div>

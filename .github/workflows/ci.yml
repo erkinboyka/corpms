@@ -1,46 +1,103 @@
-name: CI
-
-on:
-  push:
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+name: CorpMS checks
+on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   tests:
-    name: Pint + PHPUnit
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, mysql]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testing-only-password
+          MYSQL_DATABASE: corpms_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptesting-only-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: ${{ matrix.database }}
+      DB_DATABASE: ${{ matrix.database == 'mysql' && 'corpms_test' || ':memory:' }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: testing-only-password
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      AI_BASE_URL: ''
+      AI_API_KEY: ''
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
-          extensions: mbstring, fileinfo, pdo_sqlite, sqlite3, intl
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, pdo_mysql, dom, xml, xmlwriter, zip
           coverage: none
-
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare environment
+      - run: composer install --no-interaction --prefer-dist
+      - name: PHP syntax
+        run: rg --files app routes config database tests bootstrap -g '*.php' | xargs -n 1 php -l
+      - run: php vendor/phpunit/phpunit/phpunit --log-junit storage/logs/ci-tests.xml
+      - name: Concurrent database operations
+        if: matrix.database == 'mysql'
+        run: php tools/verify-concurrency.php
+      - name: Text and layout structure
+        shell: pwsh
         run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Check code style (Pint)
-        run: vendor/bin/pint --test --format agent
-
-      - name: Run tests
-        run: php artisan test --compact
+          ./tools/verify-encoding.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tools/verify-layout.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.database }}
+          path: storage/logs/ci-tests.xml
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer audit --locked
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      PHP_BINARY: php
+      AI_BASE_URL: ''
+      AI_API_KEY: ''
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, dom, xml, zip, opcache
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: composer install --no-interaction --prefer-dist
+      - run: python -m pip install -r tools/requirements-qa.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Browser, accessibility and local HTTP load
+        run: |
+          fixture=$(php tools/acceptance-environment.php)
+          python tools/verify-browser.py "$fixture" --load
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-acceptance
+          path: storage/logs/browser-acceptance/

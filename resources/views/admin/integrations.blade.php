@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'configuration')
 
 @section('title', 'Интеграции')
 
@@ -39,7 +40,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Система</div>
-            <h2 class="page-title mt-1">Интеграции</h2>
+            <h1 class="page-title mt-1">Интеграции</h1>
             <div class="text-secondary mt-1">Состояние внешних подсистем · конфигурация через .env и config, страница только для чтения</div>
         </div>
         <div class="col-auto d-print-none">
@@ -52,22 +53,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-plug"></i>Интеграций</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-plug"></i>Интеграций</div>
         <div class="crm-metric__value">{{ count($integrations) }}</div>
         <div class="crm-metric__hint">внешних подсистем в системе</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-circle-check"></i>Подключено</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>Подключено</div>
         <div class="crm-metric__value">{{ $configured }}</div>
         <div class="crm-metric__hint">заполнены обязательные параметры</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-circle-dashed"></i>Не настроено</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-circle-dashed"></i>Не настроено</div>
         <div class="crm-metric__value">{{ $notConfigured }}</div>
         <div class="crm-metric__hint">работают в ограниченном режиме</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-puzzle"></i>Встроенные</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-puzzle"></i>Встроенные</div>
         <div class="crm-metric__value">{{ $builtin }}</div>
         <div class="crm-metric__hint">без внешней конфигурации</div>
     </div>

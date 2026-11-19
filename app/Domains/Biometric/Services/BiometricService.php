@@ -7,19 +7,20 @@ namespace App\Domains\Biometric\Services;
 use App\Models\BiometricDevice;
 use App\Models\BiometricProfile;
 use App\Models\Employee;
+use App\Shared\Enums\DeviceStatus;
 use Illuminate\Support\Str;
 
 /**
- * Р РµРіРёСЃС‚СЂР°С†РёСЏ СѓСЃС‚СЂРѕР№СЃС‚РІ, РІС‹РґР°С‡Р° С‚РѕРєРµРЅРѕРІ, СЂСѓС‡РЅР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ bio-РїСЂРѕС„РёР»СЏ.
- * РЎР°Рј РїСЂРёС‘Рј СЃРѕР±С‹С‚РёР№ вЂ” DeviceApiController в†’ AttendanceService.
+ * Регистрация устройств, выдача токенов и управление биометрическими профилями.
+ * События обрабатываются через DeviceApiController и AttendanceService.
  */
 class BiometricService
 {
-    /** Р РµРіРёСЃС‚СЂРёСЂСѓРµС‚ РёР»Рё РѕР±РЅРѕРІР»СЏРµС‚ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ Рё РІРѕР·РІСЂР°С‰Р°РµС‚ РѕС‚РєСЂС‹С‚С‹Рј С‚РµРєСЃС‚РѕРј РЅРѕРІС‹Р№ С‚РѕРєРµРЅ. */
+    /** Регистрирует устройство и возвращает новый токен один раз. */
     public function registerDevice(array $attributes): array
     {
         $device = BiometricDevice::query()->updateOrCreate(
-            ['serial_number' => $attributes['serial_number']],
+            ['serial_number' => $attributes['serial_number'], 'company_id' => $attributes['company_id']],
             collect($attributes)
                 ->except(['serial_number', 'api_token_hash'])
                 ->merge(['api_token_hash' => hash('sha256', 'placeholder-token'), 'status' => 'online'])
@@ -41,17 +42,17 @@ class BiometricService
         $hash = hash('sha256', $plainToken);
 
         $device = BiometricDevice::query()->where('api_token_hash', $hash)->first();
-        if ($device === null) {
+        if ($device === null || $device->status === DeviceStatus::Disabled) {
             return null;
         }
 
-        // touch last seen Р°СЃРёРЅС…СЂРѕРЅРЅРѕ РЅРµ РєСЂРёС‚РёС‡РЅРѕ, РїРёС€РµРј СЃСЂР°Р·Сѓ
+        // Обновляем время последнего запроса только для разрешённых устройств.
         $device->forceFill(['last_seen_at' => now(), 'status' => 'online'])->saveQuietly();
 
         return $device;
     }
 
-    /** РЎРѕР·РґР°С‘С‚ Р±РёРѕРјРµС‚СЂРёС‡РµСЃРєРёР№ РїСЂРѕС„РёР»СЊ СЃРѕС‚СЂСѓРґРЅРёРєР° (Р±РµР· raw-РґР°РЅРЅС‹С… вЂ” С‚РѕР»СЊРєРѕ СЃСЃС‹Р»РєР° РЅР° С€Р°Р±Р»РѕРЅ). */
+    /** Сохраняет ссылку и хеш шаблона без сырых биометрических данных. */
     public function enrollProfile(Employee $employee, string $vendor, ?string $templateRef, string $templateHash): BiometricProfile
     {
         return BiometricProfile::updateOrCreate(

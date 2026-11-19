@@ -118,4 +118,14 @@ class BackupDatabaseCommandTest extends TestCase
             ->assertExitCode(0)
             ->expectsOutputToContain('db:backup');
     }
+
+    public function test_repeated_backups_have_unique_names_and_preserve_other_connections(): void
+    {
+        $other = $this->backupDir.'/other_2020_01_01_000000.sqlite';
+        file_put_contents($other, 'other-backup');
+        $this->artisan('db:backup', ['--connection' => 'backup_src', '--keep' => 1])->assertExitCode(0);
+        $this->artisan('db:backup', ['--connection' => 'backup_src', '--keep' => 1])->assertExitCode(0);
+        $this->assertCount(1, glob($this->backupDir.'/backup_src_*.sqlite'));
+        $this->assertFileExists($other);
+    }
 }

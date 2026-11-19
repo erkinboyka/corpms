@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Уведомления')
 
@@ -11,7 +12,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Посещаемость · оповещения</div>
-            <h2 class="page-title mt-1">Уведомления</h2>
+            <h1 class="page-title mt-1">Уведомления</h1>
             <div class="text-secondary mt-1">Системные сообщения о событиях табеля и задач</div>
         </div>
         <div class="col-auto d-print-none">

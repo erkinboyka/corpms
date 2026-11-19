@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Аномалии')
 
@@ -17,11 +18,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Посещаемость</div>
-            <h2 class="page-title mt-1">Аномалии</h2>
+            <h1 class="page-title mt-1">Аномалии</h1>
             <div class="text-secondary mt-1">Очередь обнаруженных проблем — приоритет и обработка</div>
-        </div>
-        <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary" href="{{ route('attendance.index') }}"><i class="ti ti-arrow-left me-1"></i>Сегодня</a>
         </div>
     </div>
 </div>
@@ -41,10 +39,10 @@
             $meta = $typeMeta[$anomaly->type->value] ?? ['icon' => 'alert-triangle', 'tone' => 'grey'];
             $isOpen = $anomaly->status->value === 'open';
             $toneColor = match ($meta['tone']) {
-                'red' => '#d63939',
-                'orange' => '#f76707',
-                'cyan' => '#4299e1',
-                default => '#6c7a91',
+                'red' => 'var(--crm-danger)',
+                'orange' => 'var(--crm-warning)',
+                'cyan' => 'var(--crm-info)',
+                default => 'var(--crm-text-secondary)',
             };
         @endphp
         <div class="crm-queue__item" style="--c: {{ $toneColor }};">
@@ -74,7 +72,7 @@
             @endif
         </div>
     @empty
-        <div class="crm-queue__item" style="--c: #2fb344;">
+        <div class="crm-queue__item" style="--c: var(--crm-success);">
             <span class="crm-entity__logo" style="width:38px;height:38px;font-size:15px;border-radius:11px;"><i class="ti ti-circle-check"></i></span>
             <div class="crm-queue__body">
                 <div class="crm-queue__title">Аномалий нет</div>

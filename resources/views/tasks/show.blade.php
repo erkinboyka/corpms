@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', 'Задача ' . $task->number)
 
@@ -72,7 +73,7 @@
                         </span>
                     @endif
                 </div>
-                <h2 class="page-title mt-2 mb-1">{{ $task->title }}</h2>
+                <h1 class="page-title mt-2 mb-1">{{ $task->title }}</h1>
                 <div class="text-secondary">
                     <i class="ti ti-user me-1"></i>автор: {{ $task->author?->last_name . ' ' . $task->author?->first_name ?? '—' }}
                     <span class="mx-1">·</span>
@@ -159,8 +160,8 @@
         @endif
 
         <div class="table-responsive task-timer__history mt-3">
-            <table class="table table-sm table-vcenter mb-0">
-                <thead><tr><th>Начало</th><th>Окончание</th><th>Длительность</th><th>Исполнитель</th></tr></thead>
+            <table data-record-key="0" class="table table-sm table-vcenter mb-0">
+                <thead><tr><th scope="col">Начало</th><th scope="col">Окончание</th><th scope="col">Длительность</th><th scope="col">Исполнитель</th></tr></thead>
                 <tbody>
                     @forelse ($historyLogs as $log)
                         <tr>
@@ -197,7 +198,7 @@
                 @csrf
                 <div class="crm-form__field">
                     <label class="form-label" for="ts-result">Что сделано</label>
-                    <textarea id="ts-result" name="summary" class="form-control" rows="3" placeholder="Например: подготовил договор, ссылка во вложении; прошу проверить пункт 4."></textarea>
+                    <textarea data-crm-rich id="ts-result" name="summary" class="form-control" rows="3" placeholder="Например: подготовил договор, ссылка во вложении; прошу проверить пункт 4."></textarea>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     <button class="btn btn-success"><i class="ti ti-send me-1"></i>Отправить на проверку</button>
@@ -231,7 +232,7 @@
             <div class="crm-form__desc">Дробление крупной задачи на шаги.</div>
             <div class="crm-queue mb-3">
                 @forelse ($task->children as $child)
-                    <a class="crm-queue__item text-reset text-decoration-none" style="--c: #0b9b72;" href="{{ route('tasks.show', $child) }}">
+                    <a class="crm-queue__item text-reset text-decoration-none" style="--c: var(--crm-success);" href="{{ route('tasks.show', $child) }}">
                         <div class="crm-queue__body">
                             <div class="crm-queue__title">{{ $child->title }}</div>
                         </div>
@@ -275,7 +276,7 @@
                     </div>
                     <div class="crm-form__field subtask-desc">
                         <label class="form-label" for="st-desc">Описание</label>
-                        <textarea id="st-desc" name="description" class="form-control" rows="2" placeholder="Необязательно"></textarea>
+                        <textarea data-crm-rich id="st-desc" name="description" class="form-control" rows="2" placeholder="Необязательно"></textarea>
                     </div>
                     <div class="crm-form__field d-flex align-items-end">
                         <button class="btn btn-primary w-100 justify-content-center"><i class="ti ti-plus me-1"></i>Добавить</button>
@@ -333,8 +334,8 @@
             <h3>Исполнители</h3>
             <div class="crm-form__desc">Назначения и делегирование.</div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th>Исполнитель</th><th>Тип</th><th>Статус</th><th></th></tr></thead>
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
+                    <thead><tr><th scope="col">Исполнитель</th><th scope="col">Тип</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($task->assignments as $assignment)
                             <tr>
@@ -453,27 +454,35 @@
             @csrf @method('PATCH')
             <div class="modal-header"><h5 class="modal-title">Правка задачи {{ $task->number }}</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="et-title">Название<span class="req">*</span></label>
-                    <input type="text" id="et-title" name="title" class="form-control" value="{{ old('title', $task->title) }}" required>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="et-desc">Описание</label>
-                    <textarea id="et-desc" name="description" class="form-control" rows="4">{{ old('description', $task->description) }}</textarea>
-                </div>
-                <div class="crm-form__row">
+                <div class="crm-form__section">
+                    <h3>Суть задачи</h3>
+                    <div class="crm-form__desc">Заголовок и подробности — как в форме создания.</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="et-priority">Приоритет</label>
-                        <select id="et-priority" name="priority" class="form-select">
-                            @foreach (['low', 'medium', 'high', 'critical'] as $p)
-                                <option value="{{ $p }}" @selected(old('priority', $task->priority->value) === $p)>{{ $crm_label('task_priority', $p) }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label" for="et-title">Название<span class="req">*</span></label>
+                        <input type="text" id="et-title" name="title" class="form-control" value="{{ old('title', $task->title) }}" required>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="et-deadline">Дедлайн</label>
-                        <input type="datetime-local" id="et-deadline" name="deadline" class="form-control"
-                               value="{{ old('deadline', $task->deadline?->format('Y-m-d\TH:i')) }}">
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="et-desc">Описание</label>
+                        <textarea data-crm-rich id="et-desc" name="description" class="form-control" rows="4">{{ old('description', $task->description) }}</textarea>
+                    </div>
+                </div>
+                <div class="crm-form__section mb-0">
+                    <h3>Приоритет и срок</h3>
+                    <div class="crm-form__desc">В одной строке — приоритет и дедлайн видно и правится сразу.</div>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="et-priority">Приоритет</label>
+                            <select id="et-priority" name="priority" class="form-select">
+                                @foreach (['low', 'medium', 'high', 'critical'] as $p)
+                                    <option value="{{ $p }}" @selected(old('priority', $task->priority->value) === $p)>{{ $crm_label('task_priority', $p) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="et-deadline">Дедлайн</label>
+                            <input type="datetime-local" id="et-deadline" name="deadline" class="form-control"
+                                   value="{{ old('deadline', $task->deadline?->format('Y-m-d\TH:i')) }}">
+                        </div>
                     </div>
                 </div>
             </div>

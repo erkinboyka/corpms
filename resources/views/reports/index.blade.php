@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'Отчёты')
 
@@ -51,10 +52,10 @@
     /* --- визуал: полоса посещаемости за сегодня --- */
     $attTotal = max(1, (int) $attendanceToday['total']);
     $attParts = [
-        ['label' => 'На месте', 'cnt' => (int) $attendanceToday['present'], 'color' => '#2fb344'],
-        ['label' => 'Опоздали', 'cnt' => (int) $attendanceToday['late'], 'color' => '#f76707'],
-        ['label' => 'Удалённо', 'cnt' => (int) $attendanceToday['remote'], 'color' => '#4299e1'],
-        ['label' => 'Нет отметки', 'cnt' => (int) $attendanceToday['absent_from_schedule'], 'color' => '#d6455f'],
+        ['label' => 'На месте', 'cnt' => (int) $attendanceToday['present'], 'color' => 'var(--crm-success)'],
+        ['label' => 'Опоздали', 'cnt' => (int) $attendanceToday['late'], 'color' => 'var(--crm-warning)'],
+        ['label' => 'Удалённо', 'cnt' => (int) $attendanceToday['remote'], 'color' => 'var(--crm-info)'],
+        ['label' => 'Нет отметки', 'cnt' => (int) $attendanceToday['absent_from_schedule'], 'color' => 'var(--crm-danger)'],
     ];
 
     /* --- визуал: кольцо выполнения задач --- */
@@ -67,7 +68,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Аналитика · {{ $scopeName }}</div>
-            <h2 class="page-title mt-1">Отчёты</h2>
+            <h1 class="page-title mt-1">Отчёты</h1>
             <div class="text-secondary mt-1">Сверху — что требует внимания, ниже — три отчёта с готовыми действиями.</div>
         </div>
         <div class="col-auto d-print-none">
@@ -104,7 +105,7 @@
                 <span class="avatar avatar-sm bg-blue-lt"><i class="ti ti-users"></i></span>
             </div>
             <div class="d-flex align-items-center gap-3 mt-2">
-                <div class="crm-ring" style="--p: {{ $activePct }}; --c: #4f74e3;" role="img" aria-label="Активных {{ $activePct }}%">
+                <div class="crm-ring" style="--p: {{ $activePct }}; --c: var(--crm-accent);" role="img" aria-label="Активных {{ $activePct }}%">
                     <div class="crm-ring__hole">
                         <strong class="crm-ring__value">{{ $activePct }}%</strong>
                         <span class="crm-ring__label">активных</span>
@@ -159,7 +160,7 @@
                 <span class="avatar avatar-sm {{ (int) $taskDeadlines['overdue'] > 0 ? 'bg-red-lt text-red' : 'bg-green-lt text-green' }}"><i class="ti ti-list-check"></i></span>
             </div>
             <div class="d-flex align-items-center gap-3 mt-2">
-                <div class="crm-ring" style="--p: {{ $taskPct }}; --c: #0b9b72;" role="img" aria-label="Выполнено {{ $taskPct }}%">
+                <div class="crm-ring" style="--p: {{ $taskPct }}; --c: var(--crm-success);" role="img" aria-label="Выполнено {{ $taskPct }}%">
                     <div class="crm-ring__hole">
                         <strong class="crm-ring__value">{{ $taskPct }}%</strong>
                         <span class="crm-ring__label">выполнено</span>

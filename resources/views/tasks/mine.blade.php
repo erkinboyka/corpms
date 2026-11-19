@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'planning')
 
 @section('title', 'Мои задачи')
 
@@ -16,8 +17,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Работа</div>
-            <h2 class="page-title mt-1">Мои задачи</h2>
-            <div class="text-secondary mt-1">Назначены и созданы вами · {{ $assigned->count() }} назначено · {{ $written->count() }} создано</div>
+            <h1 class="page-title mt-1">Мои задачи</h1>
+            <div class="text-secondary mt-1">Назначены и созданы вами · {{ $assigned->total() }} назначено · {{ $written->total() }} создано</div>
         </div>
         <div class="col-auto d-print-none">
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTask">
@@ -38,13 +39,13 @@
     <div class="col-xl-7">
         <div class="card">
             <div class="card-header">
-                <strong><i class="ti ti-inbox me-1"></i>Назначены мне</strong>
-                <span class="crm-chip ms-auto">{{ $assigned->count() }}</span>
+                <h2 class="card-title bm-section-title"><i class="ti ti-inbox me-1"></i>Назначены мне</h2>
+                <span class="crm-chip ms-auto">{{ $assigned->total() }}</span>
             </div>
             <div class="card-body py-2">
                 <div class="crm-queue">
                     @forelse ($assigned as $task)
-                        <div class="crm-queue__item" style="--c: {{ $task->deadline && $task->deadline->isPast() && ! in_array($task->status->value, ['completed', 'cancelled']) ? '#d63939' : '#0b9b72' }};">
+                        <div class="crm-queue__item" style="--c: {{ $task->deadline && $task->deadline->isPast() && ! in_array($task->status->value, ['completed', 'cancelled']) ? 'var(--crm-danger)' : 'var(--crm-success)' }};">
                             <div class="crm-queue__body">
                                 <div class="crm-queue__title">
                                     <a class="text-reset text-decoration-none" href="{{ route('tasks.show', $task) }}">{{ $task->title }}</a>
@@ -58,7 +59,7 @@
                             <span class="crm-chip {{ $statusChips[$task->status->value] ?? 'crm-chip' }}">{{ $crm_label('task_status', $task->status->value) }}</span>
                         </div>
                     @empty
-                        <div class="crm-queue__item" style="--c: #6c7a91;">
+                        <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                             <div class="crm-queue__body">
                                 <div class="crm-queue__title">Назначенных задач нет</div>
                                 <div class="crm-queue__sub">Задачи появятся здесь после назначения.</div>
@@ -66,6 +67,9 @@
                         </div>
                     @endforelse
                 </div>
+                @if ($assigned->hasPages())
+                    <div class="mt-3">{{ $assigned->onEachSide(1)->links('pagination::tabler') }}</div>
+                @endif
             </div>
         </div>
     </div>
@@ -73,13 +77,13 @@
     <div class="col-xl-5">
         <div class="card">
             <div class="card-header">
-                <strong><i class="ti ti-edit me-1"></i>Созданные мной</strong>
-                <span class="crm-chip ms-auto">{{ $written->count() }}</span>
+                <h2 class="card-title bm-section-title"><i class="ti ti-edit me-1"></i>Созданные мной</h2>
+                <span class="crm-chip ms-auto">{{ $written->total() }}</span>
             </div>
             <div class="card-body py-2">
                 <div class="crm-queue">
                     @forelse ($written as $task)
-                        <div class="crm-queue__item" style="--c: #4299e1;">
+                        <div class="crm-queue__item" style="--c: var(--crm-info);">
                             <div class="crm-queue__body">
                                 <div class="crm-queue__title">
                                     <a class="text-reset text-decoration-none" href="{{ route('tasks.show', $task) }}">{{ $task->title }}</a>
@@ -92,7 +96,7 @@
                             <span class="crm-chip {{ $statusChips[$task->status->value] ?? 'crm-chip' }}">{{ $crm_label('task_status', $task->status->value) }}</span>
                         </div>
                     @empty
-                        <div class="crm-queue__item" style="--c: #6c7a91;">
+                        <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                             <div class="crm-queue__body">
                                 <div class="crm-queue__title">Своих задач нет</div>
                                 <div class="crm-queue__sub">Создайте задачу — она появится здесь.</div>
@@ -100,6 +104,9 @@
                         </div>
                     @endforelse
                 </div>
+                @if ($written->hasPages())
+                    <div class="mt-3">{{ $written->onEachSide(1)->links('pagination::tabler') }}</div>
+                @endif
             </div>
         </div>
     </div>
@@ -121,7 +128,7 @@
                     </div>
                     <div class="crm-form__field">
                         <label class="form-label" for="nt-desc">Описание</label>
-                        <textarea id="nt-desc" class="form-control" name="description" rows="3" placeholder="Подробности, критерии выполнения">{{ old('description') }}</textarea>
+                        <textarea data-crm-rich id="nt-desc" class="form-control" name="description" rows="3" placeholder="Подробности, критерии выполнения">{{ old('description') }}</textarea>
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
@@ -156,7 +163,7 @@
                             <label class="form-label" for="nt-departments">Исполнители — отделы</label>
                             <select id="nt-departments" name="department_ids[]" class="form-select" multiple
                                     aria-describedby="nt-dept-hint" data-placeholder="поиск и выбор…">
-                                @foreach (\App\Models\Department::query()->orderBy('name')->get() as $option)
+                                @foreach ($departments as $option)
                                     <option value="{{ $option->id }}" @selected(in_array($option->id, (array) old('department_ids', []), true))>{{ $option->name }}</option>
                                 @endforeach
                             </select>

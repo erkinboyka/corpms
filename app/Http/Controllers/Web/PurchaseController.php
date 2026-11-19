@@ -14,6 +14,7 @@ use App\Support\PermissionService;
 use App\Support\TenantGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use LogicException;
 
@@ -122,28 +123,32 @@ class PurchaseController extends Controller
             return back()->withErrors(['number' => 'Заказ с таким номером уже существует'])->withInput();
         }
 
-        $order = PurchaseOrder::query()->create([
-            'company_id' => $me->company_id,
-            'supplier_id' => (int) $validated['supplier_id'],
-            'warehouse_id' => (int) $validated['warehouse_id'],
-            'number' => $validated['number'],
-            'status' => PurchaseOrderStatus::Draft,
-            'total' => 0,
-            'order_date' => $validated['order_date'] ?? now()->toDateString(),
-            'expected_at' => $validated['expected_at'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'created_by' => $me->user_id,
-        ]);
-
-        foreach ($validated['items'] as $item) {
-            $order->items()->create([
-                'product_id' => (int) $item['product_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'] ?? 0,
+        $order = DB::transaction(function () use ($validated, $me): PurchaseOrder {
+            $order = PurchaseOrder::query()->create([
+                'company_id' => $me->company_id,
+                'supplier_id' => (int) $validated['supplier_id'],
+                'warehouse_id' => (int) $validated['warehouse_id'],
+                'number' => $validated['number'],
+                'status' => PurchaseOrderStatus::Draft,
+                'total' => 0,
+                'order_date' => $validated['order_date'] ?? now()->toDateString(),
+                'expected_at' => $validated['expected_at'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'created_by' => $me->user_id,
             ]);
-        }
 
-        $this->inventory->recalcTotal($order);
+            foreach ($validated['items'] as $item) {
+                $order->items()->create([
+                    'product_id' => (int) $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'] ?? 0,
+                ]);
+            }
+
+            $this->inventory->recalcTotal($order);
+
+            return $order;
+        });
 
         $this->audit->log($request->user(), 'purchase.created', 'purchase_order', $order->id, null, [
             'number' => $order->number,
@@ -156,22 +161,25 @@ class PurchaseController extends Controller
     /** Размещение заказа (draft → ordered). */
     public function order(Request $request, PurchaseOrder $order): RedirectResponse
     {
-        $me = $request->user()->employee;
-        \assert($me !== null);
-        TenantGuard::ensure($order, $me);
+        return DB::transaction(function () use ($request, $order): RedirectResponse {
+            $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $me = $request->user()->employee;
+            \assert($me !== null);
+            TenantGuard::ensure($order, $me);
 
-        if ($order->status !== PurchaseOrderStatus::Draft) {
-            return back()->withErrors(['status' => 'Разместить можно только черновик']);
-        }
+            if ($order->status !== PurchaseOrderStatus::Draft) {
+                return back()->withErrors(['status' => 'Разместить можно только черновик']);
+            }
 
-        $order->status = PurchaseOrderStatus::Ordered;
-        $order->save();
+            $order->status = PurchaseOrderStatus::Ordered;
+            $order->save();
 
-        $this->audit->log($request->user(), 'purchase.ordered', 'purchase_order', $order->id, null, [
-            'number' => $order->number,
-        ]);
+            $this->audit->log($request->user(), 'purchase.ordered', 'purchase_order', $order->id, null, [
+                'number' => $order->number,
+            ]);
 
-        return back()->with('status', 'Заказ '.$order->number.' размещён');
+            return back()->with('status', 'Заказ '.$order->number.' размещён');
+        });
     }
 
     /** Приём заказа на склад: движения in, статус → received. */
@@ -198,22 +206,25 @@ class PurchaseController extends Controller
     /** Отмена заказа (draft/ordered → cancelled), позиции не оприходуются. */
     public function cancel(Request $request, PurchaseOrder $order): RedirectResponse
     {
-        $me = $request->user()->employee;
-        \assert($me !== null);
-        TenantGuard::ensure($order, $me);
+        return DB::transaction(function () use ($request, $order): RedirectResponse {
+            $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $me = $request->user()->employee;
+            \assert($me !== null);
+            TenantGuard::ensure($order, $me);
 
-        if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
-            return back()->withErrors(['status' => 'Отменить можно только черновик или размещённый заказ']);
-        }
+            if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
+                return back()->withErrors(['status' => 'Отменить можно только черновик или размещённый заказ']);
+            }
 
-        $order->status = PurchaseOrderStatus::Cancelled;
-        $order->save();
+            $order->status = PurchaseOrderStatus::Cancelled;
+            $order->save();
 
-        $this->audit->log($request->user(), 'purchase.cancelled', 'purchase_order', $order->id, null, [
-            'number' => $order->number,
-        ]);
+            $this->audit->log($request->user(), 'purchase.cancelled', 'purchase_order', $order->id, null, [
+                'number' => $order->number,
+            ]);
 
-        return back()->with('status', 'Заказ '.$order->number.' отменён');
+            return back()->with('status', 'Заказ '.$order->number.' отменён');
+        });
     }
 
     /** Добавление позиции в черновик заказа. */
@@ -235,7 +246,11 @@ class PurchaseController extends Controller
 
         TenantGuard::ensureReference('products', (int) $validated['product_id'], $me);
 
-        $this->inventory->addItem($order, $validated);
+        try {
+            $this->inventory->addItem($order, $validated);
+        } catch (LogicException $exception) {
+            return back()->withErrors(['status' => $exception->getMessage()]);
+        }
 
         $this->audit->log($request->user(), 'purchase.item_added', 'purchase_order', $order->id, null, [
             'number' => $order->number,
@@ -248,23 +263,26 @@ class PurchaseController extends Controller
     /** Удаление позиции из черновика (только draft). */
     public function removeItem(Request $request, PurchaseOrder $order, int $item): RedirectResponse
     {
-        $me = $request->user()->employee;
-        \assert($me !== null);
-        TenantGuard::ensure($order, $me);
+        return DB::transaction(function () use ($request, $order, $item): RedirectResponse {
+            $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $me = $request->user()->employee;
+            \assert($me !== null);
+            TenantGuard::ensure($order, $me);
 
-        if ($order->status !== PurchaseOrderStatus::Draft) {
-            return back()->withErrors(['status' => 'Позиции можно менять только в черновике']);
-        }
+            if ($order->status !== PurchaseOrderStatus::Draft) {
+                return back()->withErrors(['status' => 'Позиции можно менять только в черновике']);
+            }
 
-        $line = $order->items()->whereKey($item)->first();
+            $line = $order->items()->whereKey($item)->first();
 
-        if ($line === null) {
-            return back()->withErrors(['status' => 'Позиция не найдена']);
-        }
+            if ($line === null) {
+                return back()->withErrors(['status' => 'Позиция не найдена']);
+            }
 
-        $line->delete();
-        $this->inventory->recalcTotal($order);
+            $line->delete();
+            $this->inventory->recalcTotal($order);
 
-        return back()->with('status', 'Позиция удалена');
+            return back()->with('status', 'Позиция удалена');
+        });
     }
 }

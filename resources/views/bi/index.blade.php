@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'BI — Дашборды')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">BI</div>
-            <h2 class="page-title mt-1">Дашборды</h2>
+            <h1 class="page-title mt-1">Дашборды</h1>
             <div class="text-secondary mt-1">Витрина метрик · период {{ $month }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -31,22 +32,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-arrow-down-left"></i>Доходы</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-arrow-down-left"></i>Доходы</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) ($totals['finance_income'] ?? 0), 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">за {{ $month }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e5697a;"><i class="ti ti-arrow-up-right"></i>Расходы</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-arrow-up-right"></i>Расходы</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) ($totals['finance_expense'] ?? 0), 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">за {{ $month }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-trophy"></i>Выиграно</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-trophy"></i>Выиграно</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) ($totals['deals_won_amount'] ?? 0), 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">сделок: {{ number_format((float) ($totals['deals_won_count'] ?? 0), 0, ',', ' ') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-list-check"></i>Задачи</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-list-check"></i>Задачи</div>
         <div class="crm-metric__value">{{ number_format((float) ($totals['tasks_completed'] ?? 0), 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">завершено за период</div>
     </div>

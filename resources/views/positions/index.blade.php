@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Должности')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Организация</div>
-            <h2 class="page-title mt-1">Должности</h2>
+            <h1 class="page-title mt-1">Должности</h1>
             <div class="text-secondary mt-1">Каталог позиций и грейдов · {{ $positions->count() }}</div>
         </div>
         @can('checkBoxPermission', 'positions.manage')
@@ -79,25 +80,33 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новая должность</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="np-name">Название<span class="req">*</span></label>
-                    <input type="text" id="np-name" name="name" class="form-control" placeholder="Ведущий разработчик" required>
-                </div>
-                <div class="crm-form__row">
+                <div class="crm-form__section">
+                    <h3>Должность</h3>
+                    <div class="crm-form__desc">Название и код — как в штатном расписании и документах.</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="np-code">Код<span class="req">*</span></label>
-                        <input type="text" id="np-code" name="code" class="form-control" placeholder="DEV2" required
-                               data-crm-tags data-crm-tags-hint="Коды — по одному, Enter">
+                        <label class="form-label" for="np-name">Название<span class="req">*</span></label>
+                        <input type="text" id="np-name" name="name" class="form-control" placeholder="Ведущий разработчик" required>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-grade">Грейд</label>
-                        <input type="text" id="np-grade" name="grade" class="form-control" placeholder="S2"
-                               data-crm-tags data-crm-tags-hint="Грейды — по одному, Enter">
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-code">Код<span class="req">*</span></label>
+                            <input type="text" id="np-code" name="code" class="form-control" placeholder="DEV2" required
+                                   data-crm-tags data-crm-tags-hint="Коды — по одному, Enter">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-grade">Грейд</label>
+                            <input type="text" id="np-grade" name="grade" class="form-control" placeholder="S2"
+                                   data-crm-tags data-crm-tags-hint="Грейды — по одному, Enter">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="np-desc">Описание</label>
-                    <textarea id="np-desc" name="description" class="form-control" rows="4" data-crm-rich placeholder="Зона ответственности, требования…"></textarea>
+                <div class="crm-form__section mb-0">
+                    <h3>Описание</h3>
+                    <div class="crm-form__desc">Зона ответственности и требования к кандидату.</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="np-desc">Описание</label>
+                        <textarea id="np-desc" name="description" class="form-control" rows="4" data-crm-rich placeholder="Зона ответственности, требования…"></textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -116,25 +125,33 @@
             @csrf @method('PATCH')
             <div class="modal-header"><h5 class="modal-title">Правка должности</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="ep{{ $position->id }}-name">Название<span class="req">*</span></label>
-                    <input type="text" id="ep{{ $position->id }}-name" name="name" class="form-control" value="{{ $position->name }}" required>
-                </div>
-                <div class="crm-form__row">
+                <div class="crm-form__section">
+                    <h3>Должность</h3>
+                    <div class="crm-form__desc">Название и код — выровнено с формой создания.</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="ep{{ $position->id }}-code">Код<span class="req">*</span></label>
-                        <input type="text" id="ep{{ $position->id }}-code" name="code" class="form-control" value="{{ $position->code }}" required
-                               data-crm-tags data-crm-tags-hint="Коды — по одному, Enter">
+                        <label class="form-label" for="ep{{ $position->id }}-name">Название<span class="req">*</span></label>
+                        <input type="text" id="ep{{ $position->id }}-name" name="name" class="form-control" value="{{ $position->name }}" required>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep{{ $position->id }}-grade">Грейд</label>
-                        <input type="text" id="ep{{ $position->id }}-grade" name="grade" class="form-control" value="{{ $position->grade }}"
-                               data-crm-tags data-crm-tags-hint="Грейды — по одному, Enter">
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep{{ $position->id }}-code">Код<span class="req">*</span></label>
+                            <input type="text" id="ep{{ $position->id }}-code" name="code" class="form-control" value="{{ $position->code }}" required
+                                   data-crm-tags data-crm-tags-hint="Коды — по одному, Enter">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep{{ $position->id }}-grade">Грейд</label>
+                            <input type="text" id="ep{{ $position->id }}-grade" name="grade" class="form-control" value="{{ $position->grade }}"
+                                   data-crm-tags data-crm-tags-hint="Грейды — по одному, Enter">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="ep{{ $position->id }}-desc">Описание</label>
-                    <textarea id="ep{{ $position->id }}-desc" name="description" class="form-control" rows="4" data-crm-rich>{{ $position->description }}</textarea>
+                <div class="crm-form__section mb-0">
+                    <h3>Описание</h3>
+                    <div class="crm-form__desc">Зона ответственности и требования к кандидату.</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="ep{{ $position->id }}-desc">Описание</label>
+                        <textarea id="ep{{ $position->id }}-desc" name="description" class="form-control" rows="4" data-crm-rich>{{ $position->description }}</textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

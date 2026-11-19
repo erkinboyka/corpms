@@ -171,9 +171,6 @@ body.texture-bg { background-image: none; }
     position: sticky;
     top: 0;
 }
-/* скрыт при скролле вниз, возвращается при скролле вверх */
-.page-wrapper > header.navbar.crm-header-hidden { transform: translateY(-100%); }
-.page-wrapper > header.navbar.crm-header-stuck { box-shadow: 0 14px 30px -26px rgba(0, 0, 0, .6); }
 aside.navbar-vertical { z-index: 1030; }
 
 /* ----------------------------------------------------------------------------
@@ -196,7 +193,8 @@ aside.navbar-vertical .nav-link {
     padding-block: .55rem;
     transition: background-color var(--crm-dur-fast) var(--crm-ease),
                 color var(--crm-dur-fast) var(--crm-ease),
-                transform var(--crm-dur-fast) var(--crm-ease-out);
+                transform var(--crm-dur-fast) var(--crm-ease);
+    will-change: transform;
 }
 aside.navbar-vertical .nav-link:hover {
     background: rgba(var(--crm-accent-rgb), .10);
@@ -233,6 +231,7 @@ aside.navbar-vertical .crm-nav-group__head {
     cursor: pointer;
     border-radius: var(--crm-radius-md);
     transition: color var(--crm-dur-fast) var(--crm-ease);
+    will-change: color;
 }
 aside.navbar-vertical .crm-nav-group__head:hover { color: var(--crm-text); }
 aside.navbar-vertical .crm-nav-group__label {
@@ -246,6 +245,7 @@ aside.navbar-vertical .crm-nav-group__chev {
     flex: 0 0 auto;
     font-size: .8rem;
     transition: transform var(--crm-dur-base) var(--crm-ease);
+    will-change: transform;
 }
 aside.navbar-vertical .crm-nav-group.is-collapsed .crm-nav-group__chev { transform: rotate(-90deg); }
 aside.navbar-vertical .crm-nav-group.is-collapsed > .crm-nav-group__items { display: none; }
@@ -369,14 +369,23 @@ a { transition: color var(--crm-dur-fast) var(--crm-ease); }
    8. Вход контента — плавный каскад
    ---------------------------------------------------------------------------- */
 /* кросс-документный плавный переход между страницами (Chrome 126+, другие браузеры просто игнорируют) */
-@view-transition { navigation: auto; }
+@view-transition { navigation: none; }
 ::view-transition-old(root) { animation: vt-out 200ms var(--crm-ease) both; }
 ::view-transition-new(root) { animation: vt-in 320ms var(--crm-ease-out) both; }
 @keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
 @keyframes vt-in  { from { opacity: 0; transform: translateY(8px); } }
 
-/* плавная прокрутка и мягкая смена темы */
-html { scroll-behavior: smooth; }
+/* Явные переходы не вмешиваются в обычную прокрутку. */
+:root { scroll-behavior: auto; }
+html.crm-theme-transition::view-transition-group(root),
+html.crm-theme-transition::view-transition-old(root),
+html.crm-theme-transition::view-transition-new(root) { animation: none; }
+html.crm-theme-transition::view-transition-old(root),
+html.crm-theme-transition::view-transition-new(root) { mix-blend-mode: normal; }
+html.crm-theme-transition::view-transition-new(root) { z-index: 1; }
+html.crm-theme-transition :is(body, aside.navbar-vertical, .page-wrapper > header.navbar, .card, .form-control) {
+    transition: none;
+}
 html { transition: none; }
 body, aside.navbar-vertical, .page-wrapper > header.navbar {
     transition: background 420ms var(--crm-ease), color 320ms var(--crm-ease),
@@ -397,17 +406,6 @@ body, aside.navbar-vertical, .page-wrapper > header.navbar {
 @keyframes crm-rise {
     from { opacity: 0; transform: translateY(14px); }
     to   { opacity: 1; transform: translateY(0); }
-}
-
-/* появление при скролле (класс вешает corpms.js через IntersectionObserver) */
-.crm-reveal {
-    opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 420ms var(--crm-ease-out), transform 420ms var(--crm-ease-out);
-}
-.crm-reveal.crm-in {
-    opacity: 1;
-    transform: none;
 }
 
 /* и-клик: волна на кнопках и элементах меню (corpms.js) */
@@ -442,7 +440,7 @@ body, aside.navbar-vertical, .page-wrapper > header.navbar {
    ---------------------------------------------------------------------------- */
 [data-bs-theme="light"] .crm-theme-icon-light { display: none; }
 [data-bs-theme="dark"] .crm-theme-icon-dark { display: none; }
-#crm-theme-toggle i { transition: transform var(--crm-dur-base) var(--crm-ease-spring); }
+#crm-theme-toggle i { transition: transform var(--crm-dur-fast) var(--crm-ease); }
 #crm-theme-toggle:hover i { transform: rotate(24deg) scale(1.14); }
 
 /* ----------------------------------------------------------------------------
@@ -642,6 +640,22 @@ textarea.form-control { font-size: var(--crm-text-body); }
 }
 .offcanvas.crm-offcanvas .list-group-item:last-child { border-bottom: 0; }
 
+/* Закрытая панель обязана остаться в рендере.
+   bm-ui.css глушит её через display:none, а Bootstrap меняет display и
+   transform в одном кадре — transition стартовать не может, и панель
+   просто «выпрыгивает» вместо въезда справа. visibility:hidden убирает
+   панель из фокуса/чтения, но оставляет отрисованной — въезд и уход
+   становятся настоящей анимацией. */
+.offcanvas.crm-offcanvas:not(.show):not(.showing):not(.hiding) {
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+}
+.offcanvas.crm-offcanvas.offcanvas-end { transform: translateX(100%); }
+.offcanvas.crm-offcanvas.offcanvas-end.show:not(.hiding),
+.offcanvas.crm-offcanvas.offcanvas-end.showing { transform: none; }
+.offcanvas-backdrop.fade { transition: opacity var(--crm-motion-overlay) var(--crm-ease-standard); }
+
 /* карточки — естественные размеры, без растяжения к высоте колонок */
 .row > .col > .card + .card,
 .row > [class*="col-"] > .card + .card { margin-top: var(--crm-space-5); }
@@ -702,7 +716,24 @@ textarea.form-control { font-size: var(--crm-text-body); }
     box-shadow: var(--crm-glass-shadow-2);
     -webkit-backdrop-filter: blur(var(--crm-blur)) saturate(1.5);
     backdrop-filter: blur(var(--crm-blur)) saturate(1.5);
-    animation: crm-pop 220ms var(--crm-ease-out) both;
+    /* появление/уход — через класс .is-open (corpms.js): одна transition вместо
+       пары «CSS-animation + inline-стили», которые перебивали друг друга и
+       рывками показывали/прятали панель на каждом запросе */
+    opacity: 0;
+    transform: translateY(-8px) scale(.97);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity var(--crm-motion-overlay) var(--crm-ease-out),
+        transform var(--crm-motion-overlay) var(--crm-ease-out),
+        visibility 0s linear var(--crm-motion-overlay);
+}
+.crm-search-panel.is-open {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .crm-search-panel { background: var(--crm-surface-solid); }
@@ -802,12 +833,24 @@ textarea.form-control { font-size: var(--crm-text-body); }
     padding: min(14vh, 120px) var(--crm-space-3) var(--crm-space-3);
 }
 .crm-palette[hidden] { display: none; }
+/* вход/выход палитры: подложка гаснет, диалог «прилетает» сверху.
+   Состояние — класс .is-open (corpms.js): hidden снимается первым кадром,
+   анимация стартует от него, поэтому палитра не выскакивает мгновенно. */
+.crm-palette {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--crm-motion-overlay) var(--crm-ease-out);
+}
+.crm-palette.is-open { opacity: 1; pointer-events: auto; }
 .crm-palette__backdrop {
     position: absolute;
     inset: 0;
     background: rgba(15, 23, 42, .45);
     backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity var(--crm-motion-overlay) var(--crm-ease-standard);
 }
+.crm-palette.is-open .crm-palette__backdrop { opacity: 1; }
 .crm-palette__dialog {
     position: relative;
     width: min(620px, 100%);
@@ -819,7 +862,10 @@ textarea.form-control { font-size: var(--crm-text-body); }
     border-radius: 12px;
     box-shadow: 0 24px 64px rgba(15, 23, 42, .28);
     overflow: hidden;
+    transform: translateY(-14px) scale(.96);
+    transition: transform var(--crm-motion-overlay) var(--crm-ease-out);
 }
+.crm-palette.is-open .crm-palette__dialog { transform: none; }
 .crm-palette__input-row {
     display: flex;
     align-items: center;
@@ -1438,6 +1484,14 @@ body.crm-palette-open { overflow: hidden; }
     color: var(--crm-accent);
     box-shadow: 0 2px 8px -4px rgba(0, 0, 0, .3);
 }
+[data-crm-view-container] [data-view-only][hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+    .crm-view-enter { animation: crm-view-in var(--crm-motion-surface) var(--crm-ease-out); }
+}
+@keyframes crm-view-in {
+    from { opacity: .35; translate: 0 var(--crm-shift-1); }
+    to { opacity: 1; translate: 0 0; }
+}
 
 /* --- Метрическая лента (строка KPI внутри модуля) --- */
 .crm-metrics {
@@ -1859,6 +1913,24 @@ body.crm-palette-open { overflow: hidden; }
     min-width: 0;
     overflow-wrap: anywhere;
 }
+/* span/strong-вариант (метрики и отчёты) */
+.crm-kv__row > span { font-size: 13px; color: var(--tblr-secondary); }
+.crm-kv__row > strong {
+    font-size: 14.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+/* итоговая строка: акцентный блок с фоном */
+.crm-kv--total {
+    background: rgba(var(--crm-accent-rgb), .06);
+    border: 1px solid rgba(var(--crm-accent-rgb), .18);
+    border-radius: 10px;
+    padding: 4px 12px;
+}
+.crm-kv--total .crm-kv__row { border-bottom: 0; padding: 8px 0; }
+.crm-kv--total .crm-kv__row > span { color: var(--crm-text); font-weight: 500; }
+.crm-kv--total .crm-kv__row > strong { font-size: 16px; }
 
 /* --- Очередь задач/аномалий (work queue) --- */
 .crm-queue { display: flex; flex-direction: column; gap: 10px; }
@@ -1887,7 +1959,23 @@ body.crm-palette-open { overflow: hidden; }
     padding: var(--crm-sec-pad-y) var(--crm-sec-pad-x);
     margin-bottom: 14px;
 }
-.crm-form__section > h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.crm-form__section > h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+/* заголовок секции выделен акцентной чертой слева */
+.crm-form__section > h3::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 4px;
+    height: 15px;
+    border-radius: 2px;
+    background: var(--crm-accent, #4f46e5);
+}
 .crm-form__section > .crm-form__desc { font-size: 12.5px; color: var(--tblr-secondary); margin-bottom: 14px; }
 .crm-form__row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .crm-form__row--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -2004,12 +2092,17 @@ body.crm-palette-open { overflow: hidden; }
     border-radius: 10px;
     background: var(--tblr-bg-surface, #fff);
     cursor: pointer;
-    transition: border-color .13s ease, transform .13s ease, box-shadow .13s ease;
+    transition: border-color var(--crm-motion-feedback) ease, background-color var(--crm-motion-feedback) ease;
 }
-.crm-org__node:hover { border-color: rgba(var(--crm-accent-rgb), .45); transform: translateX(3px); box-shadow: 0 10px 22px -18px rgba(var(--crm-accent-rgb), .9); }
-.crm-org__toggle { color: var(--tblr-secondary); transition: transform .16s ease; display: inline-flex; }
-.crm-org details[open] > .crm-org__node .crm-org__toggle { transform: rotate(90deg); }
-.crm-org details:not([open]) > .crm-org__node .crm-org__toggle i { opacity: .4; }
+.crm-org__node:hover { border-color: rgba(var(--crm-accent-rgb), .45); background-color: var(--crm-table-hover); }
+.crm-org__node:focus-visible { outline-offset: -3px; }
+.crm-org__toggle { color: var(--tblr-secondary); transition: transform var(--crm-motion-control) var(--crm-ease-standard); display: inline-flex; }
+.crm-org__toggle i { transition: opacity var(--crm-motion-control); }
+.crm-org details[open]:not([data-org-closing]) > .crm-org__node .crm-org__toggle { transform: rotate(90deg); }
+.crm-org details:is(:not([open]), [data-org-closing]) > .crm-org__node .crm-org__toggle i { opacity: .4; }
+.crm-org__content-inner { contain: layout; display: flow-root; }
+.crm-org__content.is-animating { overflow: clip; }
+html:has(.crm-org__content.is-animating) { overflow-anchor: none; }
 .crm-org__logo { width: 34px; height: 34px; font-size: 12.5px; border-radius: 10px; flex: none; }
 .crm-org__body { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .crm-org__name { font-size: 14px; font-weight: 600; line-height: 1.25; }
@@ -2049,12 +2142,11 @@ body.crm-palette-open { overflow: hidden; }
     background: var(--tblr-bg-surface, #fff);
     color: inherit;
     text-decoration: none;
-    transition: border-color .13s ease, transform .13s ease, box-shadow .13s ease;
+    transition: border-color var(--crm-motion-feedback), background-color var(--crm-motion-feedback);
 }
 .crm-org__worker:hover {
     border-color: rgba(var(--crm-accent-rgb), .45);
-    transform: translateX(3px);
-    box-shadow: 0 10px 22px -18px rgba(var(--crm-accent-rgb), .9);
+    background-color: var(--crm-table-hover);
     color: inherit;
 }
 .crm-org__worker-avatar { width: 30px; height: 30px; font-size: 11.5px; border-radius: 9px; flex: none; }
@@ -2100,37 +2192,86 @@ body.crm-palette-open { overflow: hidden; }
     padding: 0 30px 0 12px;
     color: var(--tblr-body-color);
 }
-.select2-container--default .select2-selection--multiple { min-height: 38px; }
+.select2-container--default .select2-selection--multiple {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 46px;
+    padding: 6px 10px;
+    border-radius: 14px;
+    border-color: var(--crm-border);
+    background: var(--crm-surface-solid);
+}
 .select2-container--default .select2-selection--multiple .select2-selection__rendered {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    padding: 5px 30px 5px 8px;
+    gap: 5px 6px;
+    max-width: 100%;
+    padding: 0;
     line-height: 1.35;
 }
+.select2-container--default .select2-selection--multiple .select2-selection__rendered:empty { display: none; }
+.select2-container--default .select2-selection--multiple:has(> .select2-selection__clear) { padding-inline-end: 34px; }
 .select2-container--default .select2-selection__rendered { color: var(--tblr-body-color); }
 .select2-container--default .select2-selection__arrow { height: 36px; right: 8px; }
 .select2-container--default .select2-selection__arrow b { border-top-color: var(--tblr-body-color); }
 .select2-container--default .select2-selection__clear { color: var(--tblr-secondary); padding-right: 8px; }
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background: rgba(var(--crm-accent-rgb), .12) !important;
-    border: 1px solid rgba(var(--crm-accent-rgb), .28) !important;
-    border-radius: 6px;
-    color: var(--tblr-body-color);
-    font-size: .85rem;
-    line-height: 1.5;
-    margin-top: 0;
+    position: relative;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin: 0;
+    padding: 4px 34px 4px 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--bm-selected, rgba(var(--crm-accent-rgb), .13));
+    color: var(--bm-ink, var(--tblr-body-color));
+    font-size: .84rem;
+    line-height: 1.45;
 }
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    position: absolute;
+    inset: 2px 4px 2px auto;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 50%;
+    color: inherit;
+    font-size: 1rem;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    background-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__display { padding: 0; }
+.select2-container--default .select2-selection--multiple .select2-search--inline { flex: 1 1 9rem; min-width: 0; }
 .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
-    color: var(--tblr-body-color);
-    min-width: 90px;
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0;
+    height: 30px;
+    margin: 0;
+    padding-inline: 24px 2px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2377808b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='5.5'/%3E%3Cpath d='m15 15 4 4'/%3E%3C/svg%3E") no-repeat left center / 18px 18px;
+    color: var(--crm-text);
+    font: inherit;
 }
-.select2-container--default.select2-container--focus .select2-selection--single,
-.select2-container--default.select2-container--focus .select2-selection--multiple,
-.select2-container--default .select2-selection--multiple:focus-within {
+.select2-container--default .select2-selection--multiple .select2-search__field::placeholder { color: var(--crm-text-muted); }
+.select2-container--default.select2-container--focus .select2-selection--single {
     border-color: var(--crm-accent);
     box-shadow: 0 0 0 .15rem rgba(var(--crm-accent-rgb), .18);
+}
+.select2-container--default:is(.select2-container--focus, .select2-container--open) .select2-selection--multiple,
+.select2-container--default .select2-selection--multiple:focus-within {
+    border-color: var(--bm-link, var(--crm-accent));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bm-link, var(--crm-accent)) 16%, transparent);
 }
 .select2-container--default .select2-dropdown {
     border-color: var(--tblr-border-color);

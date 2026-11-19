@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'BI — '.$dashboard->name)
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">BI · Дашборд</div>
-            <h2 class="page-title mt-1">{{ $dashboard->name }}</h2>
+            <h1 class="page-title mt-1">{{ $dashboard->name }}</h1>
             <div class="text-secondary mt-1 d-flex align-items-center gap-2 flex-wrap">
                 <span>период {{ $month }}</span>
                 @if ($dashboard->is_default)<span class="crm-chip crm-chip--green">по умолчанию</span>@endif
@@ -81,7 +82,7 @@
                     <div class="card-body">
                         @if (($data['points'] ?? '') !== '')
                             <svg viewBox="0 0 240 48" width="100%" height="56" preserveAspectRatio="none" role="img" aria-label="Тренд: {{ $widget->title }}">
-                                <polyline points="{{ $data['points'] }}" fill="none" stroke="var(--crm-accent, #8BA9FF)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                                <polyline points="{{ $data['points'] }}" fill="none" stroke="var(--crm-accent, var(--crm-accent))" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
                             </svg>
                         @else
                             <div class="text-secondary small">Недостаточно данных за период — пересоберите витрину.</div>
@@ -140,29 +141,32 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый виджет</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="bw-title">Название<span class="req">*</span></label>
-                    <input type="text" id="bw-title" name="title" class="form-control" value="{{ old('title') }}" placeholder="Доходы за период" required>
-                </div>
-                <div class="crm-form__row">
+                <div class="crm-form__section mb-0">
+                    <h3>Виджет</h3>
+                    <div class="crm-form__desc">KPI — итог за период, тренд — дневная динамика и спарклайн.</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="bw-kind">Тип<span class="req">*</span></label>
-                        <select id="bw-kind" name="kind" class="form-select" required>
-                            @foreach ($kinds as $kindOption)
-                                <option value="{{ $kindOption->value }}" @selected(old('kind', 'kpi') === $kindOption->value)>{{ $crm_label('bi_widget_kind', $kindOption->value) }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label" for="bw-title">Название<span class="req">*</span></label>
+                        <input type="text" id="bw-title" name="title" class="form-control" value="{{ old('title') }}" placeholder="Доходы за период" required>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="bw-metric">Метрика<span class="req">*</span></label>
-                        <select id="bw-metric" name="metric_code" class="form-select" required>
-                            @foreach ($catalog as $code => $meta)
-                                <option value="{{ $code }}" @selected(old('metric_code') === $code)>{{ $meta['label'] }}</option>
-                            @endforeach
-                        </select>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="bw-kind">Тип<span class="req">*</span></label>
+                            <select id="bw-kind" name="kind" class="form-select" required>
+                                @foreach ($kinds as $kindOption)
+                                    <option value="{{ $kindOption->value }}" @selected(old('kind', 'kpi') === $kindOption->value)>{{ $crm_label('bi_widget_kind', $kindOption->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="bw-metric">Метрика<span class="req">*</span></label>
+                            <select id="bw-metric" name="metric_code" class="form-select" required>
+                                @foreach ($catalog as $code => $meta)
+                                    <option value="{{ $code }}" @selected(old('metric_code') === $code)>{{ $meta['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="form-text">KPI — итог за период, тренд — дневная динамика и спарклайн.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>

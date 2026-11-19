@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Domains\Biometric\Services\BiometricService;
+use App\Support\SettingsService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,11 @@ class DeviceTokenAuth
         }
 
         $request->attributes->set('biometric_device', $device);
+
+        // настройки читаются в контексте компании устройства (межтенантность)
+        app(SettingsService::class)->useCompany(
+            $device->company_id !== null ? (int) $device->company_id : null,
+        );
 
         return $next($request);
     }

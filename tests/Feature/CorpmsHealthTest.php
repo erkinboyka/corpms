@@ -95,4 +95,20 @@ class CorpmsHealthTest extends TestCase
         self::assertFalse($queue['ok']);
         self::assertStringContainsString('порог 0', $queue['details']);
     }
+
+    public function test_missing_storage_directories_make_health_fail(): void
+    {
+        $original = app()->storagePath();
+        app()->useStoragePath(sys_get_temp_dir().'/corpms_missing_'.Str::uuid());
+        try {
+            $command = app(\App\Console\Commands\CorpmsHealth::class);
+            $check = (new \ReflectionMethod($command, 'checkStorage'))->invoke($command);
+            self::assertFalse($check['ok']);
+            foreach (['storage', 'logs', 'app'] as $directory) {
+                self::assertStringContainsString($directory, $check['details']);
+            }
+        } finally {
+            app()->useStoragePath($original);
+        }
+    }
 }

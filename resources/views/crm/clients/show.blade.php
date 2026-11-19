@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', 'CRM — '.$client->name)
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">CRM · Клиент</div>
-            <h2 class="page-title mt-1">{{ $client->name }}</h2>
+            <h1 class="page-title mt-1">{{ $client->name }}</h1>
             <div class="text-secondary mt-1 d-flex align-items-center gap-2 flex-wrap">
                 <span class="crm-chip crm-chip--grey">{{ $crm_label('crm_client_kind', $client->kind->value) }}</span>
                 <span class="crm-chip {{ $client->status->value === 'active' ? 'crm-chip--green' : 'crm-chip--grey' }}">{{ $crm_label('crm_client_status', $client->status->value) }}</span>
@@ -17,7 +18,7 @@
             </div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('crm.clients.index') }}"><i class="ti ti-arrow-left me-1"></i>К списку</a>
+
             @can('checkBoxPermission', 'crm.manage')
             <button class="btn btn-ghost-secondary me-1" data-bs-toggle="modal" data-bs-target="#editClient"><i class="ti ti-pencil me-1"></i>Изменить</button>
             <form method="post" action="{{ route('crm.clients.toggle', $client) }}" class="d-inline"
@@ -35,22 +36,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-chart-funnel"></i>Сделки в работе</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-chart-funnel"></i>Сделки в работе</div>
         <div class="crm-metric__value">{{ $metrics['deals_open'] }}</div>
         <div class="crm-metric__hint">открытых</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-currency-dollar"></i>Сумма в работе</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-currency-dollar"></i>Сумма в работе</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['amount_open'], 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">потенциал</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-trophy"></i>Выиграно</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-trophy"></i>Выиграно</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['amount_won'], 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">закрытые сделки</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-calendar-event"></i>Активности</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-calendar-event"></i>Активности</div>
         <div class="crm-metric__value">{{ $metrics['activities_pending'] }}</div>
         <div class="crm-metric__hint">в работе</div>
     </div>
@@ -64,14 +65,14 @@
                 <div class="card-actions text-secondary">{{ $client->deals->count() }}</div>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table">
+                <table data-record-key="0" class="table table-hover table-vcenter card-table">
                     <thead>
                         <tr>
-                            <th>Сделка</th>
-                            <th>Стадия</th>
-                            <th class="text-end">Сумма</th>
-                            <th>Срок</th>
-                            <th>Ответственный</th>
+                            <th scope="col">Сделка</th>
+                            <th scope="col">Стадия</th>
+                            <th scope="col" class="text-end">Сумма</th>
+                            <th scope="col">Срок</th>
+                            <th scope="col">Ответственный</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -147,9 +148,9 @@
                 <div class="card-actions"><a class="btn btn-sm btn-ghost-secondary" href="{{ route('crm.activities.index') }}">Все</a></div>
             </div>
             <div class="table-responsive">
-                <table class="table table-vcenter card-table">
+                <table data-record-key="0" class="table table-vcenter card-table">
                     <thead>
-                        <tr><th>Активность</th><th>Вид</th><th class="text-end">Срок</th><th>Статус</th></tr>
+                        <tr><th scope="col">Активность</th><th scope="col">Вид</th><th scope="col" class="text-end">Срок</th><th scope="col">Статус</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($client->activities as $activity)
@@ -204,56 +205,67 @@
             @method('patch')
             <div class="modal-header"><h5 class="modal-title">Изменить клиента</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-name">Название<span class="req">*</span></label>
-                        <input type="text" id="ec-name" name="name" class="form-control" value="{{ $client->name }}" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-kind">Вид<span class="req">*</span></label>
-                        <select id="ec-kind" name="kind" class="form-select" required>
-                            @foreach ($kinds as $kind)
-                                <option value="{{ $kind->value }}" @selected($client->kind === $kind)>{{ $crm_label('crm_client_kind', $kind->value) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-owner">Ответственный</label>
-                        <select id="ec-owner" name="owner_id" class="form-select">
-                            <option value="">— не назначен —</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" @selected((int) $client->owner_id === (int) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-inn">ИНН</label>
-                        <input type="text" id="ec-inn" name="inn" class="form-control" value="{{ $client->inn }}" maxlength="32">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-phone">Телефон</label>
-                        <input type="text" id="ec-phone" name="phone" class="form-control" value="{{ $client->phone }}" maxlength="32">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-email">E-mail</label>
-                        <input type="email" id="ec-email" name="email" class="form-control" value="{{ $client->email }}">
+                <div class="crm-form__section">
+                    <h3>Клиент</h3>
+                    <div class="crm-form__desc">Название, вид и ответственный — выровнено с формой создания.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-name">Название<span class="req">*</span></label>
+                            <input type="text" id="ec-name" name="name" class="form-control" value="{{ $client->name }}" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-kind">Вид<span class="req">*</span></label>
+                            <select id="ec-kind" name="kind" class="form-select" required>
+                                @foreach ($kinds as $kind)
+                                    <option value="{{ $kind->value }}" @selected($client->kind === $kind)>{{ $crm_label('crm_client_kind', $kind->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-owner">Ответственный</label>
+                            <select id="ec-owner" name="owner_id" class="form-select">
+                                <option value="">— не назначен —</option>
+                                @foreach ($employees as $employee)
+                                    <option value="{{ $employee->id }}" @selected((int) $client->owner_id === (int) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-website">Сайт</label>
-                        <input type="text" id="ec-website" name="website" class="form-control" value="{{ $client->website }}">
+                <div class="crm-form__section">
+                    <h3>Реквизиты и контакты</h3>
+                    <div class="crm-form__desc">ИНН, телефон и почта в одной строке.</div>
+                    <div class="crm-form__row crm-form__row--3">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-inn">ИНН</label>
+                            <input type="text" id="ec-inn" name="inn" class="form-control" value="{{ $client->inn }}" maxlength="32">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-phone">Телефон</label>
+                            <input type="text" id="ec-phone" name="phone" class="form-control" value="{{ $client->phone }}" maxlength="32">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-email">E-mail</label>
+                            <input type="email" id="ec-email" name="email" class="form-control" value="{{ $client->email }}">
+                        </div>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ec-address">Адрес</label>
-                        <input type="text" id="ec-address" name="address" class="form-control" value="{{ $client->address }}" maxlength="1000">
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-website">Сайт</label>
+                            <input type="text" id="ec-website" name="website" class="form-control" value="{{ $client->website }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ec-address">Адрес</label>
+                            <input type="text" id="ec-address" name="address" class="form-control" value="{{ $client->address }}" maxlength="1000">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ec-notes">Примечание</label>
-                    <textarea id="ec-notes" name="notes" class="form-control" rows="2" maxlength="2000">{{ $client->notes }}</textarea>
+                <div class="crm-form__section mb-0">
+                    <h3>Примечание</h3>
+                    <div class="crm-form__desc">Особенности работы с клиентом и договорённости.</div>
+                    <div class="crm-form__field mb-0">
+                        <textarea data-crm-rich id="ec-notes" name="notes" class="form-control" rows="2" maxlength="2000">{{ $client->notes }}</textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -270,34 +282,42 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый контакт</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nct-first">Имя<span class="req">*</span></label>
-                        <input type="text" id="nct-first" name="first_name" class="form-control" value="{{ old('first_name') }}" required>
+                <div class="crm-form__section">
+                    <h3>Контакт</h3>
+                    <div class="crm-form__desc">Имя, фамилия и должность — кто принимает решения у клиента.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nct-first">Имя<span class="req">*</span></label>
+                            <input type="text" id="nct-first" name="first_name" class="form-control" value="{{ old('first_name') }}" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nct-last">Фамилия</label>
+                            <input type="text" id="nct-last" name="last_name" class="form-control" value="{{ old('last_name') }}">
+                        </div>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nct-last">Фамилия</label>
-                        <input type="text" id="nct-last" name="last_name" class="form-control" value="{{ old('last_name') }}">
-                    </div>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="nct-position">Должность</label>
-                    <input type="text" id="nct-position" name="position" class="form-control" value="{{ old('position') }}">
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nct-phone">Телефон</label>
-                        <input type="text" id="nct-phone" name="phone" class="form-control" value="{{ old('phone') }}" maxlength="32">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nct-email">E-mail</label>
-                        <input type="email" id="nct-email" name="email" class="form-control" value="{{ old('email') }}">
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="nct-position">Должность</label>
+                        <input type="text" id="nct-position" name="position" class="form-control" value="{{ old('position') }}">
                     </div>
                 </div>
-                <label class="form-check">
-                    <input type="checkbox" class="form-check-input" name="is_primary" value="1" @checked(old('is_primary'))>
-                    <span class="form-check-label">Основной контакт</span>
-                </label>
+                <div class="crm-form__section mb-0">
+                    <h3>Связь</h3>
+                    <div class="crm-form__desc">Телефон и почта рядом — быстро дозвониться и написать.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nct-phone">Телефон</label>
+                            <input type="text" id="nct-phone" name="phone" class="form-control" value="{{ old('phone') }}" maxlength="32">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nct-email">E-mail</label>
+                            <input type="email" id="nct-email" name="email" class="form-control" value="{{ old('email') }}">
+                        </div>
+                    </div>
+                    <label class="form-check mb-0">
+                        <input type="checkbox" class="form-check-input" name="is_primary" value="1" @checked(old('is_primary'))>
+                        <span class="form-check-label">Основной контакт</span>
+                    </label>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
@@ -316,40 +336,57 @@
             <input type="hidden" name="client_id" value="{{ $client->id }}">
             <div class="modal-header"><h5 class="modal-title">Сделка по клиенту</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="nd-title">Название<span class="req">*</span></label>
-                    <input type="text" id="nd-title" name="title" class="form-control" value="{{ old('title') }}" placeholder="Поставка офисной техники" required>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nd-amount">Сумма</label>
-                        <input type="number" id="nd-amount" name="amount" class="form-control" value="{{ old('amount', 0) }}" step="0.01" min="0">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nd-stage">Стадия</label>
-                        <select id="nd-stage" name="stage" class="form-select">
-                            @foreach ($stages as $stage)
-                                <option value="{{ $stage->value }}" @selected(old('stage', 'new') === $stage->value)>{{ $crm_label('crm_deal_stage', $stage->value) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nd-expected">Ожидаемое закрытие</label>
-                        <input type="date" id="nd-expected" name="expected_close_date" class="form-control" value="{{ old('expected_close_date') }}">
+                <div class="crm-form__section">
+                    <h3>Сделка</h3>
+                    <div class="crm-form__desc">Название и клиент — клиент уже выбран, остальное заполняем.</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="nd-title">Название<span class="req">*</span></label>
+                        <input type="text" id="nd-title" name="title" class="form-control" value="{{ old('title') }}" placeholder="Поставка офисной техники" required>
                     </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="nd-owner">Ответственный</label>
-                    <select id="nd-owner" name="owner_id" class="form-select">
-                        <option value="">— не назначен —</option>
-                        @foreach ($employees as $employee)
-                            <option value="{{ $employee->id }}" @selected((string) old('owner_id') === (string) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
-                        @endforeach
-                    </select>
+                <div class="crm-form__section">
+                    <h3>Воронка</h3>
+                    <div class="crm-form__desc">Сумма и стадия рядом — на каком этапе сделка и чего стоит.</div>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nd-amount">Сумма</label>
+                            <input type="number" id="nd-amount" name="amount" class="form-control" value="{{ old('amount', 0) }}" step="0.01" min="0">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nd-stage">Стадия</label>
+                            <select id="nd-stage" name="stage" class="form-select">
+                                @foreach ($stages as $stage)
+                                    <option value="{{ $stage->value }}" @selected(old('stage', 'new') === $stage->value)>{{ $crm_label('crm_deal_stage', $stage->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="nd-notes">Примечание</label>
-                    <textarea id="nd-notes" name="notes" class="form-control" rows="2" maxlength="2000">{{ old('notes') }}</textarea>
+                <div class="crm-form__section">
+                    <h3>Сроки и ответственные</h3>
+                    <div class="crm-form__desc">Ожидаемое закрытие и ответственный в одной строке.</div>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nd-expected">Ожидаемое закрытие</label>
+                            <input type="date" id="nd-expected" name="expected_close_date" class="form-control" value="{{ old('expected_close_date') }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nd-owner">Ответственный</label>
+                            <select id="nd-owner" name="owner_id" class="form-select">
+                                <option value="">— не назначен —</option>
+                                @foreach ($employees as $employee)
+                                    <option value="{{ $employee->id }}" @selected((string) old('owner_id') === (string) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="crm-form__section mb-0">
+                    <h3>Примечание</h3>
+                    <div class="crm-form__desc">Детали договорённостей по сделке.</div>
+                    <div class="crm-form__field mb-0">
+                        <textarea data-crm-rich id="nd-notes" name="notes" class="form-control" rows="2" maxlength="2000">{{ old('notes') }}</textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

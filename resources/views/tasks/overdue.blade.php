@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Просроченные задачи')
 
@@ -7,11 +8,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow" style="color: var(--tblr-danger);">Контроль сроков</div>
-            <h2 class="page-title mt-1 text-danger">Просроченные задачи</h2>
+            <h1 class="page-title mt-1 text-danger">Просроченные задачи</h1>
             <div class="text-secondary mt-1">Дедлайн прошёл, а задача не закрыта · всего {{ $tasks->total() }}</div>
-        </div>
-        <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary" href="{{ route('tasks.index') }}"><i class="ti ti-arrow-left me-1"></i>Все задачи</a>
         </div>
     </div>
 </div>
@@ -21,10 +19,10 @@
         @php
             $daysLate = $task->deadline !== null ? (int) $task->deadline->diffInDays(now(), false) : 0;
             $prioChip = ['critical' => 'crm-chip--red', 'high' => 'crm-chip--orange', 'medium' => 'crm-chip--cyan', 'low' => 'crm-chip--grey'][$task->priority->value] ?? 'crm-chip--grey';
-            $tone = $task->priority->value === 'critical' || $daysLate > 7 ? '#d63939' : '#f76707';
+            $tone = $task->priority->value === 'critical' || $daysLate > 7 ? 'var(--crm-danger)' : 'var(--crm-warning)';
         @endphp
         <div class="crm-queue__item" style="--c: {{ $tone }};">
-            <span class="crm-entity__logo" style="width:38px;height:38px;font-size:14px;border-radius:11px;background:{{ $tone }}1f;color:{{ $tone }};">
+            <span class="crm-entity__logo bm-deadline-icon">
                 <i class="ti ti-alarm"></i>
             </span>
             <div class="crm-queue__body">
@@ -44,7 +42,7 @@
             <a class="btn btn-sm btn-primary" href="{{ route('tasks.show', $task) }}" title="Открыть задачу"><i class="ti ti-arrow-right"></i></a>
         </div>
     @empty
-        <div class="crm-queue__item" style="--c: #2fb344;">
+        <div class="crm-queue__item" style="--c: var(--crm-success);">
             <span class="crm-entity__logo" style="width:38px;height:38px;font-size:15px;border-radius:11px;"><i class="ti ti-circle-check"></i></span>
             <div class="crm-queue__body">
                 <div class="crm-queue__title">Просроченных нет</div>

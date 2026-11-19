@@ -7,6 +7,7 @@ namespace App\Domains\Ai\Jobs;
 use App\Domains\Ai\Services\AiAssistantService;
 use App\Domains\Ai\Services\AiPanelService;
 use App\Models\AiConversation;
+use App\Support\PermissionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -40,6 +41,11 @@ class RetryAiAnswer implements ShouldQueue
 
         if ($conversation === null || (bool) $conversation->grounded) {
             return; // запись удалена или уже отвечена LLM
+        }
+
+        $user = $conversation->employee?->user;
+        if ($user === null || ! app(PermissionService::class)->check($user, 'analytics.ai.use')) {
+            return; // Do not disclose fresh company data after access has been revoked.
         }
 
         $service = $this->panel

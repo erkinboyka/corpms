@@ -130,6 +130,28 @@ class AiAndLiveFeedHttpTest extends TestCase
         self::assertStringContainsString('1', $answer);
     }
 
+    public function test_bumi_history_formats_only_assistant_markdown_and_blocks_unsafe_markup(): void
+    {
+        AiConversation::create([
+            'employee_id' => $this->adminEmployee->id,
+            'question' => '**Вопрос без форматирования**',
+            'answer' => "**Готово**\n\n- Первый шаг\n- Используйте `Bumi`\n\n"
+                ."[Небезопасная ссылка](javascript:invalid)\n\n<b>Сырой HTML</b>\n\n![Картинка](https://example.test/pixel.png)",
+        ]);
+
+        $this->get('/ai')
+            ->assertOk()
+            ->assertSee('Bumi')
+            ->assertSee('data-bumi-face', false)
+            ->assertSee('**Вопрос без форматирования**')
+            ->assertSee('<strong>Готово</strong>', false)
+            ->assertSee('<li>Первый шаг</li>', false)
+            ->assertSee('<code>Bumi</code>', false)
+            ->assertDontSee('javascript:invalid', false)
+            ->assertDontSee('<b>Сырой HTML</b>', false)
+            ->assertDontSee('https://example.test/pixel.png', false);
+    }
+
     public function test_ai_validation_rejects_short_question(): void
     {
         $this->post('/ai', ['question' => 'ok'])

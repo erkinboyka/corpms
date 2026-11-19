@@ -7,136 +7,279 @@ namespace App\Support;
 use App\Models\User;
 
 /**
- * Навигация с учётом permissions (п.58 ТЗ).
+ * Навигация BM Systems с учётом permissions.
  *
- * Спецификация элемента:
- *   ['_', 'Дашборд']                        — секция (заголовок)
- *   ['route', 'title', 'icon', 'permission|null']
+ * Формат элемента ITEMS:
+ *   ['_', 'Название']                                       — заголовок секции
+ *   ['route', 'title', 'icon', 'permission|null']           — пункт меню
+ *   ['module', 'title', 'icon', 'permission|null', [ ... ]] — модуль со вложенными пунктами
+ *
+ * Модуль показывается, если виден хотя бы один его пункт; пункты фильтруются
+ * индивидуально. Активный модуль раскрывается на клиенте (data-nav-group).
  */
 class Sidebar
 {
-    /** @var array<int, array{0:string,1:string,2?:string,3?:?string}> */
+    private const PARENT_ROUTES = [
+        'accounting.entries.show' => 'accounting.entries.index',
+        'bi.dashboards.show' => 'bi.index',
+        'crm.clients.show' => 'crm.clients.index',
+        'documents.show' => 'documents.index',
+        'employees.show' => 'employees.index',
+        'employees.subordinates' => 'employees.index',
+        'finance.invoices.show' => 'finance.invoices.index',
+        'payroll.show' => 'payroll.index',
+        'projects.show' => 'projects.index',
+        'purchases.show' => 'purchases.index',
+        'reports.attendance' => 'reports.index',
+        'reports.hr' => 'reports.index',
+        'reports.tasks' => 'reports.index',
+        'tasks.show' => 'tasks.index',
+    ];
+
+    public static function activeRoute(?string $name): ?string
+    {
+        return self::PARENT_ROUTES[$name] ?? $name;
+    }
+
+    /** @var array<int, array{0:string,1:string,2?:string,3?:?string,4?:array}> */
     protected const ITEMS = [
-        ['_', 'Главная'],
+        ['_', 'Обзор'],
         ['dashboard', 'Дашборд', 'layout-dashboard', 'attendance.dashboard.view'],
+        ['notifications.index', 'Уведомления', 'bell', 'attendance.view'],
+        ['chat.index', 'Чат', 'message-circle', 'chat.view'],
 
-        ['_', 'Организация'],
-        ['companies.index', 'Компании', 'building', 'companies.view'],
-        ['departments.index', 'Отделы', 'sitemap', 'departments.view'],
-        ['positions.index', 'Должности', 'briefcase', 'positions.view'],
+        ['_', 'Работа'],
+        ['module', 'Задачи', 'list-check', 'tasks.view', [
+            ['tasks.index', 'Все задачи', 'list', null],
+            ['tasks.mine', 'Мои задачи', 'user-check', null],
+            ['tasks.overdue', 'Просроченные', 'alarm', null],
+        ]],
+        ['projects.index', 'Проекты', 'folders', 'projects.view'],
+        ['module', 'Графики и отпуска', 'calendar-time', null, [
+            ['schedules.index', 'Графики работы', 'clock-bolt', 'schedules.view'],
+            ['schedules.holidays', 'Праздники', 'calendar-event', 'schedules.view'],
+            ['schedules.leaves', 'Отпуска и заявки', 'calendar-off', 'leaves.view'],
+            ['schedules.mine', 'Мой график', 'alarm', 'attendance.view'],
+        ]],
+
+        ['_', 'Люди'],
         ['employees.index', 'Сотрудники', 'users', 'employees.view'],
-        ['orgchart.index', 'Оргструктура', 'binary-tree', 'org_chart.view'],
+        ['module', 'Организация', 'building', null, [
+            ['departments.index', 'Отделы', 'sitemap', 'departments.view'],
+            ['positions.index', 'Должности', 'briefcase', 'positions.view'],
+            ['orgchart.index', 'Оргструктура', 'binary-tree', 'org_chart.view'],
+            ['companies.index', 'Компании', 'building-castle', 'companies.view'],
+        ]],
+        ['module', 'Посещаемость', 'clock', null, [
+            ['attendance.index', 'Сегодня', 'clock-hour-4', 'attendance.view'],
+            ['attendance.live', 'В реальном времени', 'broadcast', 'attendance.live.view'],
+            ['attendance.timesheet', 'Табель', 'calendar-time', 'attendance.timesheet.view'],
+            ['attendance.anomalies', 'Аномалии', 'alert-triangle', 'attendance.anomalies.view'],
+            ['attendance.corrections', 'Корректировки', 'notebook', 'attendance.correct'],
+        ]],
+        ['module', 'Зарплата', 'wallet', null, [
+            ['payroll.index', 'Ведомости', 'report-money', 'payroll.view'],
+            ['payroll.salaries', 'Оклады и компоненты', 'coins', 'payroll.view'],
+        ]],
 
-        ['_', 'Графики и отпуска'],
-        ['schedules.index', 'Графики работы', 'clock-bolt', 'schedules.view'],
-        ['schedules.holidays', 'Праздники', 'calendar-event', 'schedules.view'],
-        ['schedules.leaves', 'Отпуска и заявки', 'calendar-off', 'leaves.view'],
-        ['schedules.mine', 'Мой график', 'alarm', 'attendance.view'],
+        ['_', 'Клиенты'],
+        ['module', 'CRM', 'chart-funnel', null, [
+            ['crm.clients.index', 'Клиенты', 'address-book', 'crm.view'],
+            ['crm.leads.index', 'Лиды', 'user-search', 'crm.view'],
+            ['crm.deals.index', 'Сделки', 'transaction-euro', 'crm.view'],
+            ['crm.activities.index', 'Активности', 'calendar-event', 'crm.view'],
+        ]],
 
-        ['_', 'Посещаемость'],
-        ['attendance.index', 'Сегодня', 'clock', 'attendance.view'],
-        ['attendance.live', 'Live', 'broadcast', 'attendance.live.view'],
-        ['attendance.timesheet', 'Табель', 'calendar-time', 'attendance.timesheet.view'],
-        ['attendance.anomalies', 'Аномалии', 'alert-triangle', 'attendance.anomalies.view'],
-        ['attendance.corrections', 'Корректировки', 'notebook', 'attendance.correct'],
-        ['biometrics.index', 'Биометрия', 'fingerprint', 'biometry.devices.view'],
-        ['biometrics.events', 'События биометрии', 'activity', 'biometry.events.view'],
-        ['biometrics.privacy', 'Приватность биометрии', 'lock', 'biometry.privacy.manage'],
-        ['rfid.index', 'RFID-карты', 'credit-card', 'biometry.rfid.view'],
-
-        ['_', 'Зарплата'],
-        ['payroll.index', 'Ведомости', 'wallet', 'payroll.view'],
-        ['payroll.salaries', 'Оклады и компоненты', 'coins', 'payroll.view'],
-
-        ['_', 'Склад'],
-        ['inventory.index', 'Остатки', 'package', 'inventory.view'],
-        ['inventory.products', 'Товары', 'box', 'inventory.view'],
-        ['inventory.movements', 'Движения', 'arrows-exchange', 'inventory.view'],
-        ['inventory.warehouses', 'Склады', 'building-warehouse', 'inventory.view'],
-        ['inventory.suppliers', 'Поставщики', 'truck-delivery', 'inventory.view'],
+        ['_', 'Операции'],
+        ['module', 'Склад', 'package', null, [
+            ['inventory.index', 'Остатки', 'packages', 'inventory.view'],
+            ['inventory.products', 'Товары', 'box', 'inventory.view'],
+            ['inventory.warehouses', 'Склады', 'building-warehouse', 'inventory.view'],
+            ['inventory.suppliers', 'Поставщики', 'truck-delivery', 'inventory.view'],
+            ['inventory.movements', 'Движения', 'arrows-exchange', 'inventory.view'],
+        ]],
         ['purchases.index', 'Закупки', 'shopping-cart', 'purchases.view'],
 
-        ['_', 'CRM'],
-        ['crm.clients.index', 'Клиенты', 'address-book', 'crm.view'],
-        ['crm.leads.index', 'Лиды', 'user-search', 'crm.view'],
-        ['crm.deals.index', 'Сделки', 'chart-funnel', 'crm.view'],
-        ['crm.activities.index', 'Активности', 'calendar-event', 'crm.view'],
-
         ['_', 'Финансы'],
-        ['finance.accounts.index', 'Касса и счета', 'cash-banknote', 'finance.view'],
-        ['finance.invoices.index', 'Счета и акты', 'file-invoice', 'finance.view'],
-        ['finance.transactions.index', 'Доходы и расходы', 'receipt', 'finance.view'],
-        ['finance.budgets.index', 'Бюджеты', 'target', 'finance.view'],
-        ['finance.categories.index', 'Статьи', 'category', 'finance.view'],
-
-        ['_', 'Бухгалтерия'],
-        ['accounting.chart.index', 'План счетов', 'list-numbers', 'accounting.view'],
-        ['accounting.entries.index', 'Проводки', 'book-2', 'accounting.view'],
-        ['accounting.documents.index', 'Первичные документы', 'files', 'accounting.view'],
-        ['accounting.reports.index', 'Отчёты', 'report-analytics', 'accounting.view'],
-
-        ['_', 'Проекты'],
-        ['projects.index', 'Проекты', 'folders', 'projects.view'],
-
-        ['_', 'Задачи'],
-        ['tasks.index', 'Все задачи', 'list-check', 'tasks.view'],
-        ['tasks.mine', 'Мои задачи', 'user-check', 'tasks.view'],
-        ['tasks.overdue', 'Просроченные', 'alarm', 'tasks.view'],
+        ['module', 'Операции', 'cash-banknote', null, [
+            ['finance.accounts.index', 'Касса и счета', 'wallet', 'finance.view'],
+            ['finance.invoices.index', 'Счета и акты', 'file-invoice', 'finance.view'],
+            ['finance.transactions.index', 'Доходы и расходы', 'receipt', 'finance.view'],
+            ['finance.budgets.index', 'Бюджеты', 'target', 'finance.view'],
+            ['finance.categories.index', 'Статьи', 'category', 'finance.view'],
+        ]],
+        ['module', 'Бухгалтерия', 'book-2', null, [
+            ['accounting.chart.index', 'План счетов', 'list-numbers', 'accounting.view'],
+            ['accounting.entries.index', 'Проводки', 'arrows-right-left', 'accounting.view'],
+            ['accounting.documents.index', 'Первичные документы', 'files', 'accounting.view'],
+            ['accounting.reports.index', 'Отчёты', 'report-analytics', 'accounting.view'],
+        ]],
 
         ['_', 'Документы'],
-        ['documents.index', 'Все документы', 'files', 'documents.view'],
-        ['documents.mine', 'Мои документы', 'folder', 'documents.view'],
-        ['documents.templates', 'Шаблоны', 'template', 'documents.templates.view'],
-        ['workflows.index', 'Маршруты согласования', 'arrows-split', 'workflows.view'],
+        ['module', 'Документооборот', 'files', null, [
+            ['documents.index', 'Все документы', 'folder', 'documents.view'],
+            ['documents.mine', 'Мои документы', 'file', 'documents.view'],
+            ['documents.templates', 'Шаблоны', 'template', 'documents.templates.view'],
+            ['workflows.index', 'Маршруты согласования', 'arrows-split', 'workflows.view'],
+        ]],
 
         ['_', 'Аналитика'],
         ['analytics.index', 'Аналитика', 'chart-bar', 'analytics.view'],
         ['reports.index', 'Отчёты', 'report', 'reports.view'],
-        ['ai.index', 'AI-ассистент', 'sparkles', 'analytics.ai.use'],
-        ['bi.index', 'BI-дашборды', 'chart-histogram', 'bi.view'],
-        ['bi.metrics.index', 'Срезы витрины', 'chart-line', 'bi.view'],
+        ['module', 'BI', 'chart-histogram', null, [
+            ['bi.index', 'BI-дашборды', 'chart-dots', 'bi.view'],
+            ['bi.metrics.index', 'Срезы витрины', 'chart-line', 'bi.view'],
+        ]],
+        ['ai.index', 'Bumi', 'sparkles', 'analytics.ai.use'],
+        ['audit.index', 'Журнал действий', 'history', 'audit.view@company'],
 
-        ['_', 'Система'],
-        ['audit.index', 'Audit Log', 'history', 'audit.view'],
+        ['_', 'Администрирование'],
         ['users.index', 'Учётные записи', 'user-cog', 'users.manage'],
         ['integrations.index', 'Интеграции', 'plug', 'integrations.manage'],
-        ['settings.index', 'Настройки', 'settings', 'settings.view'],
+        ['module', 'Биометрия', 'fingerprint', null, [
+            ['biometrics.index', 'Устройства', 'device-fingerprint', 'biometry.devices.view'],
+            ['biometrics.events', 'События', 'activity', 'biometry.events.view'],
+            ['biometrics.privacy', 'Приватность', 'lock', 'biometry.privacy.manage'],
+        ]],
+        ['rfid.index', 'RFID-карты', 'credit-card', 'biometry.rfid.view'],
+        ['settings.index', 'Настройки', 'settings', 'settings.view@company'],
     ];
 
     /**
-     * Готовый список для рендера: секции без единого видимого пункта выкидываются.
+     * Готовый список для рендера: секции без единого видимого пункта выкидываются,
+     * модули — если ни один их пункт не виден.
      *
-     * @return array<int, array{type:string, label?:?string, route?:string, title?:string, icon?:string}>
+     * @return array<int, array{type:string, label?:string, route?:string, title?:string, icon?:string, children?:array}>
      */
     public static function build(User $user): array
     {
         $permissions = app(PermissionService::class);
         $list = [];
         $sectionLabel = null;
+        $sectionHasVisible = false;
+        $sectionStart = null;
+
+        $flushSection = static function () use (&$list, &$sectionLabel, &$sectionHasVisible, &$sectionStart): void {
+            if ($sectionLabel !== null) {
+                if ($sectionHasVisible && $sectionStart !== null) {
+                    array_splice($list, $sectionStart, 0, [['type' => 'section', 'label' => $sectionLabel]]);
+                }
+                $sectionLabel = null;
+                $sectionHasVisible = false;
+                $sectionStart = null;
+            }
+        };
 
         foreach (self::ITEMS as $item) {
-            // ['_', 'Заголовок секции']
             if ($item[0] === '_') {
+                $flushSection();
                 $sectionLabel = $item[1];
+                $sectionStart = count($list);
+
+                continue;
+            }
+
+            if ($item[0] === 'module') {
+                [, $title, $icon, $permission, $children] = $item;
+
+                $visibleChildren = [];
+                foreach ($children as [$route, $childTitle, $childIcon, $childPermission]) {
+                    if ($childPermission !== null && ! $permissions->check($user, $childPermission)) {
+                        continue;
+                    }
+                    $visibleChildren[] = ['type' => 'item', 'route' => $route, 'title' => $childTitle, 'icon' => $childIcon];
+                }
+
+                if ($visibleChildren === [] || ($permission !== null && ! $permissions->check($user, $permission))) {
+                    continue;
+                }
+
+                $list[] = ['type' => 'module', 'title' => $title, 'icon' => $icon, 'children' => $visibleChildren];
+                $sectionHasVisible = true;
 
                 continue;
             }
 
             [$route, $title, $icon, $permission] = $item;
 
-            $visible = $permission === null || $permissions->check($user, $permission);
-            if ($visible === false) {
+            if ($permission !== null && ! $permissions->check($user, $permission)) {
                 continue;
             }
 
-            if ($sectionLabel !== null) {
-                $list[] = ['type' => 'section', 'label' => $sectionLabel];
-                $sectionLabel = null;
-            }
-
             $list[] = ['type' => 'item', 'route' => $route, 'title' => $title, 'icon' => $icon];
+            $sectionHasVisible = true;
         }
 
+        $flushSection();
+
         return $list;
+    }
+
+    /**
+     * Все маршруты, видимые пользователю, — верхние пункты и вложенные
+     * пункты модулей (формат build() со вложенными children).
+     *
+     * @return list<string>
+     */
+    public static function routes(User $user): array
+    {
+        $routes = [];
+
+        foreach (self::build($user) as $item) {
+            if (($item['type'] ?? null) === 'module') {
+                foreach ($item['children'] as $child) {
+                    $routes[] = $child['route'];
+                }
+
+                continue;
+            }
+
+            if (isset($item['route'])) {
+                $routes[] = $item['route'];
+            }
+        }
+
+        return $routes;
+    }
+
+    /**
+     * Хлебные крошки для маршрута: ['Секция', 'Модуль|null', 'Страница'].
+     * Для маршрутов вне сайдбара (детальные страницы) — null: такие страницы
+     * задают крошки сами через partials/breadcrumbs.
+     *
+     * @return array{0:string,1:?string,2:string}|null
+     */
+    public static function breadcrumbsFor(string $routeName): ?array
+    {
+        static $cache = null;
+
+        if ($cache === null) {
+            $cache = [];
+            $section = null;
+            $module = null;
+
+            foreach (self::ITEMS as $item) {
+                if ($item[0] === '_') {
+                    $section = $item[1];
+                    $module = null;
+
+                    continue;
+                }
+
+                if ($item[0] === 'module') {
+                    $module = $item[1];
+
+                    foreach ($item[4] as [$childRoute, $childTitle]) {
+                        $cache[$childRoute] = [$section, $module, $childTitle];
+                    }
+
+                    continue;
+                }
+
+                $cache[$item[0]] = [$section, null, $item[1]];
+            }
+        }
+
+        return $cache[$routeName] ?? null;
     }
 }

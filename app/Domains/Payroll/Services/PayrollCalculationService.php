@@ -44,11 +44,12 @@ class PayrollCalculationService
     /** Пересчёт ведомости из табеля и окладов. Ручные строки (source=manual) сохраняются. */
     public function calculate(PayrollPeriod $period, User $actor): PayrollPeriod
     {
-        if (in_array($period->status, [PayrollPeriodStatus::Draft, PayrollPeriodStatus::Calculated], true) === false) {
-            throw new LogicException('Пересчёт возможен только для черновика или рассчитанного периода');
-        }
-
         return DB::transaction(function () use ($period, $actor): PayrollPeriod {
+            $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
+            if (in_array($period->status, [PayrollPeriodStatus::Draft, PayrollPeriodStatus::Calculated], true) === false) {
+                throw new LogicException('Пересчёт возможен только для черновика или рассчитанного периода');
+            }
+
             $start = $period->period_start->toDateString();
             $end = $period->period_end->toDateString();
 
@@ -169,13 +170,16 @@ class PayrollCalculationService
         $periodEnd = Carbon::parse($end);
 
         $holidays = Holiday::query()
-            ->whereBetween('date', [$start, $end])
+            ->where(fn ($query) => $query->where('company_id', $employee->company_id)->orWhereNull('company_id'))
+            ->where('is_day_off', true)
+            ->whereDate('date', '>=', $start)
+            ->whereDate('date', '<=', $end)
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
             ->all();
         $holidays = array_flip($holidays);
 
-        $days = 0;
+        $days = [];
         foreach ($leaves as $leave) {
             $from = Carbon::parse($leave->from_date)->startOfDay();
             $to = Carbon::parse($leave->to_date)->startOfDay();
@@ -190,11 +194,11 @@ class PayrollCalculationService
                 if (isset($holidays[$day->toDateString()])) {
                     continue; // праздник
                 }
-                $days++;
+                $days[$day->toDateString()] = true;
             }
         }
 
-        return round($days * $hoursPerDay, 2);
+        return round(count($days) * $hoursPerDay, 2);
     }
 
     /** Часы в день по графику сотрудника (график − перерыв); без графика — 8 ч. */
@@ -224,33 +228,39 @@ class PayrollCalculationService
     /** Согласование ведомости: calculated → approved. */
     public function approve(PayrollPeriod $period, User $actor): PayrollPeriod
     {
-        if ($period->status !== PayrollPeriodStatus::Calculated) {
-            throw new LogicException('Согласовать можно только рассчитанную ведомость');
-        }
+        return DB::transaction(function () use ($period, $actor): PayrollPeriod {
+            $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
+            if ($period->status !== PayrollPeriodStatus::Calculated) {
+                throw new LogicException('Согласовать можно только рассчитанную ведомость');
+            }
 
-        $period->update([
-            'status' => PayrollPeriodStatus::Approved,
-            'approved_at' => now(),
-            'approved_by' => $actor->id,
-        ]);
+            $period->update([
+                'status' => PayrollPeriodStatus::Approved,
+                'approved_at' => now(),
+                'approved_by' => $actor->id,
+            ]);
 
-        return $period->refresh();
+            return $period->refresh();
+        });
     }
 
     /** Выплата: approved → paid. Финальный статус, откатов нет. */
     public function pay(PayrollPeriod $period, User $actor): PayrollPeriod
     {
-        if ($period->status !== PayrollPeriodStatus::Approved) {
-            throw new LogicException('Выплатить можно только согласованную ведомость');
-        }
+        return DB::transaction(function () use ($period, $actor): PayrollPeriod {
+            $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
+            if ($period->status !== PayrollPeriodStatus::Approved) {
+                throw new LogicException('Выплатить можно только согласованную ведомость');
+            }
 
-        $period->update([
-            'status' => PayrollPeriodStatus::Paid,
-            'paid_at' => now(),
-            'paid_by' => $actor->id,
-        ]);
+            $period->update([
+                'status' => PayrollPeriodStatus::Paid,
+                'paid_at' => now(),
+                'paid_by' => $actor->id,
+            ]);
 
-        return $period->refresh();
+            return $period->refresh();
+        });
     }
 
     /**

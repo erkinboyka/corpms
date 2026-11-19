@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Шаблоны документов')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Документооборот</div>
-            <h2 class="page-title mt-1">Шаблоны документов</h2>
+            <h1 class="page-title mt-1">Шаблоны документов</h1>
             <div class="text-secondary mt-1">Категории, шаблоны и генерация с подстановкой переменных</div>
         </div>
         <div class="col-auto d-print-none">
@@ -34,8 +35,8 @@
             <div class="crm-form__desc">Разделы каталога документов.</div>
             <div class="crm-queue">
                 @forelse ($categories as $category)
-                    <div class="crm-queue__item" style="--c: #4299e1;">
-                        <span class="crm-entity__logo" style="width:36px;height:36px;font-size:13px;border-radius:10px;background:#4299e11f;color:#4299e1;">
+                    <div class="crm-queue__item" style="--c: var(--crm-info);">
+                        <span class="crm-entity__logo" style="width:36px;height:36px;font-size:13px;border-radius:10px;background:color-mix(in srgb, var(--crm-info) 12%, transparent);color:var(--crm-info);">
                             <i class="ti ti-folder"></i>
                         </span>
                         <div class="crm-queue__body">
@@ -44,7 +45,7 @@
                         </div>
                     </div>
                 @empty
-                    <div class="crm-queue__item" style="--c: #6c7a91;">
+                    <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                         <div class="crm-queue__body">
                             <div class="crm-queue__title">Категорий нет</div>
                             <div class="crm-queue__sub">Создайте категорию — документы распределятся по ним.</div>
@@ -64,7 +65,7 @@
                 @forelse ($templates as $template)
                     <div class="col-md-6">
                         <div class="crm-entity h-100">
-                            <div class="crm-entity__logo" style="background: #0b9b721f; color: #0b9b72;">
+                            <div class="crm-entity__logo" style="background: color-mix(in srgb, var(--crm-success) 12%, transparent); color: var(--crm-success);">
                                 <i class="ti ti-template"></i>
                             </div>
                             <div class="crm-entity__body">
@@ -140,54 +141,60 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый шаблон</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="ntpl-name">Название<span class="req">*</span></label>
-                    <input type="text" id="ntpl-name" name="name" class="form-control" placeholder="Заявление на отпуск" required maxlength="150">
+                <div class="crm-form__section">
+                    <h3>Шаблон</h3>
+                    <div class="crm-form__desc">Название и категория — как документ находят в списке.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ntpl-name">Название<span class="req">*</span></label>
+                            <input type="text" id="ntpl-name" name="name" class="form-control" placeholder="Заявление на отпуск" required maxlength="150">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ntpl-cat">Категория<span class="req">*</span></label>
+                            <select id="ntpl-cat" name="category_id" class="form-select" required>
+                                @foreach ($categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ntpl-cat">Категория<span class="req">*</span></label>
-                    <select id="ntpl-cat" name="category_id" class="form-select" required>
-                        @foreach ($categories as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ntpl-body">Текст шаблона<span class="req">*</span></label>
-                    <textarea id="ntpl-body" name="body" class="form-control" rows="7" required placeholder="Заявление {{ '${' }} $employee_name {{ '}' }} о..."></textarea>
-                    <div class="crm-form__desc mt-1 mb-0">Переменные вида {{ '${' }} $employee_name {{ '}' }} подставятся при генерации.</div>
+                <div class="crm-form__section">
+                    <h3>Текст шаблона</h3>
+                    <div class="crm-form__desc">Переменные вида {{ '${' }} $employee_name {{ '}' }} подставятся при генерации.</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="ntpl-body">Текст шаблона<span class="req">*</span></label>
+                        <textarea data-crm-rich id="ntpl-body" name="body" class="form-control" rows="7" required placeholder="Заявление {{ '${' }} $employee_name {{ '}' }} о..."></textarea>
+                    </div>
                 </div>
 
-                <div class="mt-2">
-                    <a class="text-secondary small text-decoration-none" data-bs-toggle="collapse" href="#ntpl-advanced" role="button" aria-expanded="false">
-                        <i class="ti ti-chevron-right me-1"></i>Дополнительные настройки
-                    </a>
-                    <div class="collapse mt-2" id="ntpl-advanced">
-                        <div class="crm-form__row">
-                            <div class="crm-form__field">
-                                <label class="form-label" for="ntpl-kind">Формат</label>
-                                <select id="ntpl-kind" name="kind" class="form-select">
-                                    <option value="blade">текст</option>
-                                    <option value="docx">docx</option>
-                                </select>
-                            </div>
-                            <div class="crm-form__field">
-                                <label class="form-label" for="ntpl-wf">Маршрут согласования</label>
-                                <select id="ntpl-wf" name="workflow_id" class="form-select">
-                                    <option value="">— без маршрута —</option>
-                                    @foreach ($workflows as $workflow)
-                                        <option value="{{ $workflow->id }}">{{ $workflow->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                <div class="crm-form__section mb-0">
+                    <h3>Дополнительные настройки</h3>
+                    <div class="crm-form__desc">Формат, маршрут согласования и список переменных.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ntpl-kind">Формат</label>
+                            <select id="ntpl-kind" name="kind" class="form-select">
+                                <option value="blade">текст</option>
+                                <option value="docx">docx</option>
+                            </select>
                         </div>
-                        <div class="crm-form__field mb-0">
-                            <label class="form-label" for="ntpl-vars">Переменные</label>
-                            <input type="text" id="ntpl-vars" name="variables" class="form-control" placeholder="employee_name, date_from"
-                                   autocomplete="off"
-                                   data-crm-tags data-crm-tags-hint="Enter — добавить переменную">
-                            <div class="form-text" id="ntpl-vars-hint">Автодетект: напишите в тексте слово с $ (например $employee_name) — переменная появится здесь сама.</div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ntpl-wf">Маршрут согласования</label>
+                            <select id="ntpl-wf" name="workflow_id" class="form-select">
+                                <option value="">— без маршрута —</option>
+                                @foreach ($workflows as $workflow)
+                                    <option value="{{ $workflow->id }}">{{ $workflow->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
+                    </div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="ntpl-vars">Переменные</label>
+                        <input type="text" id="ntpl-vars" name="variables" class="form-control" placeholder="employee_name, date_from"
+                               autocomplete="off"
+                               data-crm-tags data-crm-tags-hint="Enter — добавить переменную">
+                        <div class="form-text" id="ntpl-vars-hint">Автодетект: напишите в тексте слово с $ (например $employee_name) — переменная появится здесь сама.</div>
                     </div>
                 </div>
             </div>

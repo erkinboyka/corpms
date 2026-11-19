@@ -11,13 +11,16 @@ use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Position;
 use App\Models\Role;
+use App\Models\WorkSchedule;
 use App\Shared\Enums\EmployeeStatus;
 use App\Shared\Enums\PermissionScope;
 use App\Support\PermissionService;
 use App\Support\TenantGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -43,7 +46,9 @@ class EmployeeController extends Controller
             ->where('company_id', $employee->company_id);
 
         if ($scope === PermissionScope::Department) {
-            $query->where('department_id', $employee->department_id);
+            $employee->department_id === null
+                ? $query->whereKey($employee->id)
+                : $query->where('department_id', $employee->department_id);
         } elseif ($scope === PermissionScope::Own) {
             $query->whereKey($employee->id);
         }
@@ -116,6 +121,9 @@ class EmployeeController extends Controller
         ]);
 
         $validated['company_id'] = $me->company_id;
+        $scope = $this->permissions->can($request->user(), 'employees.manage');
+        abort_unless($scope === PermissionScope::Company || ($scope === PermissionScope::Department
+            && $me->department_id !== null && (int) ($validated['department_id'] ?? 0) === (int) $me->department_id), 403);
 
         // ссылки из формы — только записи своей компании (P0-9: анти-перенос в чужую организацию)
         foreach (['department_id' => 'departments', 'position_id' => 'positions', 'manager_id' => 'employees', 'work_schedule_id' => 'work_schedules'] as $field => $table) {
@@ -134,17 +142,21 @@ class EmployeeController extends Controller
     public function show(Request $request, Employee $employee): View
     {
         TenantGuard::ensureEmployee($employee, $request->user()->employee);
+        abort_unless($this->permissions->canAccessEmployee($request->user(), 'employees.view', $employee), 403);
 
         $employee->load(['user', 'department', 'position', 'roles', 'workSchedule', 'notifications']);
 
-        $canManage = $this->permissions->check($request->user(), 'employees.manage');
+        $canManage = $this->permissions->canAccessEmployee($request->user(), 'employees.manage', $employee);
         // реквизиты (email/телефон) — отдельное право employees.view_props (п.11 ТЗ)
-        $canViewProps = $canManage || $this->permissions->check($request->user(), 'employees.view_props');
+        $canViewProps = $canManage || $this->permissions->canAccessEmployee($request->user(), 'employees.view_props', $employee);
 
         // пояс компании — для авто-выбора страны в поле телефона
         $companyTimezone = $employee->company?->timezone;
+        $departments = Department::query()->where('company_id', $employee->company_id)->orderBy('name')->get();
+        $positions = Position::query()->where('company_id', $employee->company_id)->orderBy('name')->get();
+        $schedules = WorkSchedule::query()->where('company_id', $employee->company_id)->orderBy('name')->get();
 
-        return view('employees.show', compact('employee', 'canManage', 'canViewProps', 'companyTimezone'));
+        return view('employees.show', compact('employee', 'canManage', 'canViewProps', 'companyTimezone', 'departments', 'positions', 'schedules'));
     }
 
     public function update(Request $request, Employee $employee): RedirectResponse
@@ -152,6 +164,7 @@ class EmployeeController extends Controller
         $me = $request->user()->employee;
         \assert($me !== null);
         TenantGuard::ensureEmployee($employee, $me);
+        abort_unless($this->permissions->canAccessEmployee($request->user(), 'employees.manage', $employee), 403);
 
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:128'],
@@ -160,10 +173,11 @@ class EmployeeController extends Controller
             'email' => ['nullable', 'email'],
             'phone' => ['nullable', 'string', 'max:32', 'regex:/^\+[1-9][\d\s()\-]{6,24}$/'],
             'address' => ['nullable', 'string', 'max:255'],
-            'employee_no' => ['required', 'string', 'max:32'],
+            'employee_no' => ['required', 'string', 'max:32', Rule::unique('employees', 'employee_no')->where('company_id', $me->company_id)->ignore($employee->id)],
             // статусы согласованы с EmployeeStatus enum (active/inactive/dismissed);
             // ранее здесь был 'fired', которого нет в enum — увольнение падало с 422
             'status' => ['required', Rule::enum(EmployeeStatus::class)],
+            'fired_at' => ['nullable', 'date', 'before_or_equal:today'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
             'work_schedule_id' => ['nullable', 'exists:work_schedules,id'],
@@ -178,6 +192,15 @@ class EmployeeController extends Controller
             }
         }
 
+        $validated['fired_at'] = $validated['status'] === EmployeeStatus::Dismissed->value
+            ? ($validated['fired_at'] ?? $employee->fired_at?->toDateString() ?? today()->toDateString())
+            : null;
+        if (array_key_exists('department_id', $validated) && $this->permissions->can($request->user(), 'employees.manage') !== PermissionScope::Company) {
+            abort_unless((int) ($validated['department_id'] ?? 0) === (int) ($employee->department_id ?? 0), 403);
+        }
+        if ($validated['fired_at'] !== null && $employee->hired_at !== null && $validated['fired_at'] < $employee->hired_at->toDateString()) {
+            throw ValidationException::withMessages(['fired_at' => 'Дата увольнения не может быть раньше даты приёма']);
+        }
         $old = $employee->only(array_keys($validated));
         $employee->update($validated);
 
@@ -191,6 +214,7 @@ class EmployeeController extends Controller
     {
         $user = $request->user();
         TenantGuard::ensureEmployee($employee, $user->employee);
+        abort_unless($this->permissions->canAccessEmployee($user, 'employees.roles', $employee), 403);
 
         $validated = $request->validate([
             'role_ids' => ['array'],
@@ -238,11 +262,14 @@ class EmployeeController extends Controller
         $old = $employee->roles()->pluck('role_id')->all();
 
         // replace партициями (без переизобретения реализации)
-        EmployeeRole::query()->where('employee_id', $employee->id)->delete();
-
-        foreach ($requestedIds as $roleId) {
-            EmployeeRole::create(['employee_id' => $employee->id, 'role_id' => $roleId]);
-        }
+        DB::transaction(function () use ($employee, $requestedIds): void {
+            Employee::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
+            EmployeeRole::query()->where('employee_id', $employee->id)->delete();
+            foreach ($requestedIds as $roleId) {
+                EmployeeRole::create(['employee_id' => $employee->id, 'role_id' => $roleId]);
+            }
+        });
+        $this->permissions->forget();
 
         $new = $employee->roles()->pluck('role_id')->all();
 
@@ -255,10 +282,12 @@ class EmployeeController extends Controller
     public function subordinates(Request $request, Employee $employee): View
     {
         TenantGuard::ensureEmployee($employee, $request->user()->employee);
+        abort_unless($this->permissions->canAccessEmployee($request->user(), 'employees.view', $employee), 403);
 
         $direct = Employee::query()
             ->with(['department', 'position'])
             ->where('manager_id', $employee->id)
+            ->where('company_id', $employee->company_id)
             ->orderBy('last_name')
             ->get();
 

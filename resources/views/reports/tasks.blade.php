@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Отчёт: задачи')
 
@@ -15,7 +16,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Отчёты</div>
-            <h2 class="page-title mt-1">Отчёт по задачам</h2>
+            <h1 class="page-title mt-1">Отчёт по задачам</h1>
             <div class="text-secondary mt-1">Период: {{ $from->format('d.m.Y') }} — {{ $to->format('d.m.Y') }} · назначения сотрудников за период</div>
         </div>
         <div class="col-auto d-print-none">
@@ -43,22 +44,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-list-check"></i>Всего задач</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-list-check"></i>Всего задач</div>
         <div class="crm-metric__value">{{ $totalAll }}</div>
         <div class="crm-metric__hint">назначено за период</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-circle-check"></i>Завершено</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>Завершено</div>
         <div class="crm-metric__value">{{ $totalDone }}</div>
         <div class="crm-metric__hint">{{ $totalAll > 0 ? (int) round(100 * $totalDone / $totalAll) : 0 }}% от всех задач</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-progress"></i>В работе</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-progress"></i>В работе</div>
         <div class="crm-metric__value">{{ $totalProgress }}</div>
         <div class="crm-metric__hint">в процессе исполнения</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #d63939;"><i class="ti ti-alert-triangle"></i>Просрочено</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-alert-triangle"></i>Просрочено</div>
         <div class="crm-metric__value">{{ $totalOverdue }}</div>
         <div class="crm-metric__hint">{{ $totalOverdue > 0 ? 'требует внимания' : 'просроченных нет' }}</div>
     </div>
@@ -66,16 +67,16 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
                 <tr>
-                    <th>Таб.№</th>
-                    <th>Сотрудник</th>
-                    <th class="text-end">Всего</th>
-                    <th class="text-end">Завершено</th>
-                    <th class="text-end">В работе</th>
-                    <th class="text-end">Просрочено</th>
-                    <th style="width: 22%">Доля завершённых</th>
+                    <th scope="col">Таб.№</th>
+                    <th scope="col">Сотрудник</th>
+                    <th scope="col" class="text-end">Всего</th>
+                    <th scope="col" class="text-end">Завершено</th>
+                    <th scope="col" class="text-end">В работе</th>
+                    <th scope="col" class="text-end">Просрочено</th>
+                    <th scope="col" style="width: 22%">Доля завершённых</th>
                 </tr>
             </thead>
             <tbody>
@@ -113,12 +114,12 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="2">Итого</th>
-                    <th class="text-end crm-table-num">{{ $totalAll }}</th>
-                    <th class="text-end crm-table-num">{{ $totalDone }}</th>
-                    <th class="text-end crm-table-num">{{ $totalProgress }}</th>
-                    <th class="text-end crm-table-num">{{ $totalOverdue }}</th>
-                    <th></th>
+                    <th scope="col" colspan="2">Итого</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalAll }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalDone }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalProgress }}</th>
+                    <th scope="col" class="text-end crm-table-num">{{ $totalOverdue }}</th>
+                    <th scope="col"></th>
                 </tr>
             </tfoot>
         </table>

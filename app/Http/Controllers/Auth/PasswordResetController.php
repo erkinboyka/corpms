@@ -78,6 +78,7 @@ class PasswordResetController extends Controller
                     'password' => $password, // cast hashed
                     'remember_token' => Str::random(60),
                 ])->save();
+                $user->revokeSessions();
 
                 event(new PasswordReset($user));
             }

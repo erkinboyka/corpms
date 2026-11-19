@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\AuditController;
 use App\Http\Controllers\Web\BiDashboardController;
 use App\Http\Controllers\Web\BiMetricsController;
 use App\Http\Controllers\Web\BiometricController;
+use App\Http\Controllers\Web\ChatController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\CrmActivityController;
 use App\Http\Controllers\Web\CrmClientController;
@@ -320,6 +321,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/ai', [AiController::class, 'index'])->middleware(['permission:analytics.ai.use', 'throttle:30,1'])->name('ai.index');
     Route::post('/ai', [AiController::class, 'ask'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.ask');
     Route::post('/ai/message', [AiController::class, 'message'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.message');
+
+    /* ---------- BM Chat ---------- */
+    Route::get('/chat', [ChatController::class, 'index'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.index');
+    Route::get('/chat/unread', [ChatController::class, 'unread'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.unread');
+    Route::get('/chat/employees', [ChatController::class, 'employees'])->middleware(['permission:chat.view', 'throttle:60,1'])->name('chat.employees');
+    Route::post('/chat/conversations', [ChatController::class, 'store'])->middleware(['permission:chat.view', 'throttle:30,1'])->name('chat.store');
+    Route::get('/chat/{conversation}', [ChatController::class, 'index'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.show');
+    Route::middleware('permission:chat.view')->group(function (): void {
+        Route::patch('/chat/{conversation}', [ChatController::class, 'updateConversation'])->name('chat.conversations.update');
+        Route::delete('/chat/{conversation}', [ChatController::class, 'deleteConversation'])->name('chat.conversations.destroy');
+        Route::post('/chat/{conversation}/members', [ChatController::class, 'addMembers'])->name('chat.members.store');
+        Route::delete('/chat/{conversation}/members/{employee}', [ChatController::class, 'removeMember'])
+            ->whereNumber('employee')->name('chat.members.destroy');
+        Route::patch('/chat/{conversation}/wallpaper', [ChatController::class, 'wallpaper'])->name('chat.wallpaper.update');
+        Route::get('/chat/{conversation}/image/{kind}', [ChatController::class, 'image'])
+            ->whereIn('kind', ['avatar', 'wallpaper'])->name('chat.image');
+    });
+    Route::get('/chat/{conversation}/messages', [ChatController::class, 'messages'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.messages');
+    Route::get('/chat/{conversation}/events', [ChatController::class, 'events'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.events');
+    Route::post('/chat/{conversation}/messages', [ChatController::class, 'send'])->middleware(['permission:chat.send', 'throttle:60,1'])->name('chat.send');
+    Route::post('/chat/{conversation}/read', [ChatController::class, 'read'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.read');
+    Route::post('/chat/{conversation}/subscribe', [ChatController::class, 'subscribe'])->middleware(['permission:chat.view', 'throttle:60,1'])->name('chat.subscribe');
+    Route::put('/chat/messages/{message}', [ChatController::class, 'update'])->middleware(['permission:chat.send', 'throttle:60,1'])->name('chat.messages.update');
+    Route::delete('/chat/messages/{message}', [ChatController::class, 'destroy'])->middleware(['permission:chat.send', 'throttle:60,1'])->name('chat.messages.destroy');
+    Route::post('/chat/messages/{message}/reactions', [ChatController::class, 'react'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.messages.react');
 
     /* ---------- задачи ---------- */ Route::get('/tasks', [TaskController::class, 'index'])->middleware('permission:tasks.view')->name('tasks.index');
     Route::get('/tasks/mine', [TaskController::class, 'mine'])->middleware('permission:tasks.view')->name('tasks.mine');

@@ -146,11 +146,11 @@ class InventoryHttpTest extends TestCase
         $this->actingAs($this->adminUser)->get('/inventory/movements')->assertOk();
         $this->actingAs($this->adminUser)->get('/purchases')->assertOk();
 
-        $routes = array_column(Sidebar::build($this->adminUser), 'route');
+        $routes = Sidebar::routes($this->adminUser);
         $this->assertContains('inventory.index', $routes);
         $this->assertContains('purchases.index', $routes);
 
-        $workerRoutes = array_column(Sidebar::build($workerUser), 'route');
+        $workerRoutes = Sidebar::routes($workerUser);
         $this->assertNotContains('inventory.index', $workerRoutes);
     }
 

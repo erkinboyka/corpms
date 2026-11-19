@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Склад — Движения')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Склад</div>
-            <h2 class="page-title mt-1">Движения товаров</h2>
+            <h1 class="page-title mt-1">Движения товаров</h1>
             <div class="text-secondary mt-1">Неизменяемый журнал: приход, расход, корректировка, списание</div>
         </div>
         <div class="col-auto d-print-none">
@@ -31,15 +32,15 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table" id="movements-table">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table" id="movements-table">
             <thead>
                 <tr>
-                    <th>Дата</th>
-                    <th>Товар</th>
-                    <th>Склад</th>
-                    <th>Тип</th>
-                    <th class="text-end">Количество</th>
-                    <th>Основание</th>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Товар</th>
+                    <th scope="col">Склад</th>
+                    <th scope="col">Тип</th>
+                    <th scope="col" class="text-end">Количество</th>
+                    <th scope="col">Основание</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,46 +92,57 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Операция со складом</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="mv2-type">Тип операции<span class="req">*</span></label>
-                    <select id="mv2-type" name="type" class="form-select" required>
-                        @foreach ($types as $type)
-                            <option value="{{ $type->value }}" @selected(old('type') === $type->value)>{{ $crm_label('stock_movement_type', $type->value) }}</option>
-                        @endforeach
-                    </select>
-                    <div class="form-text">Списание не уйдёт в минус: сервис проверит остаток.</div>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv2-warehouse">Склад<span class="req">*</span></label>
-                        <select id="mv2-warehouse" name="warehouse_id" class="form-select" required>
-                            @foreach ($warehouses as $w)
-                                <option value="{{ $w->id }}" @selected((string) old('warehouse_id') === (string) $w->id)>{{ $w->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv2-product">Товар<span class="req">*</span></label>
-                        <select id="mv2-product" name="product_id" class="form-select" required>
-                            @foreach ($products as $p)
-                                <option value="{{ $p->id }}" @selected((string) old('product_id') === (string) $p->id)>{{ $p->name }} ({{ $p->sku }})</option>
+                <div class="crm-form__section">
+                    <h3>Операция</h3>
+                    <div class="crm-form__desc">Списание не уйдёт в минус: сервис проверит остаток.</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="mv2-type">Тип операции<span class="req">*</span></label>
+                        <select id="mv2-type" name="type" class="form-select" required>
+                            @foreach ($types as $type)
+                                <option value="{{ $type->value }}" @selected(old('type') === $type->value)>{{ $crm_label('stock_movement_type', $type->value) }}</option>
                             @endforeach
                         </select>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv2-quantity">Количество<span class="req">*</span></label>
-                        <input type="number" id="mv2-quantity" name="quantity" class="form-control" value="{{ old('quantity') }}" step="0.001" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv2-price">Цена единицы</label>
-                        <input type="number" id="mv2-price" name="unit_price" class="form-control" value="{{ old('unit_price', '0') }}" step="0.01" min="0">
+                <div class="crm-form__section">
+                    <h3>Где и что</h3>
+                    <div class="crm-form__desc">Склад и товар рядом — что и куда движется.</div>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv2-warehouse">Склад<span class="req">*</span></label>
+                            <select id="mv2-warehouse" name="warehouse_id" class="form-select" required>
+                                @foreach ($warehouses as $w)
+                                    <option value="{{ $w->id }}" @selected((string) old('warehouse_id') === (string) $w->id)>{{ $w->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv2-product">Товар<span class="req">*</span></label>
+                            <select id="mv2-product" name="product_id" class="form-select" required>
+                                @foreach ($products as $p)
+                                    <option value="{{ $p->id }}" @selected((string) old('product_id') === (string) $p->id)>{{ $p->name }} ({{ $p->sku }})</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="mv2-note">Комментарий</label>
-                    <input type="text" id="mv2-note" name="note" class="form-control" value="{{ old('note') }}" maxlength="1000" placeholder="Основание операции">
+                <div class="crm-form__section mb-0">
+                    <h3>Количество и стоимость</h3>
+                    <div class="crm-form__desc">Сколько единиц и по какой цене.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv2-quantity">Количество<span class="req">*</span></label>
+                            <input type="number" id="mv2-quantity" name="quantity" class="form-control" value="{{ old('quantity') }}" step="0.001" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv2-price">Цена единицы</label>
+                            <input type="number" id="mv2-price" name="unit_price" class="form-control" value="{{ old('unit_price', '0') }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="mv2-note">Комментарий</label>
+                        <input type="text" id="mv2-note" name="note" class="form-control" value="{{ old('note') }}" maxlength="1000" placeholder="Основание операции">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

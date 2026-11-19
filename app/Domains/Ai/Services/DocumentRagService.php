@@ -51,6 +51,11 @@ class DocumentRagService
     /** Переиндексация одного документа. Возвращает число чанков. */
     public function indexDocument(Document $document): int
     {
+        // embeddings-настройки — в контексте компании документа
+        app(SettingsService::class)->useCompany(
+            $document->company_id !== null ? (int) $document->company_id : null,
+        );
+
         $chunks = $this->chunkText($this->textOf($document));
 
         DocumentChunk::query()->where('document_id', $document->id)->delete();
@@ -120,6 +125,11 @@ class DocumentRagService
      */
     public function retrieve(Employee $asker, string $query, int $limit = self::RETRIEVE_LIMIT): array
     {
+        // embeddings-настройки — в контекстве компании спрашивающего
+        app(SettingsService::class)->useCompany(
+            $asker->company_id !== null ? (int) $asker->company_id : null,
+        );
+
         $user = $asker->user;
         if ($user === null || $this->permissions->check($user, 'documents.view') === false) {
             return [];

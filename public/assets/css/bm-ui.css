@@ -1,0 +1,867 @@
+/* ============================================================================
+   BM SYSTEMS — UI LAYER v1.0
+   Глобальная оболочка (сайдбар / топбар / крошки / page-header) и премиальные
+   компоненты. Загружается ПОСЛЕДНИМ: tokens.css → effects.css → corpms.css →
+   bm-ui.css. Значения — только из tokens.css (v3).
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   0. АКЦЕНТ ПО УМОЛЧАНИЮ — Indigo (перекрывает systemBlue из effects.css §0).
+   Пресеты data-crm-accent (blue/violet/rose/amber) имеют более высокую
+   специфичность и продолжают работать поверх этого значения.
+   ---------------------------------------------------------------------------- */
+:root,
+[data-bs-theme="light"] {
+    --crm-accent: #4F46E5;
+    --crm-accent-rgb: 79, 70, 229;
+
+    --tblr-primary: #4F46E5;
+    --tblr-primary-rgb: 79, 70, 229;
+    --tblr-primary-fg: #ffffff;
+    --tblr-primary-darken: #4338CA;
+    --tblr-primary-lt: #EEF0FF;
+    --tblr-primary-lt-rgb: 238, 240, 255;
+    --tblr-primary-text-emphasis: #3730A3;
+    --tblr-primary-bg-subtle: #F3F4FF;
+    --tblr-primary-border-subtle: #D8DCFF;
+}
+[data-bs-theme="dark"] {
+    --crm-accent: #818CF8;
+    --crm-accent-rgb: 129, 140, 248;
+
+    --tblr-primary: #6D79F4;
+    --tblr-primary-rgb: 109, 121, 244;
+    --tblr-primary-fg: #0B0D12;
+    --tblr-primary-darken: #5B67E8;
+    --tblr-primary-lt: #1E2140;
+    --tblr-primary-lt-rgb: 30, 33, 64;
+    --tblr-primary-text-emphasis: #A5B4FC;
+    --tblr-primary-bg-subtle: #16182A;
+    --tblr-primary-border-subtle: #2E3358;
+}
+
+/* ----------------------------------------------------------------------------
+   1. ЧИПЫ СТАТУСОВ — единый контракт из токенов (light + dark).
+   ---------------------------------------------------------------------------- */
+.crm-chip {
+    padding: 2.5px 9px;
+    border-radius: var(--crm-radius-pill);
+    font-size: 11.5px;
+    font-weight: 560;
+    line-height: 1.55;
+    background: rgba(var(--crm-accent-rgb), .1);
+    color: var(--crm-accent);
+}
+.crm-chip::before { width: 5px; height: 5px; }
+.crm-chip--green, .crm-chip--success { background: var(--crm-success-lt); color: var(--crm-success); }
+.crm-chip--orange, .crm-chip--warning { background: var(--crm-warning-lt); color: var(--crm-warning); }
+.crm-chip--red, .crm-chip--danger { background: var(--crm-danger-lt); color: var(--crm-danger); }
+[data-bs-theme="light"] .crm-chip--red, [data-bs-theme="light"] .crm-chip--danger { color: #A51F1F; }
+.crm-chip--cyan, .crm-chip--info { background: var(--crm-info-lt); color: var(--crm-info); }
+.crm-chip--purple { background: var(--crm-purple-lt); color: var(--crm-purple); }
+.crm-chip--grey, .crm-chip--muted { background: rgba(var(--crm-text-secondary-rgb), .12); color: var(--crm-text-secondary); }
+
+/* Text must remain readable independently of semantic icon colours. */
+.crm-metric__label { color: var(--crm-text-secondary) !important; }
+[data-bs-theme="light"] .bg-blue-lt { color: #0759a6 !important; }
+[data-bs-theme="dark"] .bg-blue-lt { color: #8fc9ff !important; }
+.card-body p a:not(.btn), .card-body .py-3 > a:not(.btn) { text-decoration: underline; text-underline-offset: 2px; }
+.table-responsive:focus-visible { outline: 2px solid var(--crm-accent); outline-offset: 2px; }
+.crm-app .table-responsive { max-width: 100%; min-width: 0; overflow-x: auto; }
+.crm-app .card { min-width: 0; max-width: 100%; }
+.crm-app .page-item:not(.active) .page-link { color: var(--crm-text-secondary); }
+.offcanvas:not(.show):not(.showing):not(.hiding) { display: none; }
+@media (max-width: 575.98px) {
+    .crm-app .card-header { flex-wrap: wrap; gap: .5rem; }
+    .crm-app .card-title { white-space: normal; min-width: 0; }
+    .crm-app .card-header > .ms-auto { margin-left: 0 !important; max-width: 100%; }
+    .crm-app .pagination { flex-wrap: wrap; gap: .25rem; }
+    .crm-app .pagination .page-link { min-width: 32px; padding: .35rem .5rem; }
+    .crm-app .card-footer > * { min-width: 0; max-width: 100%; }
+}
+
+/* ----------------------------------------------------------------------------
+   2. ФОН ПРИЛОЖЕНИЯ — тихий световой слой глубины (без градиентного шума).
+   ---------------------------------------------------------------------------- */
+body.crm-app {
+    background:
+        radial-gradient(1100px 520px at 78% -12%, rgba(var(--crm-accent-rgb), .05), transparent 62%),
+        radial-gradient(900px 480px at -8% 108%, rgba(var(--crm-accent-rgb), .035), transparent 60%),
+        var(--crm-bg);
+    letter-spacing: -.003em;
+}
+
+/* ----------------------------------------------------------------------------
+   3. САЙДБАР — стеклянная навигационная панель: бренд, секции, модули, активные
+   состояния. Структура/JS-хуки прежние (data-nav-group, crm-nav-group__label).
+
+   ВАЖНО: у селекторов здесь удвоенный класс (.navbar-vertical.navbar-vertical) —
+   Tabler задаёт `.navbar-vertical.navbar-expand-lg { width:15rem; position:fixed }`
+   с большей специфичностью и перекрывал наши токены ширины/z-index.
+   ---------------------------------------------------------------------------- */
+aside.navbar-vertical.navbar-vertical {
+    background: var(--crm-sidebar-bg);
+    backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.35);
+    -webkit-backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.35);
+    border-right: 1px solid var(--crm-border);
+    width: var(--crm-sidebar-w);
+    z-index: var(--crm-z-sidebar);
+    overflow: visible;
+}
+/* контент всегда знает реальную ширину панели (Tabler жёстко пишет 15rem —
+   селектор продублирован, чтобы перебить его по порядку при равной специфичности) */
+@media (min-width: 992px) {
+    .crm-app .page-wrapper,
+    .navbar-expand-lg.navbar-vertical ~ .page-wrapper {
+        margin-left: var(--crm-sidebar-w);
+        transition: margin-left var(--crm-dur-base) var(--crm-ease-out);
+    }
+}
+
+/* иконка пункта: единый слот, не зависит от текста (нужно для rail-режима) */
+.bm-nav__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    font-size: 17px;
+    line-height: 1;
+    opacity: .85;
+}
+.bm-nav__icon i { font-size: inherit; }
+
+/* бренд */
+aside.navbar-vertical .navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--crm-font);
+    font-size: 15.5px;
+    font-weight: 720;
+    letter-spacing: -.02em;
+    color: var(--crm-text);
+}
+.bm-side__logo {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: var(--crm-accent-gradient);
+    color: #fff;
+    font-size: 17px;
+    box-shadow: 0 4px 14px -4px rgba(var(--crm-accent-rgb), .55), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+/* секции: тихие uppercase-заголовки */
+aside.navbar-vertical .bm-side__section {
+    padding: 14px 14px 6px;
+    font-size: 10.5px;
+    font-weight: 640;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--crm-text-muted);
+    user-select: none;
+}
+
+/* пункты: единый стиль, активный — мягкая подложка + индикатор */
+aside.navbar-vertical .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 1px 8px;
+    padding: 7.5px 10px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--crm-text-secondary);
+    line-height: 1.35;
+    transition: background var(--crm-dur-fast) var(--crm-ease), color var(--crm-dur-fast) var(--crm-ease);
+}
+aside.navbar-vertical .nav-link i { font-size: 17px; opacity: .85; flex: none; }
+aside.navbar-vertical .nav-link:hover { color: var(--crm-text); background: var(--crm-glass-hover); }
+aside.navbar-vertical .nav-item.active > .nav-link {
+    color: var(--crm-text);
+    background: rgba(var(--crm-accent-rgb), .12);
+    font-weight: 600;
+}
+aside.navbar-vertical .nav-item.active > .nav-link i { color: var(--crm-accent); opacity: 1; }
+aside.navbar-vertical .nav-item.active > .nav-link::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--crm-accent);
+}
+aside.navbar-vertical .nav-item.active > .nav-link { position: relative; }
+
+/* модули (сворачиваемые) */
+aside.navbar-vertical .crm-nav-group__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: calc(100% - 16px);
+    margin: 1px 8px;
+    padding: 7.5px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 560;
+    letter-spacing: -.005em;
+    text-transform: none;
+    color: var(--crm-text-secondary);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--crm-dur-fast) var(--crm-ease), color var(--crm-dur-fast) var(--crm-ease);
+}
+aside.navbar-vertical .crm-nav-group__head:hover { background: var(--crm-glass-hover); color: var(--crm-text); }
+aside.navbar-vertical .crm-nav-group__head .bm-nav__icon { font-size: 17px; }
+aside.navbar-vertical .crm-nav-group__head:hover .bm-nav__icon { opacity: 1; }
+aside.navbar-vertical .crm-nav-group__chev { margin-left: auto; font-size: 15px; opacity: .55; }
+aside.navbar-vertical .crm-nav-group.is-collapsed .crm-nav-group__chev { transform: rotate(-90deg); }
+aside.navbar-vertical .crm-nav-group.is-collapsed > .crm-nav-group__items { display: none; }
+aside.navbar-vertical .crm-nav-group.is-active-group > .crm-nav-group__head {
+    color: var(--crm-text);
+    background: rgba(var(--crm-accent-rgb), .08);
+}
+aside.navbar-vertical .crm-nav-group.is-active-group > .crm-nav-group__head .bm-nav__icon { color: var(--crm-accent); opacity: 1; }
+
+/* под-пункты модуля: вторая ступень — иконка слева, текст по инденту */
+aside.navbar-vertical .crm-nav-group__items .nav-link {
+    margin: 0 8px 0 8px;
+    padding: 6px 10px 6px 34px;
+    font-size: 13px;
+    font-weight: 480;
+    position: relative;
+}
+aside.navbar-vertical .crm-nav-group__items .bm-nav__icon--child {
+    position: absolute;
+    left: 17px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    font-size: 14px;
+    opacity: .6;
+}
+aside.navbar-vertical .crm-nav-group__items .nav-item.active .nav-link .bm-nav__icon--child {
+    color: var(--crm-accent);
+    opacity: 1;
+}
+
+/* нижний блок: кнопка сворачивания сайдбара */
+.bm-side__foot {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    padding: 10px 12px;
+    border-top: 1px solid var(--crm-border);
+    background: var(--crm-sidebar-bg);
+    backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.35);
+    -webkit-backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.35);
+}
+[data-bs-theme="light"] .bm-side__foot { background: rgba(255, 255, 255, .88); }
+/* на мобильных сайдбар — блок сверху, rail-сворачивание не имеет смысла */
+@media (max-width: 991.98px) {
+    .bm-side__foot { display: none; }
+    /* Tabler/Bootstrap: .navbar { flex-wrap: wrap } наследуется контейнером через
+       .navbar > .container-fluid { flex-wrap: inherit } — в column-раскладке высокое
+       collapse-меню заворачивается во «вторую колонку» и даёт горизонтальный сдвиг. */
+    aside.navbar-vertical .container-fluid { flex-wrap: nowrap; align-items: stretch; }
+    /* базовый align-items: center ужимает раскрытое меню — на мобильных оно во всю ширину */
+    aside.navbar-vertical .navbar-collapse.show { width: 100%; }
+}
+.bm-side__collapse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6.5px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 520;
+    color: var(--crm-text-muted);
+    cursor: pointer;
+    transition: background var(--crm-dur-fast) var(--crm-ease), color var(--crm-dur-fast) var(--crm-ease);
+}
+.bm-side__collapse:hover { background: var(--crm-glass-hover); color: var(--crm-text-secondary); }
+
+/* скроллбар сайдбара */
+aside.navbar-vertical .navbar-collapse { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--crm-border-strong) transparent; }
+aside.navbar-vertical .navbar-collapse::-webkit-scrollbar { width: 5px; }
+aside.navbar-vertical .navbar-collapse::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--crm-border-strong); }
+
+/* мобильный сайдбар */
+@media (max-width: 991.98px) {
+    aside.navbar-vertical {
+        background: var(--crm-surface-solid);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+/* --- Rail-режим: сайдбар сворачивается в узкую иконку-полосу; по наведению
+       (или фокусу с клавиатуры) раскрывается поверх контента — макет не прыгает.
+       Ctrl+B / кнопка внизу панели.
+
+       Специфичность здесь намеренно выше Tabler (.navbar-vertical.navbar-expand-lg):
+       иначе width:15rem от Tabler перекрывает токены и сворачивание не работает. --- */
+@media (min-width: 992px) {
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical {
+        width: var(--crm-sidebar-w-collapsed);
+        transition: width var(--crm-dur-base) var(--crm-ease-out);
+        z-index: var(--crm-z-sidebar);
+        box-shadow: none;
+    }
+    html.bm-side-rail .crm-app .page-wrapper { margin-left: var(--crm-sidebar-w-collapsed); }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .navbar-brand { justify-content: center; padding: 0 8px; }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .bm-side__brand-text,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .nav-link-title,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .crm-nav-group__label {
+        opacity: 0;
+        width: 0;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .bm-side__section {
+        opacity: 0;
+        height: 8px;
+        padding: 0;
+        overflow: hidden;
+        font-size: 0;
+    }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .nav-link,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .crm-nav-group__head {
+        justify-content: center;
+        padding: 8px 0;
+        margin: 1px 12px;
+    }
+    /* в свёрнутом виде видны только иконки первого уровня: под-пункты скрыты */
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .crm-nav-group__items { display: none; }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .crm-nav-group__chev { display: none; }
+    /* кнопка сворачивания: только иконка, без подписи */
+    html.bm-side-rail .bm-side__collapse { justify-content: center; padding: 6.5px 0; }
+    html.bm-side-rail .bm-side__collapse .bm-side__collapse-label { display: none; }
+    html.bm-side-rail .bm-side__collapse .bm-nav__icon i { transform: rotate(180deg); }
+
+    /* hover / focus: раскрываем поверх контента (content-отступ не меняется) */
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within {
+        width: var(--crm-sidebar-w);
+        box-shadow: var(--crm-shadow-3);
+    }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .bm-side__brand-text,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .nav-link-title,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .crm-nav-group__label,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .bm-side__brand-text,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .nav-link-title,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .crm-nav-group__label {
+        opacity: 1;
+        width: auto;
+        overflow: visible;
+    }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .bm-side__section,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .bm-side__section {
+        opacity: 1;
+        height: auto;
+        padding: 14px 14px 6px;
+        font-size: 10.5px;
+    }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .nav-link,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .crm-nav-group__head,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .nav-link,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .crm-nav-group__head {
+        justify-content: flex-start;
+        padding: 7.5px 10px;
+        margin: 1px 8px;
+    }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .crm-nav-group__chev,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .crm-nav-group__chev { display: inline-block; }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .crm-nav-group__items,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .crm-nav-group__items { display: block; }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .crm-nav-group.is-collapsed > .crm-nav-group__items,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .crm-nav-group.is-collapsed > .crm-nav-group__items { display: none; }
+    html.bm-side-rail .bm-side__collapse { justify-content: flex-start; padding: 6.5px 10px; }
+    html.bm-side-rail .bm-side__collapse .bm-side__collapse-label { display: inline; }
+    html.bm-side-rail .bm-side__collapse .bm-nav__icon i { transform: none; }
+
+    /* нативные title-атрибуты подсказывают, что скрыто за иконкой */
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .nav-link-title,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical .crm-nav-group__label { font-size: 0; }
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .nav-link-title,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:hover .crm-nav-group__label,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .nav-link-title,
+    html.bm-side-rail aside.navbar-vertical.navbar-vertical:focus-within .crm-nav-group__label { font-size: 13.5px; }
+}
+
+/* ----------------------------------------------------------------------------
+   4. ТОПБАР — стеклянная шапка: поиск, действия, профиль.
+   ---------------------------------------------------------------------------- */
+header.navbar {
+    background: var(--crm-topbar-bg);
+    backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.3);
+    -webkit-backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.3);
+    border-bottom: 1px solid var(--crm-border);
+    min-height: var(--crm-topbar-h);
+    z-index: var(--crm-z-topbar);
+}
+header.navbar .crm-search-input {
+    background: var(--crm-input-bg);
+    border: 1px solid var(--crm-border);
+    border-radius: 10px;
+    height: 36px;
+    font-size: 13.5px;
+    /* width обязана остаться в списке: без неё инпут на фокусе мгновенно
+       «прыгает» с 24ch на 40ch — именно это выглядит как неровное открытие */
+    transition: width var(--crm-motion-surface) var(--crm-ease-out),
+                border-color var(--crm-dur-fast) var(--crm-ease),
+                box-shadow var(--crm-dur-fast) var(--crm-ease),
+                background var(--crm-dur-fast) var(--crm-ease);
+}
+header.navbar .crm-search-input::placeholder { color: var(--crm-text-muted); }
+header.navbar .crm-search-input:focus {
+    background: var(--crm-surface-solid);
+    border-color: rgba(var(--crm-accent-rgb), .55);
+    box-shadow: var(--crm-focus-ring);
+}
+header.navbar .crm-search { max-width: 420px; }
+header.navbar .crm-search-panel {
+    background: var(--crm-surface-solid);
+    border: 1px solid var(--crm-border);
+    border-radius: 14px;
+    box-shadow: var(--crm-shadow-3);
+}
+header.navbar .nav-link { color: var(--crm-text-secondary); border-radius: 9px; transition: background var(--crm-dur-fast) var(--crm-ease), color var(--crm-dur-fast) var(--crm-ease), transform var(--crm-motion-feedback) var(--crm-ease-out); }
+header.navbar .nav-link:hover { background: var(--crm-glass-hover); color: var(--crm-text); }
+/* тактильный отклик иконок-кнопок в шапке (уведомления, палитра): тот же
+   характер движения, что у .btn — нажатие сжимает кнопку, ховер поднимает иконку */
+header.navbar button.nav-link:active { transform: scale(.9); }
+header.navbar .nav-link i,
+header.navbar .btn-icon i { transition: transform var(--crm-motion-control) var(--crm-ease-out); }
+header.navbar .nav-link:hover i,
+header.navbar .btn-icon:hover i { transform: scale(1.12); }
+header.navbar .nav-link:active i,
+header.navbar .btn-icon:active i { transform: scale(.9); }
+header.navbar .avatar { box-shadow: 0 0 0 2px var(--crm-surface-solid), 0 0 0 3.5px var(--crm-border-strong); }
+
+/* ----------------------------------------------------------------------------
+   5. ХЛЕБНЫЕ КРОШКИ — тихая строка под топбаром.
+   ---------------------------------------------------------------------------- */
+.bm-crumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 0 0;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+.bm-crumbs__item { color: var(--crm-text-muted); text-decoration: none; white-space: nowrap; }
+a.bm-crumbs__item:hover { color: var(--crm-accent); }
+.bm-crumbs__item--current { color: var(--crm-text-secondary); font-weight: 560; }
+.bm-crumbs__sep { color: var(--crm-text-muted); opacity: .55; font-size: 13px; user-select: none; }
+
+/* ----------------------------------------------------------------------------
+   6. PAGE HEADER — eyebrow с точкой, компактный заголовок H1 22px, подпись.
+   ---------------------------------------------------------------------------- */
+.crm-app .page-header { margin-bottom: 1.25rem; }
+.crm-app .page-header .page-title {
+    font-size: var(--crm-text-heading);
+    font-weight: 700;
+    letter-spacing: -.015em;
+    line-height: 1.22;
+    margin-top: 3px;
+}
+.crm-app .page-header .text-secondary { font-size: 13px; margin-top: 2px; }
+.crm-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--crm-text-muted);
+}
+.crm-eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--crm-accent);
+    box-shadow: 0 0 0 3px rgba(var(--crm-accent-rgb), .16);
+}
+
+/* ----------------------------------------------------------------------------
+   7. КАРТОЧКИ / KPI — спокойные границы, тихие тени, аккуратный hover.
+   ---------------------------------------------------------------------------- */
+.crm-app .card {
+    border: 1px solid var(--crm-border);
+    background: var(--crm-surface-solid);
+    box-shadow: var(--crm-shadow-1);
+}
+[data-bs-theme="dark"] .crm-app .card { background: rgba(21, 23, 31, .55); }
+.crm-app .card > .card-header, .crm-app .card > .card-footer { border-color: var(--crm-border); }
+.crm-app .hr-text { color: var(--crm-text-muted) !important; }
+
+.crm-kpi .card-body { padding: 16px 18px 15px; }
+.crm-kpi__icon { width: 38px; height: 38px; border-radius: 10px; font-size: 18px; }
+.crm-kpi__label { font-size: 12px; font-weight: 560; color: var(--crm-text-muted); letter-spacing: .02em; }
+.crm-kpi__value { font-size: var(--crm-text-numeric); font-weight: 680; letter-spacing: -.02em; }
+
+/* KPI: без градиентного свечения — тихая тонкая линия-акцент сверху, сдержанный hover */
+.crm-app .card.crm-kpi::after { display: none; }
+.crm-app .card.crm-kpi::before {
+    height: 2px;
+    background: linear-gradient(90deg, rgba(var(--crm-accent-rgb), .8), rgba(var(--crm-accent-rgb), 0) 78%);
+    opacity: .55;
+}
+.crm-app .card.crm-kpi:hover {
+    transform: translateY(-1px);
+    border-color: var(--crm-border-strong);
+    box-shadow: var(--crm-shadow-2);
+}
+
+/* ----------------------------------------------------------------------------
+   8. КНОПКИ / ПОЛЯ — премиальные состояния (наследуют §16 effects.css).
+   ---------------------------------------------------------------------------- */
+.crm-app .btn { font-weight: 560; letter-spacing: -.005em; }
+.crm-app .btn-primary {
+    background: var(--crm-accent-gradient);
+    border-color: transparent;
+}
+.crm-app .btn-primary:hover, .crm-app .btn-primary:focus { filter: brightness(1.08); }
+.crm-app .btn-primary:active { filter: brightness(.96); }
+.crm-app .btn:focus-visible { box-shadow: var(--crm-focus-ring); outline: 0; }
+.crm-app .form-control:focus, .crm-app .form-select:focus { box-shadow: var(--crm-focus-ring); }
+.crm-app .form-label { font-size: 12.5px; font-weight: 570; color: var(--crm-text-secondary); letter-spacing: .01em; }
+
+/* ----------------------------------------------------------------------------
+   9. ТАБЛИЦЫ — профессиональная плотность, тихие заголовки-капс.
+   ---------------------------------------------------------------------------- */
+.crm-app .card-table th {
+    font-size: 11px;
+    font-weight: 620;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--crm-text-muted);
+    background: rgba(var(--crm-text-secondary-rgb), .04);
+    border-bottom: 1px solid var(--crm-border);
+    padding: 9px 12px;
+    white-space: nowrap;
+}
+.crm-app .card-table td { padding: 10px 12px; vertical-align: middle; }
+.crm-app .table-hover > tbody > tr:hover > * { background: var(--crm-table-hover); }
+.crm-table-num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+.crm-table__main { font-weight: 560; color: var(--crm-text); }
+.crm-table__sub { font-size: 12px; color: var(--crm-text-muted); }
+
+/* ----------------------------------------------------------------------------
+   10. ПАЛИТРА Ctrl+K и модалки — стекло последнего уровня.
+   ---------------------------------------------------------------------------- */
+.crm-palette__dialog {
+    background: var(--crm-glass-bg);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid var(--crm-glass-border);
+    border-radius: 18px;
+    box-shadow: var(--crm-shadow-4), inset 0 1px 0 var(--crm-glass-highlight);
+}
+.crm-palette__input { font-size: 15px; }
+.crm-palette__item:hover, .crm-palette__item.is-active { background: rgba(var(--crm-accent-rgb), .12); }
+.crm-palette__meta { color: var(--crm-text-muted); }
+.crm-palette__footer { color: var(--crm-text-muted); }
+.crm-palette__empty, .crm-palette__section { color: var(--crm-text-muted); }
+
+.crm-app .modal-content {
+    background: var(--crm-surface-solid);
+    border: 1px solid var(--crm-border);
+    box-shadow: var(--crm-shadow-4);
+}
+.crm-app .modal-header, .crm-app .modal-footer { border-color: var(--crm-border); }
+.crm-app .dropdown-menu {
+    background: var(--crm-surface-solid);
+    border: 1px solid var(--crm-border);
+    box-shadow: var(--crm-shadow-3);
+    padding: 5px;
+}
+[data-bs-theme="dark"] .crm-app .dropdown-menu { background: #1A1D26; }
+.crm-app .dropdown-item { border-radius: 7px; font-size: 13.5px; padding: 7px 10px; }
+.crm-app .dropdown-item:hover { background: rgba(var(--crm-accent-rgb), .1); color: var(--crm-text); }
+.crm-app .offcanvas {
+    background: var(--crm-surface-solid);
+    border-left: 1px solid var(--crm-border);
+}
+
+/* ----------------------------------------------------------------------------
+   11. AI-кнопка и панель — единый акцент.
+   ---------------------------------------------------------------------------- */
+.crm-ai-launch {
+    background: var(--crm-accent-gradient);
+    color: #fff;
+    box-shadow: 0 10px 26px -8px rgba(var(--crm-accent-rgb), .6), inset 0 1px 0 rgba(255, 255, 255, .25);
+    font-weight: 560;
+}
+.crm-ai-launch:hover { background: var(--crm-accent-gradient); color: #fff; filter: brightness(1.07); }
+
+/* ----------------------------------------------------------------------------
+   12. АВТОРИЗАЦИЯ — отдельный премиальный экран, согласованный с брендом.
+   ---------------------------------------------------------------------------- */
+.crm-auth {
+    min-height: 100vh;
+    background:
+        radial-gradient(900px 480px at 82% -10%, rgba(var(--crm-accent-rgb), .16), transparent 62%),
+        radial-gradient(760px 420px at -10% 108%, rgba(var(--crm-accent-rgb), .1), transparent 60%),
+        var(--crm-bg);
+    align-items: center;
+    justify-content: center;
+}
+.crm-auth__wrap { width: 100%; max-width: 420px; margin: 0 auto; padding: 24px; }
+.crm-auth__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+    text-align: center;
+}
+.crm-auth__logo {
+    width: 52px;
+    height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    background: var(--crm-accent-gradient);
+    color: #fff;
+    font-size: 28px;
+    box-shadow: 0 14px 34px -10px rgba(var(--crm-accent-rgb), .55), inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+.crm-auth__title { font-size: 21px; font-weight: 720; letter-spacing: -.02em; color: var(--crm-text); }
+.crm-auth .card {
+    background: var(--crm-glass-bg);
+    backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.3);
+    -webkit-backdrop-filter: blur(var(--crm-glass-blur)) saturate(1.3);
+    border: 1px solid var(--crm-glass-border);
+    border-radius: var(--crm-radius-xl);
+    box-shadow: var(--crm-glass-shadow-2), inset 0 1px 0 var(--crm-glass-highlight);
+}
+.crm-auth .form-footer { margin-top: 18px; }
+
+/* ----------------------------------------------------------------------------
+   13. FLASH/ALERT — токен-пары.
+   ---------------------------------------------------------------------------- */
+.crm-app .alert { border-radius: var(--crm-radius-md); border: 1px solid transparent; }
+.crm-app .alert-success { background: var(--crm-success-lt); border-color: rgba(var(--crm-success-rgb), .25); color: var(--crm-success); }
+.crm-app .alert-danger { background: var(--crm-danger-lt); border-color: rgba(var(--crm-danger-rgb), .25); color: var(--crm-danger); }
+[data-bs-theme="light"] .crm-app .alert-success { color: #116B33; }
+[data-bs-theme="light"] .crm-app .alert-danger { color: #A51F1F; }
+
+/* ----------------------------------------------------------------------------
+   14. ПЕЧАТЬ — плоская, без стекла.
+   ---------------------------------------------------------------------------- */
+@media print {
+    aside.navbar-vertical, header.navbar, .crm-ai-launch, .crm-palette, .bm-side__foot { display: none !important; }
+    body.crm-app { background: #fff !important; }
+}
+
+/* Working surfaces */
+.bm-skip-link:focus {
+    position: fixed;
+    inset: var(--crm-space-3) auto auto var(--crm-space-3);
+    z-index: 2000;
+    padding: var(--crm-space-3) var(--crm-space-4);
+    background: var(--crm-surface-solid);
+    color: var(--crm-text);
+    border-radius: var(--crm-radius-sm);
+    outline: 2px solid var(--crm-accent);
+}
+
+.bm-module-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--crm-space-1) var(--crm-space-2);
+    padding-block-end: var(--crm-space-2);
+    margin-block-end: var(--crm-space-5);
+    border-bottom: 1px solid var(--crm-border);
+}
+.bm-module-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--crm-space-2);
+    min-height: var(--crm-tap);
+    padding-inline: var(--crm-space-3);
+    border-radius: var(--crm-radius-sm);
+    color: var(--crm-text-secondary);
+    font-size: var(--crm-text-body);
+    font-weight: 540;
+    text-decoration: none;
+    transition: background-color var(--crm-dur-fast) var(--crm-ease);
+}
+.bm-module-nav a:hover { background: var(--crm-glass-hover); }
+.bm-module-nav a[aria-current] {
+    color: var(--crm-accent);
+    background: rgba(var(--crm-accent-rgb), .1);
+}
+
+.bm-overview__hero {
+    margin-top: 0;
+    padding: clamp(1.25rem, 3.25vw, 3rem);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-xl);
+    background: linear-gradient(105deg, rgba(var(--crm-accent-rgb), .12), transparent 76%), var(--crm-surface-solid);
+}
+.crm-app .bm-overview__hero .page-title {
+    font-size: clamp(1.75rem, 3.5vw, 3.25rem);
+    line-height: 1.1;
+    text-wrap: balance;
+}
+.bm-overview__label {
+    color: var(--crm-accent);
+    font-weight: 650;
+    margin-block-end: var(--crm-space-2);
+}
+.bm-overview__date {
+    display: flex;
+    align-items: baseline;
+    gap: var(--crm-space-1);
+    color: var(--crm-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.bm-overview__date #crm-clock { color: var(--crm-text); }
+.bm-overview__summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    margin-block: var(--crm-space-4) var(--crm-space-5);
+    background: var(--crm-border);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+}
+.bm-overview__summary > div { width: auto; }
+.bm-overview .bm-overview__summary .crm-kpi {
+    height: 100%;
+    background: var(--crm-surface-solid);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+}
+.bm-overview__summary .crm-kpi__label { font-size: var(--crm-text-body); }
+.bm-overview__summary .crm-kpi__value { font-variant-numeric: tabular-nums; }
+
+.bm-assistant__workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+    gap: var(--crm-space-5);
+    align-items: start;
+}
+.bm-assistant__conversation > .crm-panel { min-height: min(70vh, 43rem); }
+.bm-assistant__conversation .crm-chat { scrollbar-width: thin; }
+.bm-assistant__conversation .crm-msg__bubble { overflow-wrap: anywhere; }
+.bm-assistant__suggestions .btn { min-height: var(--crm-tap); }
+.bm-assistant__suggestions .btn .ti { flex: none; }
+
+.bm-finance-accounts .crm-metrics {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) repeat(3, minmax(0, 1fr));
+}
+.bm-finance-accounts .crm-metric__value { font-variant-numeric: tabular-nums; }
+.bm-finance-accounts .crm-metric:first-child {
+    background: color-mix(in srgb, var(--crm-accent) 8%, var(--crm-surface-solid));
+    border-color: color-mix(in srgb, var(--crm-accent) 26%, var(--crm-border));
+}
+.bm-attendance-day .crm-metrics {
+    gap: 1px;
+    background: var(--crm-border);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    overflow: hidden;
+}
+.bm-attendance-day .crm-metrics > .crm-metric {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--crm-surface-solid);
+}
+.bm-crm-pipeline .crm-kanban {
+    scroll-snap-type: inline proximity;
+    scrollbar-width: thin;
+}
+.bm-crm-pipeline .crm-kanban__col { scroll-snap-align: start; }
+.bm-crm-pipeline .crm-kanban__card { background: var(--crm-surface-solid); }
+.bm-people-directory .crm-toolbar { margin-block-end: var(--crm-space-4); }
+.bm-people-directory .crm-table__main { font-weight: 650; }
+
+.bm-document-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--crm-space-3) var(--crm-space-5);
+    margin-block-end: var(--crm-space-4);
+    padding: var(--crm-space-4);
+    border-block: 1px solid var(--crm-border);
+}
+.bm-document-summary > div { display: flex; align-items: baseline; gap: var(--crm-space-2); }
+.bm-document-summary dt { color: var(--crm-text-secondary); font-weight: 540; }
+.bm-document-summary dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.bm-project-progress {
+    display: grid;
+    grid-template-columns: auto minmax(7rem, 1fr) auto;
+    align-items: center;
+    gap: var(--crm-space-4);
+    padding: var(--crm-space-4) var(--crm-space-5);
+    margin-block-end: var(--crm-space-4);
+    background: var(--crm-surface-solid);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+}
+.bm-project-progress h2 { font-size: var(--crm-text-section); margin: 0; }
+.bm-project-progress p { color: var(--crm-text-secondary); margin: 0; }
+.bm-project-progress progress { width: 100%; accent-color: var(--crm-accent); }
+.bm-deadline-icon {
+    width: 38px;
+    height: 38px;
+    font-size: var(--crm-text-body);
+    border-radius: var(--crm-radius-md);
+    background: color-mix(in srgb, var(--c) 12%, var(--crm-surface-solid));
+    color: var(--c);
+}
+
+.crm-auth .crm-auth__wrap { max-width: 29rem; }
+.crm-auth .crm-auth__brand { flex-direction: row; justify-content: flex-start; }
+.crm-auth .crm-auth__logo {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    border-radius: var(--crm-radius-md);
+    box-shadow: none;
+}
+.crm-auth .form-control, .crm-auth .btn { min-height: var(--crm-tap); }
+
+@media (max-width: 991.98px) {
+    .bm-overview__summary,
+    .bm-finance-accounts .crm-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bm-assistant__workspace { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 575.98px) {
+    .bm-project-progress { grid-template-columns: minmax(0, 1fr) auto; }
+    .bm-project-progress > div { grid-column: 1 / -1; }
+    .bm-overview__hero .row > * { flex: 0 0 100%; }
+    .bm-overview__date { margin-block-start: var(--crm-space-2); }
+    .bm-overview__summary .crm-kpi__head { align-items: flex-start; }
+    .bm-overview__summary .crm-kpi__label { min-width: 0; overflow-wrap: anywhere; }
+    .bm-overview__summary .crm-kpi__value { font-size: var(--crm-text-heading); }
+}

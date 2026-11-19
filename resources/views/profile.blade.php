@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', 'Профиль')
 
@@ -19,7 +20,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Учётная запись</div>
-            <h2 class="page-title mt-1">Профиль</h2>
+            <h1 class="page-title mt-1">Профиль</h1>
             <div class="text-secondary mt-1">Личные данные, фото и смена пароля</div>
         </div>
     </div>
@@ -145,7 +146,7 @@
                         <div class="crm-form__field">
                             <label class="form-label" for="pf-email">Рабочий e-mail</label>
                             <input type="email" id="pf-email" name="email" class="form-control" maxlength="150"
-                                   value="{{ old('email', $employee->email) }}" placeholder="name@company.tj">
+                                   value="{{ old('email', session('profile_suggestions.email', $employee->email)) }}" placeholder="name@company.tj">
                         </div>
                     </div>
                 </div>

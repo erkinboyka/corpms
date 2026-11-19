@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'configuration')
 
 @section('title', 'Маршруты согласования')
 
@@ -12,7 +13,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Документооборот</div>
-            <h2 class="page-title mt-1">Маршруты согласования</h2>
+            <h1 class="page-title mt-1">Маршруты согласования</h1>
             <div class="text-secondary mt-1">Линейные цепочки шагов, через которые проходят документы</div>
         </div>
         <div class="col-auto d-print-none">
@@ -240,7 +241,7 @@
         var cards = stepCards();
         var last = cards[cards.length - 1];
         last.querySelector('[data-wf-f="name"]').focus();
-        last.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        last.scrollIntoView({ block: 'nearest', behavior: 'instant' });
     }
 
     addBtn.addEventListener('click', addStep);
@@ -295,7 +296,7 @@
                 if (!field.value.trim()) {
                     field.reportValidity();
                     field.focus();
-                    field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    field.scrollIntoView({ block: 'center', behavior: 'instant' });
                     return false;
                 }
                 var actor = cards[i].querySelector('[data-wf-f="actor_type"]').value;
@@ -375,10 +376,10 @@
         display: inline-flex; align-items: center; gap: .45rem;
         padding: .35rem .75rem; border-radius: 999px;
         background: rgba(var(--tblr-secondary-rgb, 138, 148, 166), .12);
-        color: var(--tblr-secondary, #8a94a6); font-size: .82rem; font-weight: 600;
+        color: var(--tblr-secondary, var(--crm-text-secondary)); font-size: .82rem; font-weight: 600;
         cursor: default;
     }
-    .crm-steps .nav-link.active { background: var(--tblr-primary, #266cf2); color: #fff; }
+    .crm-steps .nav-link.active { background: var(--tblr-primary, var(--crm-info)); color: #fff; }
     .crm-steps__num {
         display: inline-flex; align-items: center; justify-content: center;
         width: 1.25rem; height: 1.25rem; border-radius: 50%;
@@ -387,7 +388,7 @@
     .crm-steps .nav-link:not(.active) .crm-steps__num { background: rgba(0,0,0,.08); }
 
     .wf-step-card {
-        border: 1px solid var(--tblr-border-color, #e6e9ef);
+        border: 1px solid var(--tblr-border-color, var(--crm-border));
         border-radius: .75rem;
         padding: .85rem 1rem .35rem;
         margin-bottom: .7rem;
@@ -401,15 +402,15 @@
         display: inline-flex; align-items: center; justify-content: center;
         width: 1.5rem; height: 1.5rem; border-radius: 50%;
         background: rgba(var(--tblr-primary-rgb, 38, 108, 242), .12);
-        color: var(--tblr-primary, #266cf2); font-size: .78rem; font-weight: 700;
+        color: var(--tblr-primary, var(--crm-info)); font-size: .78rem; font-weight: 700;
     }
 
     .wf-review__row {
         display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
-        padding: .55rem 0; border-bottom: 1px dashed var(--tblr-border-color, #e6e9ef);
+        padding: .55rem 0; border-bottom: 1px dashed var(--tblr-border-color, var(--crm-border));
         font-size: .88rem;
     }
-    .wf-review__row span { color: var(--tblr-secondary, #8a94a6); }
+    .wf-review__row span { color: var(--tblr-secondary, var(--crm-text-secondary)); }
     .wf-review__row--block { flex-direction: column; align-items: stretch; }
     .wf-review__row:last-child { border-bottom: 0; }
 </style>
@@ -439,7 +440,7 @@
         background: rgba(var(--crm-accent-rgb), .14); color: var(--tblr-primary);
         box-shadow: 0 0 0 4px var(--tblr-card-bg, transparent);
     }
-    .wf-steps__item--final .wf-steps__num { background: rgba(47, 179, 68, .16); color: #2fb344; }
+    .wf-steps__item--final .wf-steps__num { background: rgba(47, 179, 68, .16); color: var(--crm-success); }
 
     .wf-steps__body { min-width: 0; padding-top: 2px; }
     .wf-steps__name {
@@ -451,9 +452,9 @@
         font-size: 12.5px; color: var(--tblr-secondary); margin-top: 3px;
     }
     .wf-steps__action { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
-    .wf-steps__action--approve { color: #2fb344; }
-    .wf-steps__action--review { color: #4299e1; }
-    .wf-steps__action--sign { color: #f76707; }
+    .wf-steps__action--approve { color: var(--crm-success); }
+    .wf-steps__action--review { color: var(--crm-info); }
+    .wf-steps__action--sign { color: var(--crm-warning); }
     .wf-steps__actor { display: inline-flex; align-items: center; gap: 4px; }
     .wf-steps__dot { opacity: .5; }
 </style>

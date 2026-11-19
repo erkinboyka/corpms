@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Корректировки посещаемости')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Посещаемость</div>
-            <h2 class="page-title mt-1">Корректировки</h2>
+            <h1 class="page-title mt-1">Корректировки</h1>
             <div class="text-secondary mt-1">Заявки на исправление отметок: история изменений и согласование</div>
         </div>
         <div class="col-auto d-print-none">
@@ -47,15 +48,15 @@
 
 <div class="card">
     <div class="card-header">
-        <strong>Заявки</strong>
+        <h2 class="card-title bm-section-title">Заявки</h2>
         <span class="crm-chip ms-auto">{{ $corrections->count() }} всего</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th>Заявка</th><th>Сотрудник</th><th>Дата</th><th>Поле</th><th>Было → станет</th><th>Причина</th><th>Статус</th>
-                    @if ($canDecide) <th class="text-end">Решение</th> @endif
+                    <th scope="col">Заявка</th><th scope="col">Сотрудник</th><th scope="col">Дата</th><th scope="col">Поле</th><th scope="col">Было → станет</th><th scope="col">Причина</th><th scope="col">Статус</th>
+                    @if ($canDecide) <th scope="col" class="text-end">Решение</th> @endif
                 </tr>
             </thead>
             <tbody>
@@ -162,7 +163,7 @@
                     </div>
                     <div class="crm-form__field">
                         <label class="form-label" for="nc-reason">Причина<span class="req">*</span></label>
-                        <textarea id="nc-reason" name="reason" class="form-control" rows="4" required maxlength="500"
+                        <textarea data-crm-rich id="nc-reason" name="reason" class="form-control" rows="4" required maxlength="500"
                                   data-crm-rich placeholder="Забыл отметить уход и т. п."></textarea>
                         <div class="form-text">Причина видна согласующему и попадает в журнал аудита.</div>
                     </div>

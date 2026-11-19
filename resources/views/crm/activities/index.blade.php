@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'CRM — Активности')
 
@@ -17,12 +18,12 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">CRM</div>
-            <h2 class="page-title mt-1">Активности</h2>
+            <h1 class="page-title mt-1">Активности</h1>
             <div class="text-secondary mt-1">В работе {{ $metrics['activities_pending'] }} · просрочено {{ $metrics['activities_overdue'] }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('crm.clients.index') }}"><i class="ti ti-address-book me-1"></i>Клиенты</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('crm.deals.index') }}"><i class="ti ti-chart-funnel me-1"></i>Сделки</a>
+
+
             @can('checkBoxPermission', 'crm.manage')
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newActivity"><i class="ti ti-plus me-1"></i>Новая активность</button>
             @endcan
@@ -48,15 +49,15 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Активность</th>
-                    <th>Связь</th>
-                    <th>Срок</th>
-                    <th>Ответственный</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Активность</th>
+                    <th scope="col">Связь</th>
+                    <th scope="col">Срок</th>
+                    <th scope="col">Ответственный</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -124,69 +125,83 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новая активность</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-kind">Вид<span class="req">*</span></label>
-                        <select id="na-kind" name="kind" class="form-select" required>
-                            @foreach ($kinds as $kindOption)
-                                <option value="{{ $kindOption->value }}" @selected(old('kind', 'task') === $kindOption->value)>{{ $crm_label('crm_activity_kind', $kindOption->value) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-subject">Тема<span class="req">*</span></label>
-                        <input type="text" id="na-subject" name="subject" class="form-control" value="{{ old('subject') }}" placeholder="Позвонить по КП" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-due">Срок</label>
-                        <input type="datetime-local" id="na-due" name="due_at" class="form-control" value="{{ old('due_at') }}">
-                    </div>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-deal">Сделка</label>
-                        <select id="na-deal" name="deal_id" class="form-select">
-                            <option value="">— нет —</option>
-                            @foreach ($deals as $deal)
-                                <option value="{{ $deal->id }}" @selected((string) old('deal_id') === (string) $deal->id)>№{{ $deal->id }} · {{ $deal->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-client">Клиент</label>
-                        <select id="na-client" name="client_id" class="form-select">
-                            <option value="">— нет —</option>
-                            @foreach ($clients as $client)
-                                <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-lead">Лид</label>
-                        <select id="na-lead" name="lead_id" class="form-select">
-                            <option value="">— нет —</option>
-                            @foreach ($leads as $lead)
-                                <option value="{{ $lead->id }}" @selected((string) old('lead_id') === (string) $lead->id)>{{ $lead->title }}</option>
-                            @endforeach
-                        </select>
+                <div class="crm-form__section">
+                    <h3>Активность</h3>
+                    <div class="crm-form__desc">Что делаем и на каком объекте — вид и тема задают тон истории.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-kind">Вид<span class="req">*</span></label>
+                            <select id="na-kind" name="kind" class="form-select" required>
+                                @foreach ($kinds as $kindOption)
+                                    <option value="{{ $kindOption->value }}" @selected(old('kind', 'task') === $kindOption->value)>{{ $crm_label('crm_activity_kind', $kindOption->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-subject">Тема<span class="req">*</span></label>
+                            <input type="text" id="na-subject" name="subject" class="form-control" value="{{ old('subject') }}" placeholder="Позвонить по КП" required>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-owner">Ответственный</label>
-                        <select id="na-owner" name="owner_id" class="form-select">
-                            <option value="">— не назначен —</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" @selected((string) old('owner_id') === (string) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="na-notes">Примечание</label>
-                        <input type="text" id="na-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
+                <div class="crm-form__section">
+                    <h3>Сроки и ответственные</h3>
+                    <div class="crm-form__desc">Срок и ответственный в одной строке — видно, кто и когда должен отработать.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-due">Срок</label>
+                            <input type="datetime-local" id="na-due" name="due_at" class="form-control" value="{{ old('due_at') }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-owner">Ответственный</label>
+                            <select id="na-owner" name="owner_id" class="form-select">
+                                <option value="">— не назначен —</option>
+                                @foreach ($employees as $employee)
+                                    <option value="{{ $employee->id }}" @selected((string) old('owner_id') === (string) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="form-text">Свяжите активность хотя бы с одним объектом CRM, чтобы она попала в историю клиента или сделки.</div>
+                <div class="crm-form__section">
+                    <h3>Связи</h3>
+                    <div class="crm-form__desc">Свяжите активность хотя бы с одним объектом CRM — она попадёт в его историю.</div>
+                    <div class="crm-form__row crm-form__row--3">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-deal">Сделка</label>
+                            <select id="na-deal" name="deal_id" class="form-select">
+                                <option value="">— нет —</option>
+                                @foreach ($deals as $deal)
+                                    <option value="{{ $deal->id }}" @selected((string) old('deal_id') === (string) $deal->id)>№{{ $deal->id }} · {{ $deal->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-client">Клиент</label>
+                            <select id="na-client" name="client_id" class="form-select">
+                                <option value="">— нет —</option>
+                                @foreach ($clients as $client)
+                                    <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="na-lead">Лид</label>
+                            <select id="na-lead" name="lead_id" class="form-select">
+                                <option value="">— нет —</option>
+                                @foreach ($leads as $lead)
+                                    <option value="{{ $lead->id }}" @selected((string) old('lead_id') === (string) $lead->id)>{{ $lead->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="crm-form__section mb-0">
+                    <h3>Примечание</h3>
+                    <div class="crm-form__desc">Короткая заметка о договорённости или результате звонка.</div>
+                    <div class="crm-form__field mb-0">
+                        <input type="text" id="na-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000" placeholder="Условия, договорённости, следующий шаг">
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>

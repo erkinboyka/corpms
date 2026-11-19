@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', $employee->last_name . ' ' . $employee->first_name)
 
@@ -33,7 +34,7 @@
         @endif
         <div class="flex-grow-1 min-w-0">
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <h2 class="page-title mb-0">{{ $fullName }}</h2>
+                <h1 class="page-title mb-0">{{ $fullName }}</h1>
                 <span class="crm-chip crm-chip--grey">{{ $employee->employee_no }}</span>
                 <span class="crm-chip {{ $statusClass }}"><i class="ti ti-{{ $statusIcon }} me-1"></i>{{ $crm_label('employee_status', $employee->status->value) }}</span>
             </div>
@@ -76,7 +77,7 @@
 
                     <div class="crm-facts">
                         <div class="crm-fact">
-                            <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: #4299e1;"><i class="ti ti-hash"></i></span>
+                            <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: var(--crm-info);"><i class="ti ti-hash"></i></span>
                             <div class="min-w-0">
                                 <div class="crm-fact__label">Табельный №</div>
                                 <div class="crm-fact__value">{{ $employee->employee_no }}</div>
@@ -84,7 +85,7 @@
                         </div>
 
                         <div class="crm-fact">
-                            <span class="crm-fact__icon" style="background: rgba(47, 179, 68, .14); color: #2fb344;"><i class="ti ti-{{ $statusIcon }}"></i></span>
+                            <span class="crm-fact__icon" style="background: rgba(47, 179, 68, .14); color: var(--crm-success);"><i class="ti ti-{{ $statusIcon }}"></i></span>
                             <div class="min-w-0">
                                 <div class="crm-fact__label">Статус</div>
                                 <div class="crm-fact__value">{{ $crm_label('employee_status', $employee->status->value) }}</div>
@@ -92,7 +93,7 @@
                         </div>
 
                         <div class="crm-fact">
-                            <span class="crm-fact__icon" style="background: rgba(124, 92, 224, .14); color: #7c5ce0;"><i class="ti ti-building-community"></i></span>
+                            <span class="crm-fact__icon" style="background: rgba(124, 92, 224, .14); color: var(--crm-purple);"><i class="ti ti-building-community"></i></span>
                             <div class="min-w-0">
                                 <div class="crm-fact__label">Подразделение</div>
                                 <div class="crm-fact__value">{{ $employee->department?->name ?? 'не назначен' }}</div>
@@ -100,7 +101,7 @@
                         </div>
 
                         <div class="crm-fact">
-                            <span class="crm-fact__icon" style="background: rgba(247, 103, 7, .14); color: #f76707;"><i class="ti ti-briefcase"></i></span>
+                            <span class="crm-fact__icon" style="background: rgba(247, 103, 7, .14); color: var(--crm-warning);"><i class="ti ti-briefcase"></i></span>
                             <div class="min-w-0">
                                 <div class="crm-fact__label">Должность</div>
                                 <div class="crm-fact__value">{{ $employee->position?->name ?? 'не назначена' }}</div>
@@ -108,7 +109,7 @@
                         </div>
 
                         <div class="crm-fact">
-                            <span class="crm-fact__icon" style="background: rgba(151, 163, 182, .16); color: #97a3b6;"><i class="ti ti-clock-hour-4"></i></span>
+                            <span class="crm-fact__icon" style="background: rgba(151, 163, 182, .16); color: var(--crm-text-secondary);"><i class="ti ti-clock-hour-4"></i></span>
                             <div class="min-w-0">
                                 <div class="crm-fact__label">График</div>
                                 <div class="crm-fact__value">{{ $employee->workSchedule?->name ?? '—' }}</div>
@@ -116,7 +117,7 @@
                         </div>
 
                         <div class="crm-fact">
-                            <span class="crm-fact__icon" style="background: rgba(11, 155, 114, .14); color: #0b9b72;"><i class="ti ti-calendar-event"></i></span>
+                            <span class="crm-fact__icon" style="background: rgba(11, 155, 114, .14); color: var(--crm-success);"><i class="ti ti-calendar-event"></i></span>
                             <div class="min-w-0">
                                 <div class="crm-fact__label">Приём на работу</div>
                                 <div class="crm-fact__value">{{ $employee->hired_at?->format('d.m.Y') ?? '—' }}</div>
@@ -125,7 +126,7 @@
 
                         @if ($canViewProps)
                             <div class="crm-fact">
-                                <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: #4299e1;"><i class="ti ti-mail"></i></span>
+                                <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: var(--crm-info);"><i class="ti ti-mail"></i></span>
                                 <div class="min-w-0">
                                     <div class="crm-fact__label">Рабочий e-mail</div>
                                     <div class="crm-fact__value">
@@ -139,7 +140,7 @@
                             </div>
 
                             <div class="crm-fact">
-                                <span class="crm-fact__icon" style="background: rgba(47, 179, 68, .14); color: #2fb344;"><i class="ti ti-phone"></i></span>
+                                <span class="crm-fact__icon" style="background: rgba(47, 179, 68, .14); color: var(--crm-success);"><i class="ti ti-phone"></i></span>
                                 <div class="min-w-0">
                                     <div class="crm-fact__label">Телефон</div>
                                     <div class="crm-fact__value">
@@ -154,7 +155,7 @@
 
                             {{-- данные из профиля (заполняет сотрудник на /profile) --}}
                             <div class="crm-fact">
-                                <span class="crm-fact__icon" style="background: rgba(247, 103, 7, .14); color: #f76707;"><i class="ti ti-cake"></i></span>
+                                <span class="crm-fact__icon" style="background: rgba(247, 103, 7, .14); color: var(--crm-warning);"><i class="ti ti-cake"></i></span>
                                 <div class="min-w-0">
                                     <div class="crm-fact__label">Дата рождения</div>
                                     <div class="crm-fact__value">
@@ -164,7 +165,7 @@
                             </div>
 
                             <div class="crm-fact">
-                                <span class="crm-fact__icon" style="background: rgba(124, 92, 224, .14); color: #7c5ce0;"><i class="ti ti-map-pin"></i></span>
+                                <span class="crm-fact__icon" style="background: rgba(124, 92, 224, .14); color: var(--crm-purple);"><i class="ti ti-map-pin"></i></span>
                                 <div class="min-w-0">
                                     <div class="crm-fact__label">Адрес</div>
                                     <div class="crm-fact__value">
@@ -178,7 +179,7 @@
                             </div>
 
                             <div class="crm-fact">
-                                <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: #4299e1;"><i class="ti ti-brand-telegram"></i></span>
+                                <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: var(--crm-info);"><i class="ti ti-brand-telegram"></i></span>
                                 <div class="min-w-0">
                                     <div class="crm-fact__label">Telegram</div>
                                     <div class="crm-fact__value">
@@ -192,7 +193,7 @@
                             </div>
                         @else
                             <div class="crm-fact">
-                                <span class="crm-fact__icon" style="background: rgba(151, 163, 182, .16); color: #97a3b6;"><i class="ti ti-lock"></i></span>
+                                <span class="crm-fact__icon" style="background: rgba(151, 163, 182, .16); color: var(--crm-text-secondary);"><i class="ti ti-lock"></i></span>
                                 <div class="min-w-0">
                                     <div class="crm-fact__label">Контакты</div>
                                     <div class="crm-fact__value text-secondary">Реквизиты скрыты</div>
@@ -260,12 +261,14 @@
                                             <option value="{{ $status }}" @selected($employee->status->value === $status)>{{ $crm_label('employee_status', $status) }}</option>
                                         @endforeach
                                     </select>
+                                    <label class="form-label mt-2" for="ep-fired-at">Дата увольнения</label>
+                                    <input id="ep-fired-at" class="form-control" type="date" name="fired_at" value="{{ old('fired_at', $employee->fired_at?->format('Y-m-d')) }}" max="{{ today()->format('Y-m-d') }}">
                                 </div>
                                 <div class="crm-form__field">
                                     <label class="form-label" for="ep-schedule">График работы</label>
                                     <select id="ep-schedule" name="work_schedule_id" class="form-select">
                                         <option value="">— не назначен —</option>
-                                        @foreach (\App\Models\WorkSchedule::query()->orderBy('name')->get() as $schedule)
+                                        @foreach ($schedules as $schedule)
                                             <option value="{{ $schedule->id }}" @selected($employee->work_schedule_id === $schedule->id)>{{ $schedule->name }}</option>
                                         @endforeach
                                     </select>
@@ -274,7 +277,7 @@
                                     <label class="form-label" for="ep-dept">Подразделение</label>
                                     <select id="ep-dept" name="department_id" class="form-select">
                                         <option value="">— не назначен —</option>
-                                        @foreach (\App\Models\Department::query()->orderBy('name')->get() as $department)
+                                        @foreach ($departments as $department)
                                             <option value="{{ $department->id }}" @selected($employee->department_id === $department->id)>{{ $department->name }}</option>
                                         @endforeach
                                     </select>
@@ -283,7 +286,7 @@
                                     <label class="form-label" for="ep-pos">Должность</label>
                                     <select id="ep-pos" name="position_id" class="form-select">
                                         <option value="">— не назначена —</option>
-                                        @foreach (\App\Models\Position::query()->orderBy('name')->get() as $position)
+                                        @foreach ($positions as $position)
                                             <option value="{{ $position->id }}" @selected($employee->position_id === $position->id)>{{ $position->name }}</option>
                                         @endforeach
                                     </select>
@@ -407,7 +410,7 @@
         flex-direction: column;
         gap: .15rem;
         padding: .9rem 1rem .95rem;
-        border: 1px solid var(--tblr-border-color, #e6e9ef);
+        border: 1px solid var(--tblr-border-color, var(--crm-border));
         border-radius: .75rem;
         background: var(--tblr-bg-surface, #fff);
         cursor: pointer;
@@ -431,19 +434,19 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border: 1.5px solid var(--tblr-border-color, #c9ced8);
+        border: 1.5px solid var(--tblr-border-color, var(--crm-border-strong));
         border-radius: 50%;
         color: transparent;
         font-size: .7rem;
         transition: all .15s ease;
     }
     .crm-role-card__input:checked ~ .crm-role-card__check {
-        background: var(--tblr-primary, #266cf2);
-        border-color: var(--tblr-primary, #266cf2);
+        background: var(--tblr-primary, var(--crm-info));
+        border-color: var(--tblr-primary, var(--crm-info));
         color: #fff;
     }
     .crm-role-card:has(.crm-role-card__input:checked) {
-        border-color: var(--tblr-primary, #266cf2);
+        border-color: var(--tblr-primary, var(--crm-info));
         box-shadow: 0 0 0 3px rgba(var(--tblr-primary-rgb, 38, 108, 242), .14);
     }
     .crm-role-card__icon {
@@ -455,20 +458,20 @@
         margin-bottom: .35rem;
         border-radius: .55rem;
         background: rgba(var(--tblr-primary-rgb, 38, 108, 242), .1);
-        color: var(--tblr-primary, #266cf2);
+        color: var(--tblr-primary, var(--crm-info));
         font-size: 1.1rem;
     }
     .crm-role-card__input:checked ~ .crm-role-card__icon {
-        background: var(--tblr-primary, #266cf2);
+        background: var(--tblr-primary, var(--crm-info));
         color: #fff;
     }
     .crm-role-card__name { font-weight: 650; line-height: 1.25; }
-    .crm-role-card__slug { font-size: .72rem; color: var(--tblr-secondary, #8a94a6); }
+    .crm-role-card__slug { font-size: .72rem; color: var(--tblr-secondary, var(--crm-text-secondary)); }
     .crm-role-card__desc {
         margin-top: .35rem;
         font-size: .78rem;
         line-height: 1.35;
-        color: var(--tblr-secondary, #8a94a6);
+        color: var(--tblr-secondary, var(--crm-text-secondary));
     }
     @media (max-width: 576px) {
         .crm-role-cards { grid-template-columns: 1fr; }

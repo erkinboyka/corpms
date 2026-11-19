@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Бухгалтерия — Первичные документы')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Бухгалтерия</div>
-            <h2 class="page-title mt-1">Первичные документы</h2>
+            <h1 class="page-title mt-1">Первичные документы</h1>
             <div class="text-secondary mt-1">Счета, акты, платёжные поручения · {{ $documents->total() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -35,16 +36,16 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Номер</th>
-                    <th>Вид</th>
-                    <th>Дата</th>
-                    <th>Контрагент</th>
-                    <th class="text-end">Сумма</th>
-                    <th>Проводка</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Номер</th>
+                    <th scope="col">Вид</th>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Контрагент</th>
+                    <th scope="col" class="text-end">Сумма</th>
+                    <th scope="col">Проводка</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,46 +92,57 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый первичный документ</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ad-number">Номер<span class="req">*</span></label>
-                        <input type="text" id="ad-number" name="number" class="form-control" value="{{ old('number') }}" maxlength="32" required>
+                <div class="crm-form__section">
+                    <h3>Документ</h3>
+                    <div class="crm-form__desc">Номер, вид и дата — реквизиты первички.</div>
+                    <div class="crm-form__row crm-form__row--3">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ad-number">Номер<span class="req">*</span></label>
+                            <input type="text" id="ad-number" name="number" class="form-control" value="{{ old('number') }}" maxlength="32" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ad-kind">Вид<span class="req">*</span></label>
+                            <select id="ad-kind" name="kind" class="form-select" required>
+                                @foreach ($kinds as $kindOption)
+                                    <option value="{{ $kindOption->value }}" @selected(old('kind', 'invoice') === $kindOption->value)>{{ $crm_label('acc_document_kind', $kindOption->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ad-date">Дата<span class="req">*</span></label>
+                            <input type="date" id="ad-date" name="document_date" class="form-control" value="{{ old('document_date', now()->toDateString()) }}" required>
+                        </div>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ad-kind">Вид<span class="req">*</span></label>
-                        <select id="ad-kind" name="kind" class="form-select" required>
-                            @foreach ($kinds as $kindOption)
-                                <option value="{{ $kindOption->value }}" @selected(old('kind', 'invoice') === $kindOption->value)>{{ $crm_label('acc_document_kind', $kindOption->value) }}</option>
+                </div>
+                <div class="crm-form__section">
+                    <h3>Сумма и контрагент</h3>
+                    <div class="crm-form__desc">О чём документ и между кем — сумма рядом с контрагентом.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ad-amount">Сумма</label>
+                            <input type="number" id="ad-amount" name="amount" class="form-control" value="{{ old('amount', 0) }}" step="0.01" min="0">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ad-counterparty">Контрагент</label>
+                            <input type="text" id="ad-counterparty" name="counterparty" class="form-control" value="{{ old('counterparty') }}" maxlength="255">
+                        </div>
+                    </div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="ad-entry">Основание (проводка)</label>
+                        <select id="ad-entry" name="entry_id" class="form-select">
+                            <option value="">— не связан —</option>
+                            @foreach ($entries as $entry)
+                                <option value="{{ $entry->id }}" @selected((string) old('entry_id') === (string) $entry->id)>№{{ $entry->id }} · {{ $entry->entry_date?->format('d.m.Y') }} · {{ $entry->description }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ad-date">Дата<span class="req">*</span></label>
-                        <input type="date" id="ad-date" name="document_date" class="form-control" value="{{ old('document_date', now()->toDateString()) }}" required>
-                    </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ad-amount">Сумма</label>
-                        <input type="number" id="ad-amount" name="amount" class="form-control" value="{{ old('amount', 0) }}" step="0.01" min="0">
+                <div class="crm-form__section mb-0">
+                    <h3>Примечание</h3>
+                    <div class="crm-form__desc">Короткая пометка о назначении документа.</div>
+                    <div class="crm-form__field mb-0">
+                        <input type="text" id="ad-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ad-counterparty">Контрагент</label>
-                        <input type="text" id="ad-counterparty" name="counterparty" class="form-control" value="{{ old('counterparty') }}" maxlength="255">
-                    </div>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ad-entry">Основание (проводка)</label>
-                    <select id="ad-entry" name="entry_id" class="form-select">
-                        <option value="">— не связан —</option>
-                        @foreach ($entries as $entry)
-                            <option value="{{ $entry->id }}" @selected((string) old('entry_id') === (string) $entry->id)>№{{ $entry->id }} · {{ $entry->entry_date?->format('d.m.Y') }} · {{ $entry->description }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ad-notes">Примечание</label>
-                    <input type="text" id="ad-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
                 </div>
             </div>
             <div class="modal-footer">

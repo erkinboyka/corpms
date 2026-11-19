@@ -60,11 +60,8 @@ class AuthFlowTest extends TestCase
         $ceo = User::where('email', 'ceo@corpms.demo')->first();
         $emp = User::where('email', 'it-emp1@corpms.demo')->first();
 
-        $ceoItems = Sidebar::build($ceo);
-        $empItems = Sidebar::build($emp);
-
-        $ceoRoutes = array_column($ceoItems, 'route');
-        $empRoutes = array_column($empItems, 'route');
+        $ceoRoutes = Sidebar::routes($ceo);
+        $empRoutes = Sidebar::routes($emp);
 
         // CEO видит настройки и аудит, рядовой сотрудник — нет
         $this->assertContains('settings.index', $ceoRoutes);

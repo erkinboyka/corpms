@@ -382,7 +382,8 @@ class ScheduleController extends Controller
             ->orderByDesc('effective_from')
             ->get();
 
-        $holidays = Holiday::query()->whereYear('date', now()->year)->orderBy('date')->get();
+        $holidays = Holiday::query()->where(fn ($query) => $query->where('company_id', $me->company_id)->orWhereNull('company_id'))
+            ->whereYear('date', now()->year)->orderBy('date')->get();
 
         return view('schedules.mine', compact('schedule', 'assignments', 'holidays'));
     }

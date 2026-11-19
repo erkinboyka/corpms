@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Web;
 use App\Domains\Ai\Services\AiAssistantService;
 use App\Domains\Ai\Services\AiPanelService;
 use App\Http\Controllers\Controller;
+use App\Support\AssistantMarkdown;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,7 @@ class AiController extends Controller
     }
 
     /**
-     * JSON-сообщение для боковой AI-панели: {ok, reply, blocks}.
+     * JSON-сообщение для боковой AI-панели: {ok, reply, reply_html, blocks}.
      * Ошибки валидации — 422 (Laravel), сбои сервиса — 200 {ok:false}, не 500.
      */
     public function message(Request $request): JsonResponse
@@ -66,6 +67,7 @@ class AiController extends Controller
         return response()->json([
             'ok' => (bool) $payload['ok'],
             'reply' => (string) $payload['reply'],
+            'reply_html' => AssistantMarkdown::render((string) $payload['reply']),
             'blocks' => array_values($payload['blocks']),
         ]);
     }

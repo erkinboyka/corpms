@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Бухгалтерия — проводка №'.$entry->id)
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Бухгалтерия · Проводка</div>
-            <h2 class="page-title mt-1">{{ $entry->description ?: 'Проводка №'.$entry->id }}</h2>
+            <h1 class="page-title mt-1">{{ $entry->description ?: 'Проводка №'.$entry->id }}</h1>
             <div class="text-secondary mt-1 d-flex align-items-center gap-2 flex-wrap">
                 <span class="crm-chip crm-chip--grey">№{{ $entry->id }}</span>
                 <span class="crm-chip {{ $entry->source->value === 'finance' ? 'crm-chip--cyan' : 'crm-chip--grey' }}">{{ $crm_label('acc_entry_source', $entry->source->value) }}</span>
@@ -23,17 +24,17 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-arrow-down-left"></i>Дебет</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-arrow-down-left"></i>Дебет</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format($debitTotal, 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">оборот по дебету</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-arrow-up-right"></i>Кредит</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-arrow-up-right"></i>Кредит</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format($creditTotal, 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">оборот по кредиту</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-scale"></i>Баланс</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-scale"></i>Баланс</div>
         <div class="crm-metric__value" style="font-size: 1rem; padding-top: 10px;">
             @if (abs($debitTotal - $creditTotal) < 0.01)
                 <span class="crm-chip crm-chip--green">сбалансирована</span>
@@ -44,7 +45,7 @@
         <div class="crm-metric__hint">дебет = кредит</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-user"></i>Автор</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-user"></i>Автор</div>
         <div class="crm-metric__value" style="font-size: 1rem; padding-top: 10px;">{{ $entry->creator?->name ?? '—' }}</div>
         <div class="crm-metric__hint">создал проводку</div>
     </div>
@@ -53,13 +54,13 @@
 <div class="card">
     <div class="card-header"><div class="card-title">Строки проводки</div></div>
     <div class="table-responsive">
-        <table class="table table-vcenter card-table">
+        <table data-record-key="0" class="table table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Счёт</th>
-                    <th class="text-end">Дебет</th>
-                    <th class="text-end">Кредит</th>
-                    <th>Комментарий</th>
+                    <th scope="col">Счёт</th>
+                    <th scope="col" class="text-end">Дебет</th>
+                    <th scope="col" class="text-end">Кредит</th>
+                    <th scope="col">Комментарий</th>
                 </tr>
             </thead>
             <tbody>
@@ -81,10 +82,10 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th>Итого</th>
-                    <th class="text-end">{{ number_format($debitTotal, 2, ',', ' ') }}</th>
-                    <th class="text-end">{{ number_format($creditTotal, 2, ',', ' ') }}</th>
-                    <th></th>
+                    <th scope="col">Итого</th>
+                    <th scope="col" class="text-end">{{ number_format($debitTotal, 2, ',', ' ') }}</th>
+                    <th scope="col" class="text-end">{{ number_format($creditTotal, 2, ',', ' ') }}</th>
+                    <th scope="col"></th>
                 </tr>
             </tfoot>
         </table>

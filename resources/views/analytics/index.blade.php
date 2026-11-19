@@ -1,28 +1,29 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'Аналитика')
 
 @php
     $taskMeta = [
-        'new' => ['Новые', '#4299e1'],
-        'planned' => ['Запланированные', '#7048e8'],
-        'in_progress' => ['В работе', '#0b9b72'],
-        'review' => ['На проверке', '#f76707'],
-        'returned' => ['Возвращённые', '#ae3ec9'],
-        'completed' => ['Завершённые', '#2fb344'],
-        'cancelled' => ['Отменённые', '#6c7a91'],
-        'overdue' => ['Просроченные', '#d63939'],
+        'new' => ['Новые', 'var(--crm-info)'],
+        'planned' => ['Запланированные', 'var(--crm-accent)'],
+        'in_progress' => ['В работе', 'var(--crm-success)'],
+        'review' => ['На проверке', 'var(--crm-warning)'],
+        'returned' => ['Возвращённые', 'var(--crm-purple)'],
+        'completed' => ['Завершённые', 'var(--crm-success)'],
+        'cancelled' => ['Отменённые', 'var(--crm-text-secondary)'],
+        'overdue' => ['Просроченные', 'var(--crm-danger)'],
     ];
     $docMeta = [
-        'draft' => ['Черновик', '#6c7a91'],
-        'submitted' => ['На согласовании', '#4299e1'],
-        'review' => ['На проверке', '#f76707'],
-        'revision' => ['Доработка', '#ae3ec9'],
-        'approved' => ['Согласовано', '#2fb344'],
-        'signing' => ['На подписании', '#0b9b72'],
-        'signed' => ['Подписано', '#0b9b72'],
-        'registered' => ['Зарегистрировано', '#4299e1'],
-        'archived' => ['В архиве', '#6c7a91'],
+        'draft' => ['Черновик', 'var(--crm-text-secondary)'],
+        'submitted' => ['На согласовании', 'var(--crm-info)'],
+        'review' => ['На проверке', 'var(--crm-warning)'],
+        'revision' => ['Доработка', 'var(--crm-purple)'],
+        'approved' => ['Согласовано', 'var(--crm-success)'],
+        'signing' => ['На подписании', 'var(--crm-success)'],
+        'signed' => ['Подписано', 'var(--crm-success)'],
+        'registered' => ['Зарегистрировано', 'var(--crm-info)'],
+        'archived' => ['В архиве', 'var(--crm-text-secondary)'],
     ];
 
     $openTasks = ($tasks['new'] ?? 0) + ($tasks['planned'] ?? 0) + ($tasks['in_progress'] ?? 0) + ($tasks['review'] ?? 0);
@@ -48,16 +49,16 @@
 
     /* --- виджеты (п.3): меты и максимумы для столбчатых диаграмм --- */
     $prioMeta = [
-        'critical' => ['Критический', '#d63939'],
-        'high' => ['Высокий', '#f76707'],
-        'medium' => ['Средний', '#4299e1'],
-        'low' => ['Низкий', '#6c7a91'],
+        'critical' => ['Критический', 'var(--crm-danger)'],
+        'high' => ['Высокий', 'var(--crm-warning)'],
+        'medium' => ['Средний', 'var(--crm-info)'],
+        'low' => ['Низкий', 'var(--crm-text-secondary)'],
     ];
     $leaveMeta = [
-        'pending' => ['Ожидают решения', '#f76707'],
-        'approved' => ['Согласованы', '#2fb344'],
-        'rejected' => ['Отклонены', '#d63939'],
-        'cancelled' => ['Отменены', '#6c7a91'],
+        'pending' => ['Ожидают решения', 'var(--crm-warning)'],
+        'approved' => ['Согласованы', 'var(--crm-success)'],
+        'rejected' => ['Отклонены', 'var(--crm-danger)'],
+        'cancelled' => ['Отменены', 'var(--crm-text-secondary)'],
     ];
     $prioTotal = array_sum($priorities);
     $deadlineMax = max(1, max(array_values($deadlines)));
@@ -124,7 +125,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Данные</div>
-            <h2 class="page-title mt-1">Аналитика</h2>
+            <h1 class="page-title mt-1">Аналитика</h1>
             <div class="text-secondary mt-1">Сводные показатели по посещаемости, задачам, документам и кадрам</div>
         </div>
         <div class="col-auto d-print-none">
@@ -138,17 +139,17 @@
 {{-- ===== KPI-лента ===== --}}
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-users"></i>Сотрудников</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-users"></i>Сотрудников</div>
         <div class="crm-metric__value">{{ $headcount['active'] }} <small>/ {{ $headcount['total'] }}</small></div>
         <div class="crm-metric__hint">активных / всего в области доступа</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-door-enter"></i>На месте сегодня</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-door-enter"></i>На месте сегодня</div>
         <div class="crm-metric__value">{{ $attendance['present'] }}</div>
         <div class="crm-metric__hint">опоздали: {{ $attendance['late'] }} · удалённо: {{ $attendance['remote'] }} · без отметки: {{ $attendance['absent_from_schedule'] }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-list-check"></i>Открытых задач</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-list-check"></i>Открытых задач</div>
         <div class="crm-metric__value">{{ $openTasks }}</div>
         <div class="crm-metric__hint">
             @if (($tasks['overdue'] ?? 0) > 0)
@@ -159,23 +160,33 @@
         </div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-calendar-event"></i>Отпуска в ожидании</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-calendar-event"></i>Отпуска в ожидании</div>
         <div class="crm-metric__value">{{ $leaves['pending'] ?? 0 }}</div>
         <div class="crm-metric__hint">согласовано: {{ $leaves['approved'] ?? 0 }} · отклонено: {{ $leaves['rejected'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-circle-check"></i>Выполнение задач</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>Выполнение задач</div>
         <div class="crm-metric__value">{{ $completion['pct'] }}<small>%</small></div>
         <div class="crm-metric__hint">завершено {{ $completion['completed'] }} · в работе {{ $completion['active'] }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-clock-hour-4"></i>Учтено времени</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-clock-hour-4"></i>Учтено времени</div>
         <div class="crm-metric__value">{{ $trackedHours }}<small> ч</small></div>
         <div class="crm-metric__hint">записей тайм-трекинга: {{ $timeTracking['records'] }}</div>
     </div>
+    <div class="crm-metric">
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-file-text"></i>Документов</div>
+        <div class="crm-metric__value">{{ $docTotal }}</div>
+        <div class="crm-metric__hint">автор или подписант</div>
+    </div>
+    <div class="crm-metric">
+        <div class="crm-metric__label" style="color: {{ ($tasks['overdue'] ?? 0) > 0 ? 'var(--crm-danger)' : 'var(--crm-success)'; }}"><i class="ti ti-alert-triangle"></i>Просрочено задач</div>
+        <div class="crm-metric__value">{{ $tasks['overdue'] ?? 0 }}</div>
+        <div class="crm-metric__hint">@if (($tasks['overdue'] ?? 0) > 0)требуют внимания@else сроки соблюдаются@endif</div>
+    </div>
     @if ($canAudit && $auditTrend !== null)
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-activity"></i>Событий журнала</div>
+            <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-activity"></i>Событий журнала</div>
             <div class="crm-metric__value">{{ $auditTrend['total'] }}</div>
             <div class="crm-metric__hint">за последние 14 дней</div>
         </div>
@@ -194,7 +205,8 @@
                 <span class="crm-chip crm-chip--green">пик {{ $trendMax }}</span>
             </div>
             <div class="card-body d-flex flex-column">
-                <div class="crm-bars flex-grow-1" style="min-height: 168px;">
+                @if ($marksTotal > 0)
+                    <div class="crm-bars flex-grow-1" style="min-height: 168px;">
                     @foreach ($trend as $row)
                         @php
                             $dayTotal = $row['present'] + $row['late'] + $row['remote'];
@@ -206,13 +218,16 @@
                             <div class="crm-bar__label">{{ $row['date']->format('d.m') }}</div>
                         </div>
                     @endforeach
-                </div>
-                <div class="crm-legend mt-3">
-                    <span><i style="--c: #2fb344"></i>на месте {{ $sumPresent }}</span>
-                    <span><i style="--c: #f76707"></i>опоздали {{ $sumLate }}</span>
-                    <span><i style="--c: #4299e1"></i>удалённо {{ $sumRemote }}</span>
-                    <span><i style="--c: rgba(var(--crm-accent-rgb), .3)"></i>выходные</span>
-                </div>
+                    </div>
+                    <div class="crm-legend mt-3">
+                        <span><i style="--c: var(--crm-success)"></i>на месте {{ $sumPresent }}</span>
+                        <span><i style="--c: var(--crm-warning)"></i>опоздали {{ $sumLate }}</span>
+                        <span><i style="--c: var(--crm-info)"></i>удалённо {{ $sumRemote }}</span>
+                        <span><i style="--c: rgba(var(--crm-accent-rgb), .3)"></i>выходные</span>
+                    </div>
+                @else
+                    @include('partials.empty-state', ['icon' => 'calendar-off', 'title' => 'Отметок за период нет', 'text' => 'Здесь появятся столбцы посещаемости, когда сотрудники начнут отмечать вход и выход за последние ' . count($trend) . ' дней.'])
+                @endif
             </div>
         </div>
     </div>
@@ -344,10 +359,10 @@
             <div class="card-body">
                 @php
                     $deadlineRows = [
-                        ['Срок прошёл', $deadlines['overdue'], '#d63939'],
-                        ['Ближайшие 7 дней', $deadlines['week'], '#f76707'],
-                        ['Позже', $deadlines['later'], '#2fb344'],
-                        ['Без срока', $deadlines['none'], '#6c7a91'],
+                        ['Срок прошёл', $deadlines['overdue'], 'var(--crm-danger)'],
+                        ['Ближайшие 7 дней', $deadlines['week'], 'var(--crm-warning)'],
+                        ['Позже', $deadlines['later'], 'var(--crm-success)'],
+                        ['Без срока', $deadlines['none'], 'var(--crm-text-secondary)'],
                     ];
                     $deadlineSum = array_sum($deadlines);
                 @endphp
@@ -480,21 +495,21 @@
                         $onTimePct = (int) round(100 * ($marksTotal - $sumLate) / $marksTotal);
                     @endphp
                     <div class="crm-stat mb-3">
-                        <span class="crm-stat__dot" style="--c:#2fb344"></span>
+                        <span class="crm-stat__dot" style="--c:var(--crm-success)"></span>
                         <div>
                             <div class="crm-stat__val">{{ $onTimePct }}%</div>
                             <div class="crm-stat__label">пришли вовремя</div>
                         </div>
                     </div>
                     <div class="crm-stack" role="img" aria-label="Структура отметок за 14 дней">
-                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumPresent / $marksTotal) }}%; --c: #2fb344" title="на месте: {{ $sumPresent }}"></span>
-                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumLate / $marksTotal) }}%; --c: #f76707" title="опоздали: {{ $sumLate }}"></span>
-                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumRemote / $marksTotal) }}%; --c: #4299e1" title="удалённо: {{ $sumRemote }}"></span>
+                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumPresent / $marksTotal) }}%; --c: var(--crm-success)" title="на месте: {{ $sumPresent }}"></span>
+                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumLate / $marksTotal) }}%; --c: var(--crm-warning)" title="опоздали: {{ $sumLate }}"></span>
+                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumRemote / $marksTotal) }}%; --c: var(--crm-info)" title="удалённо: {{ $sumRemote }}"></span>
                     </div>
                     <div class="crm-legend mt-3">
-                        <span><i style="--c: #2fb344"></i>на месте {{ $sumPresent }}</span>
-                        <span><i style="--c: #f76707"></i>опоздали {{ $sumLate }}</span>
-                        <span><i style="--c: #4299e1"></i>удалённо {{ $sumRemote }}</span>
+                        <span><i style="--c: var(--crm-success)"></i>на месте {{ $sumPresent }}</span>
+                        <span><i style="--c: var(--crm-warning)"></i>опоздали {{ $sumLate }}</span>
+                        <span><i style="--c: var(--crm-info)"></i>удалённо {{ $sumRemote }}</span>
                     </div>
                 @else
                     @include('partials.empty-state', ['icon' => 'clock-off', 'title' => 'Отметок нет', 'text' => 'За последние 14 дней в области доступа нет записей посещаемости.'])
@@ -698,8 +713,21 @@
     var isDark = function () { return root.getAttribute('data-bs-theme') === 'dark'; };
     var gridColor = function () { return isDark() ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'; };
     var tickColor = function () { return isDark() ? 'rgba(255,255,255,.62)' : 'rgba(0,0,0,.55)'; };
-    var tooltipColor = function () { return isDark() ? '#1c1f26' : '#fff'; };
-    var tooltipBg = function () { return isDark() ? '#f2f2f7' : 'rgba(28,31,38,.94)'; };
+
+    /* Canvas 2D не умеет var(--…): такое значение браузер трактует как невалидное
+       и рисует ЧЁРНЫМ. Разворачиваем CSS-переменные через getComputedStyle. */
+    function cssColor(v) {
+        if (typeof v !== 'string' || v.indexOf('var(') !== 0) { return v; }
+        var name = (v.match(/var\(\s*(--[a-z0-9-]+)/i) || [])[1];
+        if (!name) { return v; }
+        var val = getComputedStyle(root).getPropertyValue(name).trim();
+        if (val) { return val; }
+        var fb = (v.match(/var\(\s*--[a-z0-9-]+\s*,\s*([^)]+)\)/i) || [])[1];
+        return fb ? fb.trim() : (isDark() ? '#9098a8' : '#6b7484');
+    }
+    function cssColors(arr) { return Array.isArray(arr) ? arr.map(cssColor) : cssColor(arr); }
+    function tooltipColor() { return isDark() ? cssColor('var(--crm-text)') : '#fff'; }
+    function tooltipBg() { return isDark() ? 'rgba(21,24,32,.96)' : 'rgba(28,31,38,.94)'; }
 
     Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif";
     Chart.defaults.font.size = 12;
@@ -742,9 +770,9 @@
             data: {
                 labels: @json($chartTrendLabels),
                 datasets: [
-                    { label: 'На месте', data: @json($chartPresent), borderColor: '#2fb344', backgroundColor: 'rgba(47,179,68,.14)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
-                    { label: 'Опоздали', data: @json($chartLate), borderColor: '#f76707', backgroundColor: 'rgba(247,103,7,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
-                    { label: 'Удалённо', data: @json($chartRemote), borderColor: '#4299e1', backgroundColor: 'rgba(66,153,225,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 }
+                    { label: 'На месте', data: @json($chartPresent), borderColor: cssColor('var(--crm-success)'), backgroundColor: 'rgba(47,179,68,.14)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
+                    { label: 'Опоздали', data: @json($chartLate), borderColor: cssColor('var(--crm-warning)'), backgroundColor: 'rgba(247,103,7,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
+                    { label: 'Удалённо', data: @json($chartRemote), borderColor: cssColor('var(--crm-info)'), backgroundColor: 'rgba(66,153,225,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 }
                 ]
             },
             options: baseCartesian()
@@ -761,7 +789,7 @@
                 datasets: [{
                     label: 'Задач',
                     data: @json($chartTasks['data']),
-                    backgroundColor: @json($chartTasks['colors']),
+                    backgroundColor: cssColors(@json($chartTasks['colors'])),
                     borderRadius: 6,
                     borderSkipped: false,
                     maxBarThickness: 34
@@ -784,7 +812,7 @@
                 labels: @json($chartDocs['labels']),
                 datasets: [{
                     data: @json($chartDocs['data']),
-                    backgroundColor: @json($chartDocs['colors']),
+                    backgroundColor: cssColors(@json($chartDocs['colors'])),
                     borderColor: 'transparent',
                     hoverOffset: 8
                 }]
@@ -812,7 +840,7 @@
                 labels: @json($chartPrio['labels']),
                 datasets: [{
                     data: @json($chartPrio['data']),
-                    backgroundColor: @json($chartPrio['colors']),
+                    backgroundColor: cssColors(@json($chartPrio['colors'])),
                     borderColor: 'transparent',
                     hoverOffset: 8
                 }]
@@ -835,6 +863,9 @@
     var observer = new MutationObserver(function () {
         if (themeTimer) { clearTimeout(themeTimer); }
         themeTimer = setTimeout(function () {
+            Chart.defaults.plugins.tooltip.backgroundColor = tooltipBg();
+            Chart.defaults.plugins.tooltip.titleColor = tooltipColor();
+            Chart.defaults.plugins.tooltip.bodyColor = tooltipColor();
             charts.forEach(function (chart) {
                 var opts = chart.options;
                 if (opts.scales) {

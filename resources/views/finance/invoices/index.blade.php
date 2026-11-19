@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Финансы — Счета и акты')
 
@@ -7,12 +8,12 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Финансы</div>
-            <h2 class="page-title mt-1">Счета и акты</h2>
+            <h1 class="page-title mt-1">Счета и акты</h1>
             <div class="text-secondary mt-1">Реестр документов на оплату · всего {{ $invoices->total() }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.accounts.index') }}"><i class="ti ti-cash-banknote me-1"></i>Счета</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.transactions.index') }}"><i class="ti ti-receipt me-1"></i>Операции</a>
+
+
             @can('checkBoxPermission', 'finance.invoices.manage')
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newInvoice"><i class="ti ti-plus me-1"></i>Новый счёт</button>
             @endcan
@@ -22,23 +23,23 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-file-invoice"></i>Не оплачено</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['unpaid'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-file-invoice"></i>Не оплачено</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'unpaid'])</div>
         <div class="crm-metric__hint">{{ $metrics['invoices_open'] }} выставленных</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e5697a;"><i class="ti ti-alarm"></i>Просрочено</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-alarm"></i>Просрочено</div>
         <div class="crm-metric__value">{{ $metrics['invoices_overdue'] }}</div>
         <div class="crm-metric__hint">срок оплаты прошёл</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-arrow-down-left"></i>Поступления</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['income'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-arrow-down-left"></i>Поступления</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'income'])</div>
         <div class="crm-metric__hint">за месяц</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-cash-banknote"></i>Баланс</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['balance'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>Баланс</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'balance'])</div>
         <div class="crm-metric__hint">все счета</div>
     </div>
 </div>
@@ -66,16 +67,16 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Документ</th>
-                    <th>Вид</th>
-                    <th>Дата / срок</th>
-                    <th class="text-end">Сумма</th>
-                    <th class="text-end">Оплачено</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Документ</th>
+                    <th scope="col">Вид</th>
+                    <th scope="col">Дата / срок</th>
+                    <th scope="col" class="text-end">Сумма</th>
+                    <th scope="col" class="text-end">Оплачено</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -127,58 +128,73 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый счёт или акт</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-number">Номер<span class="req">*</span></label>
-                        <input type="text" id="fi-number" name="number" class="form-control" value="{{ old('number', 'INV-'.now()->format('Ymd-His')) }}" maxlength="32" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-kind">Вид<span class="req">*</span></label>
-                        <select id="fi-kind" name="kind" class="form-select" required>
-                            @foreach ($kinds as $kindOption)
-                                <option value="{{ $kindOption->value }}" @selected(old('kind', 'invoice') === $kindOption->value)>{{ $crm_label('fin_invoice_kind', $kindOption->value) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-client">Клиент CRM</label>
-                        <select id="fi-client" name="client_id" class="form-select">
-                            <option value="">— не выбран —</option>
-                            @foreach ($clients as $client)
-                                <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-counterparty">Контрагент (если нет в CRM)</label>
-                        <input type="text" id="fi-counterparty" name="counterparty_name" class="form-control" value="{{ old('counterparty_name') }}" maxlength="255">
+                <div class="crm-form__section">
+                    <h3>Документ</h3>
+                    <div class="crm-form__desc">Номер и вид — счёт на оплату или акт выполненных работ.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-number">Номер<span class="req">*</span></label>
+                            <input type="text" id="fi-number" name="number" class="form-control" value="{{ old('number', 'INV-'.now()->format('Ymd-His')) }}" maxlength="32" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-kind">Вид<span class="req">*</span></label>
+                            <select id="fi-kind" name="kind" class="form-select" required>
+                                @foreach ($kinds as $kindOption)
+                                    <option value="{{ $kindOption->value }}" @selected(old('kind', 'invoice') === $kindOption->value)>{{ $crm_label('fin_invoice_kind', $kindOption->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-issue">Дата документа<span class="req">*</span></label>
-                        <input type="date" id="fi-issue" name="issue_date" class="form-control" value="{{ old('issue_date', now()->toDateString()) }}" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-due">Оплатить до</label>
-                        <input type="date" id="fi-due" name="due_date" class="form-control" value="{{ old('due_date') }}">
+                <div class="crm-form__section">
+                    <h3>Контрагент</h3>
+                    <div class="crm-form__desc">Клиент из CRM или свободное название — выберите одно из двух.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-client">Клиент CRM</label>
+                            <select id="fi-client" name="client_id" class="form-select">
+                                <option value="">— не выбран —</option>
+                                @foreach ($clients as $client)
+                                    <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-counterparty">Контрагент (если нет в CRM)</label>
+                            <input type="text" id="fi-counterparty" name="counterparty_name" class="form-control" value="{{ old('counterparty_name') }}" maxlength="255">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-amount">Сумма<span class="req">*</span></label>
-                        <input type="number" id="fi-amount" name="amount" class="form-control" value="{{ old('amount') }}" step="0.01" min="0.01" required>
+                <div class="crm-form__section">
+                    <h3>Суммы и даты</h3>
+                    <div class="crm-form__desc">Сумма с НДС и срок оплаты рядом — видно, сколько и когда.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-amount">Сумма<span class="req">*</span></label>
+                            <input type="number" id="fi-amount" name="amount" class="form-control" value="{{ old('amount') }}" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-vat">НДС, %</label>
+                            <input type="number" id="fi-vat" name="vat_rate" class="form-control" value="{{ old('vat_rate', 0) }}" step="0.01" min="0" max="100">
+                        </div>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="fi-vat">НДС, %</label>
-                        <input type="number" id="fi-vat" name="vat_rate" class="form-control" value="{{ old('vat_rate', 0) }}" step="0.01" min="0" max="100">
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-issue">Дата документа<span class="req">*</span></label>
+                            <input type="date" id="fi-issue" name="issue_date" class="form-control" value="{{ old('issue_date', now()->toDateString()) }}" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="fi-due">Оплатить до</label>
+                            <input type="date" id="fi-due" name="due_date" class="form-control" value="{{ old('due_date') }}">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="fi-notes">Примечание</label>
-                    <input type="text" id="fi-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
+                <div class="crm-form__section mb-0">
+                    <h3>Примечание</h3>
+                    <div class="crm-form__desc">Условия оплаты и реквизиты для клиента.</div>
+                    <div class="crm-form__field mb-0">
+                        <input type="text" id="fi-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

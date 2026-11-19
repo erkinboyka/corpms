@@ -9,13 +9,25 @@ use App\Models\Setting;
 /**
  * Настройки системы (п.70 ТЗ): устойчивые значения с fallback на config('corpms.*').
  *
- * Приоритет: БД (settings, group 'corpms') → config → default.
- * Значения кэшируются на время запроса.
+ * Межтенантность: строка settings с company_id — переопределение конкретной
+ * компании, строка company_id NULL — общая (установочная) настройка.
+ * Приоритет: настройка компании → общая настройка БД → config → default.
+ *
+ * Контекст компании (useCompany) задаётся явно вне HTTP-контекста:
+ * device API (DeviceTokenAuth), AI/очередь (AiAssistantService и др.),
+ * консоль. В web-запросе компания берётся из сотрудника auth()->user().
+ * Контекст хранится в атрибутах текущего Request и не перетекает
+ * между запросами (в том числе в тестах и под Octane).
+ *
+ * Значения кэшируются на время запроса в рамках ключа «компания|ключ».
  */
 class SettingsService
 {
     /** Группа в таблице settings. */
     public const GROUP = 'corpms';
+
+    /** Атрибут Request с явным контекстом компании (int|null). */
+    protected const CONTEXT_ATTR = 'corpms_settings_company_id';
 
     /** @var array<string, string|null> */
     protected array $resolved = [];
@@ -35,6 +47,11 @@ class SettingsService
             ],
             'corpms.documents.max_file_size_mb' => [
                 'name' => 'Макс. размер файла документа (МБ)',
+                'type' => 'int',
+                'group' => 'Документы',
+            ],
+            'corpms.documents.max_file_count' => [
+                'name' => 'Макс. файлов на документ',
                 'type' => 'int',
                 'group' => 'Документы',
             ],
@@ -86,24 +103,81 @@ class SettingsService
         ];
     }
 
-    /** Значение настройки: БД → config → default. */
+    /**
+     * Задать контекст компании для последующих чтений/записей настроек
+     * (device API, AI-сервисы вне web-запроса, очередь, консоль).
+     * null — работать с общими настройками (company_id IS NULL).
+     */
+    public function useCompany(?int $companyId): void
+    {
+        request()->attributes->set(self::CONTEXT_ATTR, $companyId !== null ? (int) $companyId : null);
+        $this->resolved = [];
+    }
+
+    /**
+     * Текущий контекст компании: явный (useCompany) → сотрудник
+     * auth()->user() → null (общие настройки).
+     */
+    public function companyId(): ?int
+    {
+        $attributes = request()->attributes;
+
+        if ($attributes->has(self::CONTEXT_ATTR)) {
+            $value = $attributes->get(self::CONTEXT_ATTR);
+
+            return $value !== null ? (int) $value : null;
+        }
+
+        $employee = auth()->user()?->employee;
+
+        return $employee?->company_id !== null ? (int) $employee->company_id : null;
+    }
+
+    /** Значение настройки: компания → общая строка БД → config → default. */
     public function get(string $fullKey, mixed $default = null): mixed
     {
-        if (\array_key_exists($fullKey, $this->resolved)) {
-            return $this->resolved[$fullKey];
+        $companyId = $this->companyId();
+        $memoKey = $this->memoKey($fullKey, $companyId);
+
+        if (\array_key_exists($memoKey, $this->resolved)) {
+            return $this->resolved[$memoKey];
         }
 
         $dotKey = $this->dotKey($fullKey);
 
-        // 1) БД
-        $row = Setting::query()
+        // 1) БД: строка компании имеет приоритет над общей (company_id NULL);
+        //    в общем контексте читаются только строки company_id IS NULL
+        $rows = Setting::query()
             ->where('group', self::GROUP)
             ->where('key', $dotKey)
-            ->first();
+            ->when(
+                $companyId === null,
+                fn ($query) => $query->whereNull('company_id'),
+                fn ($query) => $query->where(
+                    fn ($scope) => $scope->whereNull('company_id')->orWhere('company_id', $companyId),
+                ),
+            )
+            ->get();
+
+        $row = $companyId !== null
+            ? $rows->first(fn (Setting $setting): bool => (int) $setting->company_id === $companyId)
+                ?? $rows->first(fn (Setting $setting): bool => $setting->company_id === null)
+            : $rows->first();
+
+        // A tenant-supplied endpoint must never receive the installation's API key.
+        // Inherited credentials are valid only for the inherited provider address.
+        if ($dotKey === 'ai.api_key' && $companyId !== null && ($row === null || $row->company_id === null)) {
+            $companyUrl = Setting::query()->where('group', self::GROUP)->where('key', 'ai.base_url')->where('company_id', $companyId)->value('value');
+            $globalUrl = Setting::query()->where('group', self::GROUP)->where('key', 'ai.base_url')->whereNull('company_id')->value('value')
+                ?? config('corpms.ai.base_url', '');
+            if ($companyUrl !== null && rtrim((string) $companyUrl, '/') !== rtrim((string) $globalUrl, '/')) {
+                return $this->resolved[$memoKey] = '';
+            }
+        }
 
         if ($row !== null && $row->value !== null) {
             $value = $this->castOut($dotKey, $row->value);
-            $this->resolved[$fullKey] = $value;
+            $this->resolved[$memoKey] = $value;
 
             return $value;
         }
@@ -112,51 +186,88 @@ class SettingsService
         if ($dotKey !== null) {
             $configValue = config('corpms.'.$dotKey);
             if ($configValue !== null) {
-                $this->resolved[$fullKey] = $configValue;
+                $this->resolved[$memoKey] = $configValue;
 
                 return $configValue;
             }
         }
 
-        $this->resolved[$fullKey] = $default;
+        $this->resolved[$memoKey] = $default;
 
         return $default;
     }
 
-    /** Сохранение (или сброс на config, если null). */
+    /**
+     * Сохранение в текущий контекст компании (или сброс строки этого
+     * контекста на fallback: общая строка → config, если null).
+     */
     public function set(string $fullKey, mixed $value): void
     {
         $dotKey = $this->dotKey($fullKey);
-        $this->resolved[$fullKey] = $value;
+        $companyId = $this->companyId();
+        $this->resolved = [];
+
+        $scope = [
+            'group' => self::GROUP,
+            'key' => $dotKey,
+            'company_id' => $companyId,
+        ];
 
         if ($value === null) {
             if ($dotKey !== null) {
-                Setting::query()->where('group', self::GROUP)->where('key', $dotKey)->delete();
+                Setting::query()->where($scope)->delete();
             }
 
             return;
         }
 
-        Setting::updateOrCreate([
-            'group' => self::GROUP,
-            'key' => $dotKey,
-        ], ['value' => $this->castIn($dotKey, $value)]);
+        Setting::updateOrCreate($scope, ['value' => $this->castIn($dotKey, $value)]);
     }
 
-    /** Текущие значения для панели. */
+    /**
+     * Текущие значения для панели.
+     *
+     * @return array<string, array{value: mixed, configured: bool, in_db: bool, scope: string} & array{name: string, type: string, group: string}>
+     */
     public function currentValues(): array
     {
+        $companyId = $this->companyId();
+        $dotKeys = array_map(
+            fn (string $key): string => (string) $this->dotKey($key),
+            array_keys($this->definitions()),
+        );
+
+        $rows = Setting::query()
+            ->where('group', self::GROUP)
+            ->whereIn('key', $dotKeys)
+            ->where(fn ($query) => $query->whereNull('company_id')->when($companyId !== null, fn ($scope) => $scope->orWhere('company_id', $companyId)))
+            ->get()
+            ->groupBy('key');
+
         $result = [];
         foreach ($this->definitions() as $key => $meta) {
             $value = $this->get($key);
+            $keyRows = $rows->get($this->dotKey($key), collect());
+            $hasCompany = $companyId !== null && $keyRows->contains(
+                fn (Setting $setting): bool => (int) $setting->company_id === $companyId,
+            );
+            $hasGlobal = $keyRows->contains(fn (Setting $setting): bool => $setting->company_id === null);
+
             $result[$key] = [
                 'value' => $meta['type'] === 'secret' ? '' : $value,
                 'configured' => $meta['type'] === 'secret' && $value !== '',
-                'in_db' => Setting::query()->where('group', self::GROUP)->where('key', $this->dotKey($key))->exists(),
+                'in_db' => $hasCompany || $hasGlobal,
+                'scope' => $hasCompany ? 'company' : ($hasGlobal ? 'global' : 'config'),
             ] + $meta;
         }
 
         return $result;
+    }
+
+    /** Ключ кэша значений с учётом контекста компании. */
+    protected function memoKey(string $fullKey, ?int $companyId): string
+    {
+        return ($companyId === null ? 'g' : 'c'.$companyId).'|'.$fullKey;
     }
 
     protected function dotKey(string $fullKey): ?string

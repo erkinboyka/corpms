@@ -22,6 +22,7 @@ final class PermissionMatrix
         'documents' => 'Документы',
         'workflow' => 'Workflow',
         'signature' => 'Подпись',
+        'chat' => 'Чат',
         'analytics' => 'Аналитика',
         'reports' => 'Отчёты',
         'payroll' => 'Зарплата',
@@ -113,6 +114,13 @@ final class PermissionMatrix
         'signatures.revoke' => ['Отзыв подписи', 'signature'],
         'signatures.verify' => ['Проверка подписи', 'signature'],
 
+        // --- BM Chat ---
+        'chat.view' => ['Просмотр чатов', 'chat'],
+        'chat.send' => ['Отправка сообщений', 'chat'],
+        'chat.manage' => ['Управление диалогами и модерация', 'chat'],
+        'chat.groups.create' => ['Создание групп', 'chat'],
+        'chat.channels.create' => ['Создание каналов компании', 'chat'],
+
         // --- Аналитика ---
         'analytics.view' => ['Просмотр аналитики', 'analytics'],
         'analytics.ai.use' => ['AI-аномалитики', 'analytics'],
@@ -177,5 +185,17 @@ final class PermissionMatrix
     public static function exists(string $slug): bool
     {
         return isset(self::PERMISSIONS[$slug]);
+    }
+
+    /** These resources have company ownership and no implemented own/department boundary. */
+    public static function requiresCompanyScope(string $slug): bool
+    {
+        return in_array($slug, [
+            'inventory.view', 'inventory.manage', 'inventory.move', 'purchases.view', 'purchases.manage',
+            'crm.view', 'crm.manage', 'crm.deals.manage', 'finance.view', 'finance.manage', 'finance.invoices.manage',
+            'accounting.view', 'accounting.manage', 'projects.view', 'projects.manage', 'bi.view', 'bi.manage',
+            'users.manage', 'integrations.manage', 'positions.manage', 'schedules.manage', 'holidays.manage',
+            'documents.templates.manage', 'documents.categories.manage', 'workflows.manage',
+        ], true);
     }
 }

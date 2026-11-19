@@ -1,0 +1,451 @@
+/* ============================================================================
+   BM MOTION SYSTEM — единое поведение плавности BM Systems
+   ----------------------------------------------------------------------------
+   Подключается после tokens.css (там лежат все длительности и кривые)
+   и до компонентных стилей.
+
+   Правила системы:
+   1. Длительность берётся ТОЛЬКО из --crm-motion-* / --crm-dur-*.
+      Новые числа в компонентах запрещены — это ломает единый ритм.
+   2. Анимируются только transform и opacity (работают на композиторе).
+      Не анимируем: width/height, top/left, box-shadow, backdrop-filter,
+      background — они вызывают layout/paint и ощущаются как подтормаживание.
+   3. Один характер движения = одна кривая: вход через --crm-ease-out,
+      нейтральный сдвиг через --crm-ease-standard, уход через --crm-ease-in.
+   4. Анимируется только изменение состояния. Появление первого элемента
+      на странице — не анимировать (initReveal в corpms.js делает это
+      осознанно и отключается при reduced-motion).
+   5. prefers-reduced-motion снимает всё необязательное (см. конец файла).
+   ========================================================================= */
+
+/* ----------------------------------------------------------------------------
+   0. Базовые состояния интерактивных элементов
+   Все кнопки/ссылки/поля переходят одинаково: только то, что меняется.
+   ---------------------------------------------------------------------------- */
+.btn,
+.nav-link,
+.dropdown-item,
+.list-group-item-action,
+.crm-chip,
+.form-control,
+.form-select {
+    transition:
+        background-color var(--crm-motion-control) var(--crm-ease-standard),
+        border-color var(--crm-motion-control) var(--crm-ease-standard),
+        color var(--crm-motion-control) var(--crm-ease-standard),
+        box-shadow var(--crm-motion-control) var(--crm-ease-standard),
+        opacity var(--crm-motion-control) var(--crm-ease-standard);
+}
+
+/* Нажатие — самый быстрый отклик в системе */
+.btn:active,
+.crm-chip:active {
+    transition-duration: var(--crm-motion-feedback);
+}
+
+/* Кнопка в состоянии загрузки: текст не дёргается по ширине */
+.btn[aria-busy="true"],
+.btn.is-loading {
+    pointer-events: none;
+    opacity: .82;
+}
+
+/* ----------------------------------------------------------------------------
+   1. Сайдбар
+   Ширина не анимируется через transition (это layout): переключение rail
+   задаётся классом на <html>, плавность даёт transform-оверлей в bm-ui.css.
+   Здесь — поведение групп и пунктов.
+   ---------------------------------------------------------------------------- */
+#bm-sidebar .nav-link {
+    transition:
+        background-color var(--crm-motion-surface) var(--crm-ease-standard),
+        color var(--crm-motion-surface) var(--crm-ease-standard),
+        transform var(--crm-motion-surface) var(--crm-ease-out);
+}
+
+/* Пункт меню при незначимом hover — сдвиг вправо на 2px, без масштаба */
+@media (hover: hover) and (pointer: fine) {
+    #bm-sidebar .nav-link:hover {
+        transform: translateX(var(--crm-shift-1));
+    }
+}
+
+/* Раскрытие/сворачивание группы модулей: высота анимируется у списка,
+   сам заголовок не двигается. */
+.crm-nav-group__items {
+    transition:
+        opacity var(--crm-motion-surface) var(--crm-ease-standard),
+        transform var(--crm-motion-surface) var(--crm-ease-standard);
+    transform-origin: top center;
+}
+
+.crm-nav-group.is-collapsed .crm-nav-group__items {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--crm-shift-1)));
+}
+
+/* Стрелка-индикатор группы */
+.crm-nav-group__chev {
+    transition: transform var(--crm-motion-surface) var(--crm-ease-out);
+}
+
+.crm-nav-group.is-collapsed .crm-nav-group__chev {
+    transform: rotate(-90deg);
+}
+
+/* ----------------------------------------------------------------------------
+   2. Overlay-слои: modal, drawer, offcanvas
+   Bootstrap даёт opacity-переход через .fade. Дополняем сдвигом по оси,
+   чтобы слой «приближался», а не просто проявлялся.
+   ---------------------------------------------------------------------------- */
+.modal.fade .modal-dialog,
+.offcanvas.fade {
+    transition:
+        opacity var(--crm-motion-panel) var(--crm-ease-out),
+        transform var(--crm-motion-panel) var(--crm-ease-out);
+}
+
+.modal.fade .modal-dialog {
+    transform: translateY(calc(-1 * var(--crm-shift-3))) scale(var(--crm-scale-in));
+}
+
+.modal.fade.show .modal-dialog,
+.offcanvas.fade.show {
+    transform: none;
+}
+
+/* Боковой drawer/panel въезжает справа.
+   Примечание: у navbar-offcanvas Bootstrap включает responsive-правило
+   transition:none — оно остаётся действующим по смыслу, поскольку у
+   статичной панели transform не меняется. */
+.offcanvas.offcanvas-end,
+.offcanvas.offcanvas-start,
+.offcanvas.offcanvas-top,
+.offcanvas.offcanvas-bottom {
+    transition: transform var(--crm-motion-panel) var(--crm-ease-emphasized);
+}
+
+/* Подложка: только opacity, без анимации blur */
+.modal-backdrop.fade {
+    transition: opacity var(--crm-motion-panel) var(--crm-ease-standard);
+}
+
+/* ----------------------------------------------------------------------------
+   3. Dropdown и popover
+   Bootstrap показывает меню через display:none → block в одном кадре,
+   поэтому transition здесь не срабатывает: нужна animation, которая
+   стартует в момент появления элемента. Вход короткий — меню не должно
+   заставлять ждать.
+   ---------------------------------------------------------------------------- */
+.dropdown-menu,
+.popover {
+    transform-origin: top center;
+}
+
+.dropdown-menu.show,
+.popover.show {
+    animation: bm-overlay-in var(--crm-motion-overlay) var(--crm-ease-out) both;
+}
+
+@keyframes bm-overlay-in {
+    from {
+        opacity: 0;
+        translate: 0 calc(-1 * var(--crm-shift-1));
+        scale: var(--crm-scale-in);
+    }
+    to {
+        opacity: 1;
+        translate: 0 0;
+        scale: 1;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   4. Вкладки
+   Панели в проекте уже используют Bootstrap `.fade` (opacity-переход).
+   Здесь мы не добавляем вторую анимацию, а приводим готовую к ритму
+   системы: .15s linear → длительность из токена и осмысленная кривая.
+   Кнопки вкладок переходят вместе с панелью.
+   ---------------------------------------------------------------------------- */
+.nav-tabs .nav-link,
+.crm-tabs .nav-link {
+    transition:
+        color var(--crm-motion-surface) var(--crm-ease-standard),
+        background-color var(--crm-motion-surface) var(--crm-ease-standard),
+        border-color var(--crm-motion-surface) var(--crm-ease-standard),
+        box-shadow var(--crm-motion-surface) var(--crm-ease-standard);
+}
+
+/* Панель вкладки: Bootstrap задаёт .fade { transition: opacity .15s linear } */
+.tab-pane.fade {
+    transition:
+        opacity var(--crm-motion-content) var(--crm-ease-out),
+        transform var(--crm-motion-content) var(--crm-ease-out);
+}
+
+.tab-pane.fade:not(.show) {
+    transform: translateY(var(--crm-shift-1));
+}
+
+/* Вкладки вне Bootstrap (собственные панели) — тот же вход */
+.crm-tab-pane.is-active {
+    animation: bm-tab-in var(--crm-motion-content) var(--crm-ease-out) both;
+}
+
+@keyframes bm-tab-in {
+    from {
+        opacity: 0;
+        transform: translateY(var(--crm-shift-1));
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   5. Плавное обновление содержимого
+   Класс вешается на контейнер, который подменяется данными (AJAX-подгрузка,
+   live-лента, фильтр). Сначала гасим, потом показываем новое.
+   ---------------------------------------------------------------------------- */
+[data-bm-refresh] {
+    transition:
+        opacity var(--crm-motion-content) var(--crm-ease-standard),
+        transform var(--crm-motion-content) var(--crm-ease-standard);
+}
+
+[data-bm-refresh].is-leaving {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--crm-shift-1)));
+    pointer-events: none;
+}
+
+[data-bm-refresh].is-entering {
+    animation: bm-content-in var(--crm-motion-content) var(--crm-ease-out) both;
+}
+
+@keyframes bm-content-in {
+    from {
+        opacity: 0;
+        transform: translateY(var(--crm-shift-1));
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Новое сообщение/событие в ленте — лёгкое появление без прыжка скролла */
+.bm-enter {
+    animation: bm-content-in var(--crm-motion-content) var(--crm-ease-out) both;
+}
+
+/* ----------------------------------------------------------------------------
+   6. Skeleton — без скачков layout
+   Скелет обязан занимать ровно столько же места, сколько займёт контент.
+   Высота задаётся через --bm-skel-h (или наследуется), ширина — 100%.
+   ---------------------------------------------------------------------------- */
+.crm-skeleton,
+.bm-skel {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    background: var(--crm-table-hover, rgba(127, 127, 127, .12));
+    border-radius: var(--crm-radius-sm);
+    color: transparent;
+    user-select: none;
+    pointer-events: none;
+    min-height: var(--bm-skel-h, 1em);
+}
+
+.crm-skeleton::after,
+.bm-skel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, .18),
+        transparent
+    );
+    animation: bm-shimmer var(--crm-motion-skeleton) linear infinite;
+}
+
+/* Круглый скелет (аватар) */
+.bm-skel--avatar {
+    --bm-skel-h: 36px;
+    width: 36px;
+    border-radius: var(--crm-radius-pill);
+}
+
+/* Строка текста: ширина меньше контейнера, чтобы читалось как текст */
+.bm-skel--line {
+    --bm-skel-h: 12px;
+    height: 12px;
+    width: var(--bm-skel-w, 100%);
+}
+
+@keyframes bm-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   7. Уведомления
+   Тост въезжает и уезжает, не перекрывая содержимое резко.
+   ---------------------------------------------------------------------------- */
+.crm-toast {
+    transition:
+        opacity var(--crm-motion-overlay) var(--crm-ease-out),
+        transform var(--crm-motion-overlay) var(--crm-ease-out);
+}
+
+.crm-toast:not(.crm-toast--show) {
+    opacity: 0;
+    transform: translateY(var(--crm-shift-2)) scale(var(--crm-scale-in));
+    pointer-events: none;
+}
+
+.crm-toast.crm-toast--show {
+    opacity: 1;
+    transform: none;
+}
+
+/* Счётчик непрочитанных: короткий «толчок» при изменении значения */
+.bm-badge-bump {
+    animation: bm-bump var(--crm-motion-surface) var(--crm-ease-spring);
+}
+
+@keyframes bm-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+}
+
+/* ----------------------------------------------------------------------------
+   8. Карточки и пустые состояния при динамической подмене
+   ---------------------------------------------------------------------------- */
+.card[aria-busy="true"] {
+    transition: opacity var(--crm-motion-content) var(--crm-ease-standard);
+    opacity: .72;
+    pointer-events: none;
+}
+
+.crm-empty {
+    animation: bm-content-in var(--crm-motion-content) var(--crm-ease-out) both;
+}
+
+/* ----------------------------------------------------------------------------
+   9. Переходы между страницами
+   Кросс-документные View Transitions уже описаны в effects.css (§8).
+   Здесь — только их синхронизация с ритмом системы: длительность страницы.
+   ---------------------------------------------------------------------------- */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root) {
+    animation: bm-page-out var(--crm-motion-page) var(--crm-ease-in) both;
+}
+
+::view-transition-new(root) {
+    animation: bm-page-in var(--crm-motion-page) var(--crm-ease-out) both;
+}
+
+@keyframes bm-page-out {
+    to {
+        opacity: 0;
+        transform: scale(.995);
+    }
+}
+
+@keyframes bm-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(var(--crm-shift-1));
+    }
+}
+
+/* Если браузер не поддерживает View Transitions — ничего не ломается:
+   правила выше просто не применяются. */
+
+/* ----------------------------------------------------------------------------
+   9а. BM Chat — появление сообщения и всплывающих меню
+   Пузырь входит снизу с лёгким сдвигом (surface), меню реакций/подсказки —
+   масштабированием от 0.96. Длительности и easing — из токенов системы.
+   ---------------------------------------------------------------------------- */
+@keyframes bm-msg-in {
+    from {
+        opacity: 0;
+        transform: translateY(var(--crm-shift-1));
+    }
+}
+
+@keyframes bm-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(.96);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bm-chat__msg,
+    .bm-chat__emoji-menu,
+    .bm-chat__suggest {
+        animation: none;
+    }
+
+    .bm-chat__messages {
+        scroll-behavior: auto;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   10. Reduced motion — системная настройка пользователя
+   Снимаем всё необязательное, оставляем мгновенную смену состояний.
+   Глобальный сброс живёт в tokens.css; здесь — специфичное для системы.
+   ---------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .crm-skeleton::after,
+    .bm-skel::after {
+        animation: none;
+        transform: none;
+        background: none;
+    }
+
+    .tab-pane.fade,
+    .crm-tab-pane.is-active,
+    .bm-enter,
+    [data-bm-refresh].is-entering,
+    .crm-empty,
+    .bm-badge-bump {
+        animation: none;
+        transform: none;
+    }
+
+    .dropdown-menu.show,
+    .popover.show {
+        animation: none;
+    }
+
+    .tab-pane.fade:not(.show) {
+        transform: none;
+    }
+
+    [data-bm-refresh].is-leaving {
+        opacity: 1;
+        transform: none;
+    }
+
+    #bm-sidebar .nav-link:hover {
+        transform: none;
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation: none;
+    }
+}

@@ -16,6 +16,7 @@ use App\Models\DocumentVersion;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\LeaveRequest;
+use App\Models\Message;
 use App\Models\RfidCard;
 use App\Models\TaskAttachment;
 use App\Models\User;
@@ -67,6 +68,8 @@ final class EnsureTenantIsolation
         AppNotification::class => ['recipient'],
         TaskAttachment::class => ['task'],
         BiWidget::class => ['dashboard'],
+        // BM Chat: сообщение принадлежит диалогу, диалог — компании.
+        Message::class => ['conversation'],
     ];
 
     public function __construct(private PermissionService $permissions) {}

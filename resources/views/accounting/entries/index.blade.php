@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Бухгалтерия — Проводки')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Бухгалтерия</div>
-            <h2 class="page-title mt-1">Журнал проводок</h2>
+            <h1 class="page-title mt-1">Журнал проводок</h1>
             <div class="text-secondary mt-1">Период {{ $month }} · всего {{ $entries->total() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -29,22 +30,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-book-2"></i>Проводок</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-book-2"></i>Проводок</div>
         <div class="crm-metric__value">{{ $entries->total() }}</div>
         <div class="crm-metric__hint">за {{ $month }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-refresh"></i>Из финансов</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-refresh"></i>Из финансов</div>
         <div class="crm-metric__value">{{ $financePosted }}</div>
         <div class="crm-metric__hint">автоматические</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-clock"></i>Без проводок</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-clock"></i>Без проводок</div>
         <div class="crm-metric__value">{{ $withoutEntry }}</div>
         <div class="crm-metric__hint">операций финансов за месяц</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-scale"></i>Оборот</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-scale"></i>Оборот</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $turnover, 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">дебет за месяц</div>
     </div>
@@ -57,16 +58,16 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="2" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>№</th>
-                    <th>Дата</th>
-                    <th>Проводка</th>
-                    <th>Источник</th>
-                    <th class="text-center">Строк</th>
-                    <th class="text-end">Сумма</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">№</th>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Проводка</th>
+                    <th scope="col">Источник</th>
+                    <th scope="col" class="text-center">Строк</th>
+                    <th scope="col" class="text-end">Сумма</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -101,54 +102,91 @@
 </div>
 
 @can('checkBoxPermission', 'accounting.manage')
-<div class="modal modal-blur fade" id="newEntry" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <form class="modal-content" method="post" action="{{ route('accounting.entries.store') }}" data-submit-guard>
+@php($advancedEntry = old('entry_mode') === 'advanced')
+<div class="modal modal-blur fade" id="newEntry" tabindex="-1" aria-labelledby="newEntryTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form class="modal-content" method="post" action="{{ route('accounting.entries.store') }}" data-submit-guard data-entry-form>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новая проводка</h5></div>
-            <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ae-date">Дата<span class="req">*</span></label>
-                        <input type="date" id="ae-date" name="entry_date" class="form-control" value="{{ old('entry_date', now()->toDateString()) }}" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ae-description">Описание</label>
-                        <input type="text" id="ae-description" name="description" class="form-control" value="{{ old('description') }}" maxlength="255" placeholder="Поступление выручки">
-                    </div>
-                </div>
-                <div class="crm-form__section">
-                    <h3>Строки проводки</h3>
-                    <div class="crm-form__desc">В каждой строке заполняется только одна колонка: дебет или кредит. Суммы должны совпадать.</div>
-                    @for ($i = 0; $i < 4; $i++)
-                        <div class="crm-form__row mb-2">
-                            <div class="crm-form__field mb-0">
-                                <label class="form-label">Счёт</label>
-                                <select name="lines[{{ $i }}][account_id]" class="form-select" aria-label="Счёт строки {{ $i + 1 }}">
-                                    <option value="">— выберите —</option>
+            <input type="hidden" name="entry_mode" value="{{ $advancedEntry ? 'advanced' : 'simple' }}">
+            <div class="modal-header">
+                <h2 class="modal-title" id="newEntryTitle">Новая проводка</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body d-grid gap-3">
+                @if ($accounts->isEmpty())
+                    <p class="alert alert-info mb-0">Сначала добавьте счета в <a href="{{ route('accounting.chart.index') }}">плане счетов</a>.</p>
+                @endif
+                <fieldset id="ae-simple" class="m-0" @disabled($advancedEntry) @if ($advancedEntry) hidden @endif>
+                    <div class="row g-3">
+                        @foreach (['debit_account_id' => 'Дебет', 'credit_account_id' => 'Кредит'] as $name => $label)
+                            <div class="col-sm-6">
+                                <label class="form-label" for="ae-{{ $name }}">{{ $label }}</label>
+                                <select id="ae-{{ $name }}" name="{{ $name }}" class="form-select" required>
+                                    <option value="">Выберите счёт</option>
                                     @foreach ($accounts as $account)
-                                        <option value="{{ $account->id }}">{{ $account->code }} {{ $account->name }}</option>
+                                        <option value="{{ $account->id }}" @selected((string) old($name) === (string) $account->id)>{{ $account->code }} · {{ $account->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="crm-form__field mb-0">
-                                <label class="form-label">Дебет</label>
-                                <input type="number" name="lines[{{ $i }}][debit]" class="form-control" step="0.01" min="0" value="0">
+                        @endforeach
+                        <div class="col-sm-6">
+                            <label class="form-label" for="ae-amount">Сумма</label>
+                            <input id="ae-amount" name="amount" type="number" inputmode="decimal" step="0.01" min="0.01"
+                                   max="999999999999" class="form-control" value="{{ old('amount') }}" placeholder="0,00" required>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset id="ae-advanced" class="m-0" @disabled(! $advancedEntry) @if (! $advancedEntry) hidden @endif>
+                    <legend class="h4 mb-1">Строки проводки</legend>
+                    <p class="text-secondary small mb-3">Укажите дебет или кредит в каждой строке. Итоговые суммы должны совпасть.</p>
+                    @for ($i = 0; $i < 4; $i++)
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="ae-line-{{ $i }}">Счёт {{ $i + 1 }}</label>
+                                <select id="ae-line-{{ $i }}" name="lines[{{ $i }}][account_id]" class="form-select">
+                                    <option value="">Выберите счёт</option>
+                                    @foreach ($accounts as $account)
+                                        <option value="{{ $account->id }}" @selected((string) old("lines.$i.account_id") === (string) $account->id)>{{ $account->code }} · {{ $account->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <div class="crm-form__field mb-0">
-                                <label class="form-label">Кредит</label>
-                                <input type="number" name="lines[{{ $i }}][credit]" class="form-control" step="0.01" min="0" value="0">
-                            </div>
+                            @foreach (['debit' => 'Дебет', 'credit' => 'Кредит'] as $side => $label)
+                                <div class="col-6 col-sm-3">
+                                    <label class="form-label" for="ae-{{ $side }}-{{ $i }}">{{ $label }}</label>
+                                    <input id="ae-{{ $side }}-{{ $i }}" type="number" inputmode="decimal" name="lines[{{ $i }}][{{ $side }}]"
+                                           class="form-control" step="0.01" min="0" value="{{ old("lines.$i.$side") }}" placeholder="0,00">
+                                </div>
+                            @endforeach
                         </div>
                     @endfor
+                </fieldset>
+                <div class="row g-3 border-top pt-1">
+                    <div class="col-sm-4">
+                        <label class="form-label" for="ae-date">Дата</label>
+                        <input type="date" id="ae-date" name="entry_date" class="form-control" value="{{ old('entry_date', now()->toDateString()) }}" required>
+                    </div>
+                    <div class="col-sm-8">
+                        <label class="form-label" for="ae-description">Комментарий <span class="text-secondary fw-normal">· необязательно</span></label>
+                        <input type="text" id="ae-description" name="description" class="form-control" value="{{ old('description') }}" maxlength="255" placeholder="Например, поступление выручки">
+                    </div>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-ghost-secondary" data-entry-mode aria-controls="ae-advanced"
+                            aria-expanded="{{ $advancedEntry ? 'true' : 'false' }}" hidden>{{ $advancedEntry ? 'Обычная проводка' : 'Нужно больше строк?' }}</button>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary">Провести</button>
+                <button type="submit" class="btn btn-primary" @disabled($accounts->isEmpty())>Провести</button>
             </div>
         </form>
     </div>
 </div>
 @endcan
 @endsection
+
+@can('checkBoxPermission', 'accounting.manage')
+    @push('scripts')
+        <script src="/assets/js/accounting-entry.js?v1" defer></script>
+    @endpush
+@endcan

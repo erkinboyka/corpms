@@ -21,6 +21,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/framework/acceptance/
+/storage/framework/restore-check/
 /vendor
 _ide_helper.php
 Homestead.json

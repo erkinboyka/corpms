@@ -42,18 +42,26 @@ class BackupDatabase extends Command
         }
 
         $dir = (string) config('backup.path');
-        if (! is_dir($dir) && ! @mkdir($dir, 0775, true) && ! is_dir($dir)) {
+        if (! is_dir($dir) && ! @mkdir($dir, 0700, true) && ! is_dir($dir)) {
             $this->error("Не удалось создать каталог бэкапов: {$dir}");
 
             return self::FAILURE;
         }
 
-        $stamp = now()->format('Y_m_d_His');
+        $resolvedDir = str_replace('\\', '/', (string) realpath($dir));
+        $publicDir = str_replace('\\', '/', (string) realpath(public_path()));
+        if ($resolvedDir === '' || ($publicDir !== '' && (strtolower($resolvedDir) === strtolower($publicDir)
+            || str_starts_with(strtolower($resolvedDir), strtolower($publicDir).'/')))) {
+            $this->error('Каталог резервных копий должен находиться вне public');
+
+            return self::FAILURE;
+        }
+        $stamp = now()->format('Y_m_d_His_u').'_'.bin2hex(random_bytes(3));
 
         try {
             $file = match ($config['driver'] ?? null) {
                 'sqlite' => $this->backupSqlite($name, $config, $dir, $stamp),
-                'mysql', 'mariadb' => $this->backupMysql($config, $dir, $stamp),
+                'mysql', 'mariadb' => $this->backupMysql($name, $config, $dir, $stamp),
                 default => throw new RuntimeException(
                     'Драйвер ['.($config['driver'] ?? 'null').'] не поддерживается этой командой'
                 ),
@@ -66,7 +74,8 @@ class BackupDatabase extends Command
         }
 
         $keep = (int) ($this->option('keep') ?: config('backup.keep'));
-        $removed = $this->rotate($dir, $keep);
+        @chmod($file, 0600);
+        $removed = $this->rotate($dir, $name, $keep);
 
         $size = (int) @filesize($file);
         $this->info(sprintf(
@@ -114,10 +123,10 @@ class BackupDatabase extends Command
     }
 
     /** Дамп mysql/mariadb через mysqldump. */
-    private function backupMysql(array $config, string $dir, string $stamp): string
+    private function backupMysql(string $name, array $config, string $dir, string $stamp): string
     {
         $binary = (string) (env('DB_DUMP_BINARY') ?: 'mysqldump');
-        $target = $dir."/mysql_{$stamp}.sql";
+        $target = $dir."/{$name}_{$stamp}.sql";
 
         $process = new Process([
             $binary,
@@ -152,15 +161,15 @@ class BackupDatabase extends Command
     }
 
     /** Ротация: оставляем $keep свежайших копий, остальные удаляем. */
-    private function rotate(string $dir, int $keep): int
+    private function rotate(string $dir, string $name, int $keep): int
     {
         if ($keep < 1) {
             return 0;
         }
 
         $files = array_merge(
-            glob($dir.'/*.sql') ?: [],
-            glob($dir.'/*.sqlite') ?: [],
+            glob($dir.'/'.$name.'_*.sql') ?: [],
+            glob($dir.'/'.$name.'_*.sqlite') ?: [],
         );
 
         usort($files, fn (string $a, string $b): int => filemtime($b) <=> filemtime($a));

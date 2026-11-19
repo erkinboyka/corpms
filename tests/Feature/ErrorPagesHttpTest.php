@@ -31,7 +31,7 @@ class ErrorPagesHttpTest extends TestCase
 
         $response->assertNotFound();
         $response->assertSee('Страница не найдена');
-        $response->assertSee('CorpMS');
+        $response->assertSee('BM Systems');
 
         // сообщение исключения и внутренние детали не показываются
         $response->assertDontSee('SQLSTATE');
@@ -103,7 +103,7 @@ class ErrorPagesHttpTest extends TestCase
             ])->render();
 
             self::assertStringContainsString($title, $html, "страница {$code}");
-            self::assertStringContainsString('CorpMS', $html, "страница {$code}");
+            self::assertStringContainsString('BM Systems', $html, "страница {$code}");
         }
     }
 }

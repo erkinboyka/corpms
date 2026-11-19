@@ -3,53 +3,49 @@
 @section('title', 'Вход')
 
 @section('content')
-    <div class="row justify-content-center">
-        <div class="col-12">
-            <div class="text-center mb-4">
-                <div><span class="navbar-brand d-inline-flex align-items-center fs-2"><i class="ti ti-building-castle me-2"></i>CorpMS</span></div>
-                <div class="crm-tagline">Корпоративная система управления</div>
-            </div>
-            <div class="card card-md">
-                <div class="card-body p-4">
-                    <h2 class="h2 mb-1">Вход в систему</h2>
-                    <p class="text-secondary mb-4">Введите учётные данные вашего аккаунта</p>
+    <div class="card">
+        <div class="card-body p-4">
+            <h1 class="h2 mb-1">Вход в систему</h1>
+            <p class="text-secondary mb-4">Войдите с рабочей почтой и паролем.</p>
 
-                    <form method="POST" action="{{ route('login') }}">
-                        @csrf
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
 
-                        <div class="mb-3">
-                            <label class="form-label" for="email">Email</label>
-                            <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                                   placeholder="you@company.local" value="{{ old('email') }}" autocomplete="username">
-                            @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label" for="password">Пароль</label>
-                            <input type="password" id="password" name="password" class="form-control"
-                                   autocomplete="current-password" placeholder="Ваш пароль">
-                            @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-check form-check-inline m-0">
-                                <input class="form-check-input" type="checkbox" name="remember" value="1">
-                                <span class="form-check-label">Запомнить меня</span>
-                            </label>
-                        </div>
-
-                        <div class="form-footer">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="ti ti-lock me-1"></i> Войти
-                            </button>
-                        </div>
-
-                        <div class="text-center mt-3">
-                            <a href="{{ route('password.request') }}" class="text-secondary">Забыли пароль?</a>
-                        </div>
-                    </form>
+                <div class="mb-3">
+                    <label class="form-label" for="email">Рабочая почта</label>
+                    <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror"
+                           placeholder="name@company.ru" value="{{ old('email') }}" autocomplete="username" required autofocus
+                           @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
+                    @error('email') <div class="invalid-feedback" id="email-error">{{ $message }}</div> @enderror
                 </div>
-            </div>
+
+                <div class="mb-2">
+                    <label class="form-label" for="password">Пароль</label>
+                    <div class="bm-password">
+                        <input type="password" id="password" name="password" class="form-control @error('password') is-invalid @enderror"
+                           autocomplete="current-password" required
+                           @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
+                        <button type="button" class="bm-password-toggle" aria-label="Показать пароль" aria-controls="password" aria-pressed="false" hidden>
+                            <i class="ti ti-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    @error('password') <div class="invalid-feedback" id="password-error">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="mb-2 d-flex justify-content-between align-items-center">
+                    <label class="form-check form-check-inline m-0">
+                        <input class="form-check-input" type="checkbox" name="remember" value="1">
+                        <span class="form-check-label">Запомнить меня</span>
+                    </label>
+                    <a href="{{ route('password.request') }}" class="small">Забыли пароль?</a>
+                </div>
+
+                <div class="form-footer">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="ti ti-lock me-1"></i> Войти
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 @endsection

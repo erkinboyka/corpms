@@ -66,12 +66,16 @@ class AiToolRegistry
                 continue;
             }
 
+            $schema = $definition['schema'];
+            if (($schema['properties'] ?? []) === []) {
+                $schema['properties'] = new \stdClass;
+            }
             $tools[] = [
                 'type' => 'function',
                 'function' => [
                     'name' => $name,
                     'description' => $definition['description'],
-                    'parameters' => $definition['schema'],
+                    'parameters' => $schema,
                 ],
             ];
         }
@@ -510,6 +514,11 @@ class AiToolRegistry
             'profit' => $metrics['profit'],
             'balance' => $metrics['balance'],
             'unpaid_invoices' => $metrics['unpaid'],
+            'currency' => $metrics['currency'],
+            'by_currency' => $metrics['by_currency'],
+            'currency_note' => $metrics['mixed_currencies']
+                ? 'Totals across currencies are unavailable. Use by_currency. Legacy invoices and budgets have no assigned currency; do not infer or convert their amounts.'
+                : 'Amounts use the ledger currency. No exchange conversion has been applied.',
             'url' => route('finance.transactions.index', ['month' => $month]),
         ];
     }

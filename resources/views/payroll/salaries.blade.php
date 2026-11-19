@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Зарплата — Оклады и компоненты')
 
@@ -15,7 +16,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Зарплата</div>
-            <h2 class="page-title mt-1">Оклады и компоненты</h2>
+            <h1 class="page-title mt-1">Оклады и компоненты</h1>
             <div class="text-secondary mt-1" id="pay-lede">Базовая сумма каждого сотрудника.</div>
         </div>
     </div>
@@ -71,7 +72,7 @@
             </div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-coins"></i>Средний оклад</div>
+            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-coins"></i>Средний оклад</div>
             <div class="crm-metric__value">{{ number_format($totals['avg'], 2, ',', ' ') }}</div>
         </div>
         <div class="crm-metric">
@@ -79,14 +80,14 @@
             <div class="crm-metric__value">{{ $totals['components'] }}</div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-toggle-right"></i>Активных</div>
+            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-toggle-right"></i>Активных</div>
             <div class="crm-metric__value">{{ $totals['active'] }}</div>
         </div>
     </div>
 
     <div class="card mb-3">
         <div class="card-header">
-            <strong>Оклады сотрудников</strong>
+            <h2 class="card-title bm-section-title">Оклады сотрудников</h2>
             <span class="crm-chip ms-auto" id="salaries-count">{{ $salaries->count() }} назначено</span>
         </div>
         <div class="card-body pb-0 d-print-none">
@@ -97,11 +98,11 @@
             </div>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-vcenter card-table mb-0">
+            <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th>Сотрудник</th><th>Отдел / должность</th>
-                        <th class="text-end">Базовая сумма</th><th>Валюта</th><th>С какой даты</th>
+                        <th scope="col">Сотрудник</th><th scope="col">Отдел / должность</th>
+                        <th scope="col" class="text-end">Базовая сумма</th><th scope="col">Валюта</th><th scope="col">С какой даты</th>
                     </tr>
                 </thead>
                 <tbody id="salaries-tbody">
@@ -149,7 +150,7 @@
 
     <div class="card mb-3">
         <div class="card-header">
-            <strong>Общие правила расчёта</strong>
+            <h2 class="card-title bm-section-title">Общие правила расчёта</h2>
             <span class="crm-chip ms-auto" id="components-count">{{ $components->count() }} правил</span>
         </div>
         <div class="card-body pb-0 d-print-none">
@@ -164,12 +165,12 @@
             </div>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-vcenter card-table mb-0">
+            <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th>Код</th><th>Правило</th><th>Влияние</th><th>Как считается</th>
-                        <th class="text-end">Значение</th><th>В расчёте</th>
-                        @if ($canManage)<th class="text-end">Действие</th>@endif
+                        <th scope="col">Код</th><th scope="col">Правило</th><th scope="col">Влияние</th><th scope="col">Как считается</th>
+                        <th scope="col" class="text-end">Значение</th><th scope="col">В расчёте</th>
+                        @if ($canManage)<th scope="col" class="text-end">Действие</th>@endif
                     </tr>
                 </thead>
                 <tbody id="components-tbody">
@@ -230,7 +231,7 @@
             <div class="crm-metric__value">{{ $totals['withSalary'] }}<small> / {{ $totals['employees'] }}</small></div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-toggle-right"></i>Правил активно</div>
+            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-toggle-right"></i>Правил активно</div>
             <div class="crm-metric__value">{{ $totals['active'] }}<small> / {{ $totals['components'] }}</small></div>
         </div>
     </div>
@@ -280,14 +281,13 @@
                             <input type="number" id="ns-amount" name="base_amount" class="form-control" required min="0" step="0.01" placeholder="5000.00" inputmode="decimal">
                             <div class="form-text">Только число, без пробелов.</div>
                         </div>
-                        <div class="crm-form__field">
-                            <label class="form-label" for="ns-currency">Валюта<span class="req">*</span></label>
-                            <select id="ns-currency" name="currency" class="form-select" required>
-                                @foreach ($currencies as $code)
-                                    <option value="{{ $code }}" @selected($code === 'TJS')>{{ $code }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        @include('partials.currency-select', [
+                            'id' => 'ns-currency',
+                            'name' => 'currency',
+                            'value' => old('currency', 'TJS'),
+                            'label' => 'Валюта',
+                            'required' => true,
+                        ])
                         <div class="crm-form__field">
                             <label class="form-label" for="ns-from">Действует с<span class="req">*</span></label>
                             <input type="date" id="ns-from" name="effective_from" class="form-control" required value="{{ now()->toDateString() }}">
@@ -550,7 +550,6 @@
         var total = screens.length;
         if (!total || !stepBtns.length) { return; }
 
-        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         function stepFromHash() {
             var m = /^#step-([1-9][0-9]*)$/.exec(window.location.hash || '');
@@ -595,7 +594,7 @@
                 }
                 var stepper = flow.querySelector('.pay-stepper');
                 if (stepper && stepper.scrollIntoView) {
-                    stepper.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                    stepper.scrollIntoView({ behavior: 'instant', block: 'start' });
                 }
             }
         }

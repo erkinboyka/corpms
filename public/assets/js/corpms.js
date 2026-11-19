@@ -1,7 +1,6 @@
 /* ============================================================================
    CorpMS — фронтенд-скрипт (без сборщика, целенаправленно статический)
    - переключение светлой/тёмной темы с сохранением + синхронизация вкладок
-   - покадровое появление блоков при скролле (IntersectionObserver)
    - «волна» на клик для кнопок и элементов меню
    - живой поиск в топбаре (подсказки списком с blur-панелью)
    - память скролла: страница на «Назад» и позиция сайдбара всегда
@@ -34,9 +33,42 @@
         if (typeof retintRichEditors === 'function') { retintRichEditors(); }
     }
 
-    function setTheme(theme) {
-        applyTheme(theme);
+    var themeTransition;
+    function setTheme(theme, trigger) {
         try { localStorage.setItem(KEY, theme); } catch (e) { /* private mode */ }
+        if (themeTransition) {
+            themeTransition.skipTransition();
+            themeTransition = null;
+            document.documentElement.classList.remove('crm-theme-transition');
+            applyTheme(theme);
+            return;
+        }
+        if (!trigger || !document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            applyTheme(theme);
+            return;
+        }
+        var root = document.documentElement;
+        var rect = trigger.getBoundingClientRect();
+        var x = rect.left + rect.width / 2;
+        var y = rect.top + rect.height / 2;
+        var radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        root.classList.add('crm-theme-transition');
+        var transition = document.startViewTransition(function () {
+            if (themeTransition === transition) { applyTheme(theme); }
+        });
+        themeTransition = transition;
+        transition.ready.then(function () {
+            var duration = getComputedStyle(root).getPropertyValue('--crm-motion-panel').trim();
+            root.animate({
+                clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + radius + 'px at ' + x + 'px ' + y + 'px)']
+            }, { duration: parseFloat(duration) * (duration.endsWith('ms') ? 1 : 1000) || 520,
+                easing: 'cubic-bezier(.2, 0, 0, 1)', pseudoElement: '::view-transition-new(root)' });
+        }).catch(function () { /* снимок мог быть пропущен браузером */ });
+        transition.finished.finally(function () {
+            if (themeTransition !== transition) { return; }
+            themeTransition = null;
+            root.classList.remove('crm-theme-transition');
+        }).catch(function () {});
     }
 
     /* тумблер: кнопка(и) по классу, иконка меняется CSS-ом от data-bs-theme */
@@ -44,7 +76,7 @@
         var button = event.target.closest && event.target.closest('.crm-theme-toggle');
         if (button) {
             event.preventDefault();
-            setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+            setTheme(currentTheme() === 'dark' ? 'light' : 'dark', button);
         }
     });
 
@@ -118,7 +150,7 @@
         if (!input || !input.name) { return; }
 
         if (input.name === 'crm-c-theme') {
-            setTheme(input.value);
+            setTheme(input.value, input);
             return;
         }
 
@@ -160,45 +192,6 @@
             syncCustomizeForm();
         }
     });
-
-    /* ---------- плавное появление при скролле ---------- */
-
-    function initReveal() {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            return; /* системно отключены анимации */
-        }
-        if (typeof IntersectionObserver === 'undefined') {
-            return; /* старые браузеры показывают всё сразу */
-        }
-
-        var targets = [];
-        var nodes = document.querySelectorAll('.page-body .card, .page-body .page-header, footer.footer');
-        for (var i = 0; i < nodes.length; i++) {
-            var el = nodes[i];
-            /* модалки не участвуют; детей каскада (row-cards) анимирует чистый CSS */
-            if (el.closest && el.closest('.modal')) { continue; }
-            if (el.parentElement && el.parentElement.classList.contains('row-cards')) { continue; }
-            if (el.dataset.crmReveal === '1') { continue; }
-            el.dataset.crmReveal = '1';
-            targets.push(el);
-        }
-
-        if (targets.length === 0) { return; }
-
-        var observer = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('crm-in');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.05, rootMargin: '0px 0px -40px 0px' });
-
-        targets.forEach(function (el) {
-            el.classList.add('crm-reveal');
-            observer.observe(el);
-        });
-    }
 
     /* ---------- волна на клик ---------- */
 
@@ -244,49 +237,46 @@
     function initScrollMemory() {
         /* --- страница: запоминаем позицию каждой и возвращаемся по «Назад/Вперёд» --- */
 
-        var map = readJSON(SCROLL_PAGE_KEY) || {};
         var url = location.pathname + location.search;
+        var side = document.querySelector('#bm-sidebar .bm-dock__body, aside.navbar-vertical');
+        var SIDEBAR_KEY = 'crm-sidebar-scroll';
 
-        /* prune: максимум N записей */
-        var urls = Object.keys(map);
-        while (urls.length > SCROLL_PAGE_MAX) {
-            delete map[urls.shift()];
-            urls = Object.keys(map);
-        }
-
-        var saveTimer = null;
-        window.addEventListener('scroll', function () {
-            if (saveTimer !== null) { return; }
-            saveTimer = window.setTimeout(function () {
-                saveTimer = null;
-                map[url] = Math.round(window.scrollY || document.documentElement.scrollTop || 0);
-                writeJSON(SCROLL_PAGE_KEY, map);
-            }, 180);
-        }, { passive: true });
+        /* Синхронное хранилище трогаем при уходе со страницы, не при прокрутке. */
+        window.addEventListener('pagehide', function () {
+            var map = readJSON(SCROLL_PAGE_KEY) || {};
+            delete map[url];
+            map[url] = Math.round(window.scrollY);
+            Object.keys(map).slice(0, -SCROLL_PAGE_MAX).forEach(function (key) { delete map[key]; });
+            writeJSON(SCROLL_PAGE_KEY, map);
+            if (side && side.clientHeight) { writeJSON(SIDEBAR_KEY, side.scrollTop); }
+        });
 
         var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
         if (nav && (nav.type === 'back_forward' || nav.type === 'reload')) {
-            var remembered = map[url];
+            var remembered = (readJSON(SCROLL_PAGE_KEY) || {})[url];
             if (typeof remembered === 'number' && remembered > 0) {
-                window.scrollTo(0, remembered);
+                /* мгновенно: из-за scroll-behavior:smooth страница сама «доезжала»
+                   до запомненной позиции поверх входящих анимаций — выглядело как глюк */
+                try {
+                    window.scrollTo({ top: remembered, behavior: 'instant' });
+                } catch (e) {
+                    window.scrollTo(0, remembered);
+                }
             }
         }
 
         /* --- сайдбар: позиция внутри списка разделов сохраняется всегда --- */
 
-        var side = document.querySelector('aside.navbar-vertical');
-        var SIDEBAR_KEY = 'crm-sidebar-scroll';
         if (side) {
-            var prev = parseInt(sessionStorage.getItem(SIDEBAR_KEY), 10);
-            if (!isNaN(prev) && prev > 0) { side.scrollTop = prev; }
-            var sideTimer = null;
-            side.addEventListener('scroll', function () {
-                if (sideTimer !== null) { return; }
-                sideTimer = window.setTimeout(function () {
-                    sideTimer = null;
-                    try { sessionStorage.setItem(SIDEBAR_KEY, String(side.scrollTop)); } catch (e) { /* ignore */ }
-                }, 180);
-            }, { passive: true });
+            var prev = readJSON(SIDEBAR_KEY);
+            if (typeof prev === 'number' && prev > 0) {
+                if (side.clientHeight) { side.scrollTop = prev; }
+                else {
+                    side.addEventListener('shown.bs.collapse', function () {
+                        side.scrollTop = prev;
+                    }, { once: true });
+                }
+            }
         }
     }
 
@@ -299,6 +289,7 @@
         var hintURL = host.dataset.hintUrl || '';
         var fullURL = host.dataset.fullUrl || '';
         var timer = null;
+        var hideTimer = null;
         var active = -1; /* индекс активного элемента в списке ссылок */
         var seq = 0; /* номер запроса: применяем только последний (C5) */
 
@@ -368,17 +359,35 @@
                 });
         }
 
+        /* Панель открывается/закрывается классом .is-open — одна transition на
+           opacity+transform (effects.css). Раньше здесь жили одновременно
+           inline-стили и CSS-animation crm-pop: они перебивали друг друга,
+           из-за чего панель выскакивала без плавности и исчезала рывком. */
         function show() {
+            window.clearTimeout(hideTimer);
             panel.hidden = false;
+            panel.inert = false;
+            if (!panel.classList.contains('is-open')) {
+                void panel.offsetWidth; /* закрываемое состояние должно отрисоваться до класса */
+                panel.classList.add('is-open');
+            }
             input.setAttribute('aria-expanded', 'true');
         }
 
         function hide() {
+            window.clearTimeout(timer);
             seq++; /* ответ, пришедший после закрытия, не должен открыть панель заново */
-            panel.hidden = true;
-            panel.removeAttribute('aria-busy');
+            if (!panel.classList.contains('is-open')) { return; }
+            panel.classList.remove('is-open');
+            panel.inert = true;
             input.setAttribute('aria-expanded', 'false');
             active = -1;
+            window.clearTimeout(hideTimer);
+            hideTimer = window.setTimeout(function () {
+                if (panel.classList.contains('is-open')) { return; } /* успели открыть снова */
+                panel.hidden = true;
+                panel.removeAttribute('aria-busy');
+            }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 360);
         }
 
         function items() {
@@ -395,6 +404,7 @@
         input.addEventListener('input', function () {
             var query = input.value.trim();
             window.clearTimeout(timer);
+            seq++;
             if (query.length < 2) {
                 hide();
                 return;
@@ -403,7 +413,8 @@
         });
 
         input.addEventListener('focus', function () {
-            if (input.value.trim().length >= 2 && panel.innerHTML !== '') { show(); }
+            var query = input.value.trim();
+            if (query.length >= 2) { fetchHints(query); }
         });
 
         input.addEventListener('keydown', function (event) {
@@ -413,7 +424,7 @@
                 input.blur();
                 return;
             }
-            if (panel.hidden || list.length === 0) { return; }
+            if (!panel.classList.contains('is-open') || list.length === 0) { return; }
             if (event.key === 'ArrowDown') {
                 event.preventDefault();
                 setActive(active + 1);
@@ -518,21 +529,60 @@
             if (all[active].scrollIntoView) { all[active].scrollIntoView({ block: 'nearest' }); }
         }
 
+        var closeTimer = null;
+        var previousFocus = null;
+        var scrollLocked = false;
+        var originalPadRight = null;
+
+        /* overflow:hidden на body убирает полосу прокрутки и сдвигает страницу —
+           компенсируем отступом, как это делает Bootstrap для модалок */
+        function lockScroll(on) {
+            if (on === scrollLocked) { return; }
+            scrollLocked = on;
+            if (on) {
+                originalPadRight = document.body.style.paddingRight;
+                var gap = window.innerWidth - document.documentElement.clientWidth;
+                document.body.style.paddingRight = gap > 0 ? gap + 'px' : originalPadRight;
+                document.body.classList.add('crm-palette-open');
+            } else {
+                document.body.classList.remove('crm-palette-open');
+                document.body.style.paddingRight = originalPadRight || '';
+                originalPadRight = null;
+            }
+        }
+
         function open() {
+            if (palette.classList.contains('is-open')) { return; }
+            window.clearTimeout(closeTimer);
+            previousFocus = document.activeElement;
             palette.hidden = false;
+            palette.inert = false;
             input.value = '';
             render();
-            input.focus();
-            document.body.classList.add('crm-palette-open');
+            void palette.offsetWidth; /* закрытое состояние рисуется до класса */
+            palette.classList.add('is-open');
+            input.focus({ preventScroll: true });
+            lockScroll(true);
         }
 
         function close() {
-            palette.hidden = true;
-            document.body.classList.remove('crm-palette-open');
+            if (!palette.classList.contains('is-open')) { return; }
+            palette.classList.remove('is-open');
+            palette.inert = true;
+            if (previousFocus && previousFocus.isConnected) {
+                previousFocus.focus({ preventScroll: true });
+            }
+            previousFocus = null;
+            window.clearTimeout(closeTimer);
+            closeTimer = window.setTimeout(function () {
+                if (palette.classList.contains('is-open')) { return; } /* успели открыть снова */
+                palette.hidden = true;
+                lockScroll(false);
+            }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 360);
         }
 
         function toggle() {
-            if (palette.hidden) { open(); } else { close(); }
+            if (palette.classList.contains('is-open')) { close(); } else { open(); }
         }
 
         document.addEventListener('keydown', function (event) {
@@ -552,7 +602,6 @@
         input.addEventListener('input', render);
 
         input.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') { event.preventDefault(); close(); return; }
             if (event.key === 'ArrowDown') { event.preventDefault(); setActive(active + 1); return; }
             if (event.key === 'ArrowUp') { event.preventDefault(); setActive(active - 1); return; }
             if (event.key === 'Enter') {
@@ -566,6 +615,9 @@
                 }
             }
         });
+        palette.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') { event.preventDefault(); close(); }
+        });
 
         list.addEventListener('click', function (event) {
             if (event.target.closest && event.target.closest('.crm-palette__item')) { close(); }
@@ -578,7 +630,9 @@
         if (!clock) { return; }
         var tick = function () {
             try {
-                clock.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                clock.textContent = new Date().toLocaleTimeString('ru-RU', {
+                    hour: '2-digit', minute: '2-digit', timeZone: clock.dataset.timeZone || undefined,
+                });
             } catch (e) { /* ignore */ }
         };
         tick();
@@ -617,42 +671,34 @@
                 var container = document.querySelector('[data-crm-view-container="' + key + '"]');
                 if (!container) { return; }
                 var buttons = group.querySelectorAll('button[data-view]');
-                var apply = function (view) {
+                if (!buttons.length) { return; }
+                var blocks = container.querySelectorAll('[data-view-only]');
+                var apply = function (view, animate) {
+                    if (container.dataset.view === view) { return; }
                     container.setAttribute('data-view', view);
                     for (var b = 0; b < buttons.length; b++) {
-                        buttons[b].classList.toggle('is-active', buttons[b].getAttribute('data-view') === view);
+                        var selected = buttons[b].dataset.view === view;
+                        buttons[b].classList.toggle('is-active', selected);
+                        buttons[b].setAttribute('aria-pressed', String(selected));
+                    }
+                    for (var i = 0; i < blocks.length; i++) {
+                        var visible = blocks[i].dataset.viewOnly === view;
+                        blocks[i].hidden = !visible;
+                        blocks[i].classList.toggle('crm-view-enter', visible && animate);
                     }
                     try { localStorage.setItem('crm-view-' + key, view); } catch (e) { /* private */ }
                 };
                 var saved = null;
                 try { saved = localStorage.getItem('crm-view-' + key); } catch (e) { /* private */ }
-                var initial = saved || container.getAttribute('data-view-default') || buttons[0].getAttribute('data-view');
-                apply(initial);
+                var valid = Array.from(buttons).some(function (button) { return button.dataset.view === saved; });
+                var initial = (valid && saved) || container.getAttribute('data-view-default') || buttons[0].dataset.view;
+                apply(initial, false);
                 group.addEventListener('click', function (event) {
                     var btn = event.target.closest && event.target.closest('button[data-view]');
-                    if (btn) { apply(btn.getAttribute('data-view')); }
+                    if (btn) { apply(btn.dataset.view, true); }
                 });
             })(groups[g]);
         }
-        /* переключение видимости секций [data-view-only] внутри container */
-        var obs = function () {
-            var conts = document.querySelectorAll('[data-crm-view-container]');
-            for (var i = 0; i < conts.length; i++) {
-                (function (container) {
-                    var view = container.getAttribute('data-view');
-                    var blocks = container.querySelectorAll('[data-view-only]');
-                    for (var b = 0; b < blocks.length; b++) {
-                        blocks[b].style.display = blocks[b].getAttribute('data-view-only') === view ? '' : 'none';
-                    }
-                })(conts[i]);
-            }
-        };
-        document.addEventListener('click', function (e) {
-            if (e.target.closest && e.target.closest('[data-crm-switch] button[data-view]')) {
-                window.setTimeout(obs, 0);
-            }
-        });
-        obs();
     }
 
     /* --- Kanban: перетаскивание карточки между колонками -> PUT /tasks/{id}/status
@@ -904,33 +950,9 @@
             event.preventDefault();
             target.click();
             if (typeof target.scrollIntoView === 'function') {
-                target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                target.scrollIntoView({ block: 'nearest', behavior: 'instant' });
             }
         });
-    }
-
-    /* --- Хедер: прячем при скролле вниз, возвращаем при скролле вверх --- */
-    function initHeaderAutohide() {
-        var header = document.querySelector('.page-wrapper > header.navbar');
-        if (!header) { return; }
-        var lastY = window.scrollY || 0;
-        var hidden = false;
-        var threshold = 8; /* гистерезис против микро-дрожания */
-        window.addEventListener('scroll', function () {
-            var y = window.scrollY || document.documentElement.scrollTop || 0;
-            var delta = y - lastY;
-            if (Math.abs(delta) < threshold) { return; }
-            lastY = y;
-            if (y < 80) {
-                hidden = false;
-            } else if (delta > 0 && !hidden) {
-                hidden = true;
-            } else if (delta < 0 && hidden) {
-                hidden = false;
-            }
-            header.classList.toggle('crm-header-hidden', hidden);
-            header.classList.toggle('crm-header-stuck', y >= 80);
-        }, { passive: true });
     }
 
     /* --- Ссылка-якорь на модалку (например, из пустого состояния): href="#modalId" --- */
@@ -995,7 +1017,7 @@
 
                 /* активный раздел всегда раскрыт — иначе пользователь «теряет» текущую страницу */
                 var hasActive = group.classList.contains('is-active-group');
-                var collapsed = hasActive ? false : state[label] === true;
+                var collapsed = !hasActive && state[label] !== false;
 
                 function apply() {
                     group.classList.toggle('is-collapsed', collapsed);
@@ -1066,7 +1088,18 @@
         document.head.appendChild(style);
     }
 
-    /* опции TinyMCE: скин и фон тела документа — по текущей теме */
+    /* опции TinyMCE: скин и фон тела документа — по текущей теме.
+       Высота подбирается под размер поля: короткие заметки — компактно,
+       описания и тексты документов — полноценный редактор. */
+    function richEditorHeight(textarea) {
+        var explicit = parseInt(textarea.getAttribute('data-rich-height'), 10);
+        if (explicit) { return explicit; }
+        var rows = parseInt(textarea.getAttribute('rows'), 10) || 4;
+        if (rows <= 2) { return 170; }
+        if (rows <= 4) { return 230; }
+        return 300;
+    }
+
     function richEditorOptions(textarea) {
         var dark = currentTheme() === 'dark';
         return {
@@ -1080,7 +1113,7 @@
             promotion: false,
             branding: false,
             resize: true,
-            height: 280,
+            height: richEditorHeight(textarea),
             plugins: 'autolink lists link table code searchreplace wordcount fullscreen',
             toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | blockquote | link table | code fullscreen',
             content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.6; padding: 10px 14px; ' +
@@ -1205,7 +1238,7 @@
         /* мультивыбор исполнителей задачи (сотрудники + отделы) */
         '#nt-employees', '#nt-departments',
         /* страны в полях телефона: поиск + группы (часто 2 селекта на странице) */
-        'select[data-crm-phone-country]'
+        'select[data-crm-phone-country]', 'select[data-chat-employee-select]'
     ];
 
     function initSelect2Fields() {
@@ -1273,13 +1306,32 @@
                         || ((first && first.value === '' && first.text.trim())
                             ? first.text.trim()
                             : (multiple ? 'выбрать…' : null));
-                    $(select).select2({
+                    var options = {
                         language: 'ru',
                         allowClear: !select.hasAttribute('required') && !country,
                         placeholder: ph,
                         dropdownParent: modal ? $(modal) : null,
                         dropdownAutoWidth: country
-                    });
+                    };
+                    if (select.dataset.chatEmployeeSelect) {
+                        options.width = '100%';
+                        options.minimumInputLength = 2;
+                        options.maximumInputLength = 120;
+                        if (multiple) { options.maximumSelectionLength = 200; }
+                        options.ajax = {
+                            url: select.dataset.chatEmployeeSelect,
+                            delay: 250,
+                            dataType: 'json',
+                            data: function (params) { return { q: params.term }; },
+                            processResults: function (data) {
+                                return { results: data.employees.map(function (row) {
+                                    var name = [row.last_name, row.first_name].filter(Boolean).join(' ');
+                                    return { id: String(row.id), text: [name, row.email].filter(Boolean).join(' · ') };
+                                }) };
+                            }
+                        };
+                    }
+                    $(select).select2(options);
                     /* select2 шлёт change через jQuery — нативных слушателей
                        (dirty-guard и др.) он не достигает, досылаем вручную */
                     $(select).on('select2:select select2:clear select2:unselect', function () {
@@ -2554,13 +2606,11 @@
     function initAll() {
         ensureUtilStyles();
         ensureSectionStyles();
-        initReveal();
         initRipple();
         initSearch();
         initCommandPalette();
         initTabJump();
         initModalAnchor();
-        initHeaderAutohide();
         initScrollMemory();
         initClock();
         initCountUp();

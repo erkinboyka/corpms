@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'Отчёт: кадры')
 
@@ -16,7 +17,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Отчёты</div>
-            <h2 class="page-title mt-1">Кадровый отчёт</h2>
+            <h1 class="page-title mt-1">Кадровый отчёт</h1>
             <div class="text-secondary mt-1">Численность по подразделениям · scope: {{ $scope === 'company' ? 'компания' : ($scope === 'department' ? 'подразделение' : 'личный') }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -30,22 +31,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-user-check"></i>Активных сотрудников</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-user-check"></i>Активных сотрудников</div>
         <div class="crm-metric__value">{{ $headcount['active'] }}</div>
         <div class="crm-metric__hint">со статусом «активен»</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-users"></i>Всего в scope</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-users"></i>Всего в scope</div>
         <div class="crm-metric__value">{{ $total }}</div>
         <div class="crm-metric__hint">включая неактивных</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-building"></i>Подразделений</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-building"></i>Подразделений</div>
         <div class="crm-metric__value">{{ count($departments) }}</div>
         <div class="crm-metric__hint">с сотрудниками в scope</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-trending-up"></i>Крупнейший отдел</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-trending-up"></i>Крупнейший отдел</div>
         <div class="crm-metric__value">{{ $maxDept }} <small>чел.</small></div>
         <div class="crm-metric__hint">{{ $total > 0 ? (int) round(100 * $maxDept / $total) : 0 }}% численности</div>
     </div>

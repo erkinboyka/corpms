@@ -3,8 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="@yield('meta_description', 'BM Systems — единая бизнес-платформа: сотрудники, задачи, CRM, финансы, документы и аналитика в одном интерфейсе.')">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'CorpMS') — CorpMS</title>
+    @if (config('broadcasting.default') === 'reverb' && config('broadcasting.connections.reverb.key'))
+        {{-- параметры realtime-канала для Echo (см. assets/js/bm-realtime.js) --}}
+        <meta name="reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+        <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host') }}">
+        <meta name="reverb-port" content="{{ (string) config('broadcasting.connections.reverb.options.port') }}">
+        <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
+        @auth
+            <meta name="employee-id" content="{{ (string) auth()->user()->employee?->id }}">
+        @endauth
+    @endif
+    <title>@yield('title', 'BM Systems') — BM Systems</title>
 
     {{-- тема до отрисовки (без «вспышки») --}}
     <script>
@@ -23,6 +34,10 @@
                 if (s && /^(sm|md|lg)$/.test(s) && s !== 'md') {
                     document.documentElement.setAttribute('data-crm-scale', s);
                 }
+                var r = localStorage.getItem('bm-side-rail');
+                if (r === '1') {
+                    document.documentElement.classList.add('bm-side-rail');
+                }
             } catch (e) { /* private mode: оставляем light */ }
         })();
     </script>
@@ -31,16 +46,25 @@
     <link rel="preload" href="/assets/vendor/fonts/tabler-icons.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/assets/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/vendor/tabler-icons.min.css">
-    <link rel="stylesheet" href="/assets/css/tokens.css?v10">
-    <link rel="stylesheet" href="/assets/css/effects.css?v45">
-    <link rel="stylesheet" href="/assets/css/corpms.css?v6">
-    <link rel="stylesheet" href="/assets/css/ai-panel.css?v1">
+    <link rel="stylesheet" href="/assets/css/tokens.css?v34">
+    <link rel="stylesheet" href="/assets/css/effects.css?v53">
+    <link rel="stylesheet" href="/assets/css/corpms.css?v7">
+    <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
+    <link rel="stylesheet" href="/assets/css/ai-panel.css?v15">
+    <link rel="stylesheet" href="/assets/css/motion.css?v4">
     <script src="/assets/vendor/tabler.min.js" defer></script>
-    <script src="/assets/js/corpms.js?v39" defer></script>
-    <script src="/assets/js/ai-panel.js?v2" defer></script>
+    <script src="/assets/js/corpms.js?v48" defer></script>
+    <script src="/assets/js/bm-ui.js?v4" defer></script>
+    <script src="/assets/js/ai-panel.js?v13" defer></script>
+    <script src="/assets/vendor/echo/pusher.min.js" defer></script>
+    <script src="/assets/vendor/echo/echo.iife.js" defer></script>
+    <script src="/assets/js/bm-realtime.js?v1" defer></script>
+    <link rel="icon" type="image/svg+xml" href="/assets/bm-mark.svg">
+    <link rel="stylesheet" href="/assets/css/workspace.css?v29">
     @stack('styles')
 </head>
 <body class="crm-app @yield('body_class')">
+<a class="bm-skip-link visually-hidden-focusable" href="#main-content">Перейти к содержанию</a>
 <div class="page">
 
     @auth
@@ -56,8 +80,32 @@
             $paletteCommands = [];
             $paletteSection = '';
             foreach ($navItems as $paletteEntry) {
-                if (($paletteEntry['type'] ?? '') === 'section') {
+                $paletteType = $paletteEntry['type'] ?? 'item';
+                if ($paletteType === 'section') {
                     $paletteSection = $paletteEntry['label'] ?? '';
+                    continue;
+                }
+                if ($paletteType === 'module') {
+                    // модуль открывает свой первый пункт; дети идут отдельными командами
+                    $firstChild = $paletteEntry['children'][0] ?? null;
+                    if ($firstChild !== null && \Illuminate\Support\Facades\Route::has($firstChild['route'])) {
+                        $paletteCommands[] = [
+                            'title' => $paletteEntry['title'],
+                            'section' => $paletteSection,
+                            'icon' => $paletteEntry['icon'] ?? 'circle',
+                            'url' => route($firstChild['route']),
+                        ];
+                    }
+                    foreach ($paletteEntry['children'] as $paletteChild) {
+                        $paletteCommands[] = [
+                            'title' => $paletteChild['title'],
+                            'section' => ($paletteSection !== '' ? $paletteSection . ' · ' : '') . $paletteEntry['title'],
+                            'icon' => $paletteChild['icon'] ?? 'circle',
+                            'url' => \Illuminate\Support\Facades\Route::has($paletteChild['route'])
+                                ? route($paletteChild['route'])
+                                : '#',
+                        ];
+                    }
                     continue;
                 }
                 $paletteCommands[] = [
@@ -71,17 +119,25 @@
             }
             $paletteSearchAllowed = app(\App\Support\PermissionService::class)
                 ->check(auth()->user(), 'search.global');
+            $bmCurrentRoute = request()->route()?->getName() ?? '';
+            $bmActiveRoute = \App\Support\Sidebar::activeRoute($bmCurrentRoute);
+            $bmCrumbs = \App\Support\Sidebar::breadcrumbsFor($bmCurrentRoute);
+            $bmModule = null;
+            if (in_array(explode('.', $bmCurrentRoute, 2)[0], ['tasks', 'attendance', 'crm', 'finance', 'documents', 'workflows'], true)) {
+                $bmModule = collect($navItems)->first(fn ($item) => isset($item['children']) &&
+                    collect($item['children'])->contains('route', $bmActiveRoute));
+            }
         @endphp
         @include('partials.sidebar')
     @endauth
 
-    <main class="page-wrapper">
+    <div class="page-wrapper">
 
         @auth
             @include('partials.navbar')
         @endauth
 
-        <div class="page-body">
+        <main data-workspace="@yield('workspace_layout', 'directory')" class="page-body" id="main-content" tabindex="-1">
             <div class="container-xl">
                 @foreach (['success' => 'success', 'status' => 'success', 'error' => 'danger'] as $flashKey => $flashClass)
                     @if (session($flashKey))
@@ -120,19 +176,45 @@
 
                 @stack('breadcrumbs')
 
+                {{-- автокрошки из структуры навигации (детальные страницы добавляют
+                     свой уровень через @include('partials.breadcrumbs', [...])) --}}
+                @auth
+                    @if (empty($bmNoAutoCrumbs) && $bmCrumbs !== null)
+                        @include('partials.breadcrumbs', ['bmItems' => array_values(array_filter([
+                            ['label' => $bmCrumbs[0]],
+                            $bmCrumbs[1] !== null ? ['label' => $bmCrumbs[1]] : null,
+                            ['label' => $bmCrumbs[2], 'current' => true],
+                        ]))])
+                    @endif
+                @endauth
+
+                @if (isset($bmModule) && count($bmModule['children']) > 1)
+                    <nav class="bm-module-nav d-print-none" aria-label="{{ $bmModule['title'] }}">
+                        @foreach ($bmModule['children'] as $bmDestination)
+                            <a href="{{ route($bmDestination['route']) }}"
+                                @if ($bmDestination['route'] === $bmActiveRoute)
+                                    aria-current="{{ $bmCurrentRoute === $bmActiveRoute ? 'page' : 'location' }}"
+                                @endif>
+                                <i class="ti ti-{{ $bmDestination['icon'] }}" aria-hidden="true"></i>
+                                {{ $bmDestination['title'] }}
+                            </a>
+                        @endforeach
+                    </nav>
+                @endif
+
                 @yield('content')
             </div>
-        </div>
+        </main>
 
         <footer class="footer">
             <div class="container-xl">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-secondary">CorpMS — корпоративная система управления</span>
+                    <span class="text-secondary">BM Systems — единая бизнес-платформа</span>
                     <span class="text-secondary">© {{ date('Y') }}</span>
                 </div>
             </div>
         </footer>
-    </main>
+    </div>
 </div>
 
 @auth
@@ -181,23 +263,23 @@
                     <div class="crm-cz__label"><i class="ti ti-droplet me-1"></i>Акцентный цвет</div>
                     <div class="crm-cz__accents" id="crm-c-accents">
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="teal" aria-label="Бирюзовый" title="Бирюзовый" style="--sw:#0b9b72"><i class="ti ti-check"></i></button>
+                            <button type="button" class="crm-swatch" data-crm-accent="teal" aria-label="Бирюзовый" title="Бирюзовый" style="--sw:var(--crm-success)"><i class="ti ti-check"></i></button>
                             <span>Бирюза</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="blue" aria-label="Синий" title="Синий" style="--sw:#4f74e3"><i class="ti ti-check"></i></button>
+                            <button type="button" class="crm-swatch" data-crm-accent="blue" aria-label="Синий" title="Синий" style="--sw:var(--crm-accent)"><i class="ti ti-check"></i></button>
                             <span>Синий</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="violet" aria-label="Фиолетовый" title="Фиолетовый" style="--sw:#7c5ce0"><i class="ti ti-check"></i></button>
+                            <button type="button" class="crm-swatch" data-crm-accent="violet" aria-label="Фиолетовый" title="Фиолетовый" style="--sw:var(--crm-purple)"><i class="ti ti-check"></i></button>
                             <span>Фиолетовый</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="rose" aria-label="Розовый" title="Розовый" style="--sw:#d6455f"><i class="ti ti-check"></i></button>
+                            <button type="button" class="crm-swatch" data-crm-accent="rose" aria-label="Розовый" title="Розовый" style="--sw:var(--crm-danger)"><i class="ti ti-check"></i></button>
                             <span>Розовый</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="amber" aria-label="Янтарный" title="Янтарный" style="--sw:#c98a12"><i class="ti ti-check"></i></button>
+                            <button type="button" class="crm-swatch" data-crm-accent="amber" aria-label="Янтарный" title="Янтарный" style="--sw:var(--crm-warning)"><i class="ti ti-check"></i></button>
                             <span>Янтарный</span>
                         </div>
                     </div>
@@ -247,11 +329,7 @@
         </div>
     </div>
 
-    {{-- AI-ассистент: отдельная боковая панель справа (док) --}}
-    @if (app(\App\Support\PermissionService::class)->check(auth()->user(), 'analytics.ai.use'))
-        <button type="button" class="crm-ai-launch" data-ai-toggle aria-controls="ai-panel" aria-expanded="false" aria-label="Открыть AI-ассистента">
-            <i class="ti ti-sparkles"></i><span>Спросить AI</span>
-        </button>
+    @if (! request()->routeIs('ai.index', 'chat.index', 'chat.show') && app(\App\Support\PermissionService::class)->check(auth()->user(), 'analytics.ai.use'))
         @include('partials.ai-panel')
     @endif
 

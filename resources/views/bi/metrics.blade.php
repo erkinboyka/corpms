@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'BI — Срезы витрины')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">BI</div>
-            <h2 class="page-title mt-1">Срезы витрины</h2>
+            <h1 class="page-title mt-1">Срезы витрины</h1>
             <div class="text-secondary mt-1">Метрики по дням · период {{ $month }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -30,17 +31,17 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Метрика</th>
-                    <th>Тип</th>
-                    <th class="text-end">Итог</th>
-                    <th class="text-end">Среднее/день</th>
-                    <th class="text-end">Мин</th>
-                    <th class="text-end">Макс</th>
-                    <th class="text-center">Дней</th>
-                    <th style="width: 180px;">Динамика</th>
+                    <th scope="col">Метрика</th>
+                    <th scope="col">Тип</th>
+                    <th scope="col" class="text-end">Итог</th>
+                    <th scope="col" class="text-end">Среднее/день</th>
+                    <th scope="col" class="text-end">Мин</th>
+                    <th scope="col" class="text-end">Макс</th>
+                    <th scope="col" class="text-center">Дней</th>
+                    <th scope="col" style="width: 180px;">Динамика</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,7 +64,7 @@
                         <td>
                             @if ($row['points'] !== '')
                                 <svg viewBox="0 0 240 48" width="160" height="40" preserveAspectRatio="none" role="img" aria-label="Динамика {{ $row['meta']['label'] }}">
-                                    <polyline points="{{ $row['points'] }}" fill="none" stroke="var(--crm-accent, #8BA9FF)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                                    <polyline points="{{ $row['points'] }}" fill="none" stroke="var(--crm-accent, var(--crm-accent))" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
                                 </svg>
                             @else
                                 <span class="text-secondary small">нет данных</span>

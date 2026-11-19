@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Бухгалтерия — План счетов')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Бухгалтерия</div>
-            <h2 class="page-title mt-1">План счетов</h2>
+            <h1 class="page-title mt-1">План счетов</h1>
             <div class="text-secondary mt-1">Счета компании · {{ $totals['accounts'] }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -25,22 +26,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-list-numbers"></i>Счетов</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-list-numbers"></i>Счетов</div>
         <div class="crm-metric__value">{{ $totals['accounts'] }}</div>
         <div class="crm-metric__hint">в плане компании</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-building-bank"></i>Активы</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-building-bank"></i>Активы</div>
         <div class="crm-metric__value">{{ $totals['assets'] }}</div>
         <div class="crm-metric__hint">дебетовое сальдо</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-arrow-down-left"></i>Доходные</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-arrow-down-left"></i>Доходные</div>
         <div class="crm-metric__value">{{ $totals['income'] }}</div>
         <div class="crm-metric__hint">счета доходов</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e5697a;"><i class="ti ti-arrow-up-right"></i>Расходные</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-arrow-up-right"></i>Расходные</div>
         <div class="crm-metric__value">{{ $totals['expense'] }}</div>
         <div class="crm-metric__hint">счета расходов</div>
     </div>
@@ -48,14 +49,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Код</th>
-                    <th>Название</th>
-                    <th>Вид</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Код</th>
+                    <th scope="col">Название</th>
+                    <th scope="col">Вид</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -105,23 +106,27 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый счёт плана</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="aa-code">Код<span class="req">*</span></label>
-                        <input type="text" id="aa-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="90.3" maxlength="10" required>
+                <div class="crm-form__section mb-0">
+                    <h3>Счёт плана</h3>
+                    <div class="crm-form__desc">Код, вид и название — как в плане счетов.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="aa-code">Код<span class="req">*</span></label>
+                            <input type="text" id="aa-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="90.3" maxlength="10" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="aa-kind">Вид<span class="req">*</span></label>
+                            <select id="aa-kind" name="kind" class="form-select" required>
+                                @foreach ($kinds as $kind)
+                                    <option value="{{ $kind->value }}" @selected(old('kind', 'asset') === $kind->value)>{{ $crm_label('acc_account_kind', $kind->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="aa-kind">Вид<span class="req">*</span></label>
-                        <select id="aa-kind" name="kind" class="form-select" required>
-                            @foreach ($kinds as $kind)
-                                <option value="{{ $kind->value }}" @selected(old('kind', 'asset') === $kind->value)>{{ $crm_label('acc_account_kind', $kind->value) }}</option>
-                            @endforeach
-                        </select>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="aa-name">Название<span class="req">*</span></label>
+                        <input type="text" id="aa-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Прочие доходы и расходы" required>
                     </div>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="aa-name">Название<span class="req">*</span></label>
-                    <input type="text" id="aa-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Прочие доходы и расходы" required>
                 </div>
             </div>
             <div class="modal-footer">

@@ -44,7 +44,7 @@ class AttendanceService
 
             $record->clock_in_at = $event->occurred_at;
             $record->source = 'biometric';
-            $record->status = $this->statusOnArrival($record->clock_in_at, $schedule, $day);
+            $record->status = $this->statusOnArrival($record->clock_in_at, $schedule, $day, (int) $employee->company_id);
             $record->late_minutes = $this->lateMinutes($record->clock_in_at, $schedule, $day);
             $record->scheduled_minutes = $schedule !== null
                 ? (int) $day->copy()->setTimeFromTimeString($schedule->start_time)->diffInMinutes($day->copy()->setTimeFromTimeString($schedule->end_time), true)
@@ -73,9 +73,9 @@ class AttendanceService
     }
 
     /** Статус прихода: выходной / отсутствует график / вовремя / опоздал. */
-    public function statusOnArrival(Carbon $clockIn, ?WorkSchedule $schedule, Carbon $day): AttendanceStatus
+    public function statusOnArrival(Carbon $clockIn, ?WorkSchedule $schedule, Carbon $day, ?int $companyId = null): AttendanceStatus
     {
-        if ($this->isDayOff($day)) {
+        if ($this->isDayOff($day, $companyId ?? $schedule?->company_id)) {
             return AttendanceStatus::Weekend;
         }
 
@@ -189,13 +189,15 @@ class AttendanceService
         return WorkSchedule::find($assigned ?? $employee->work_schedule_id);
     }
 
-    public function isDayOff(Carbon $day): bool
+    public function isDayOff(Carbon $day, ?int $companyId = null): bool
     {
         if (in_array($day->dayOfWeekIso, [6, 7], true)) {
             return true;
         }
 
-        return Holiday::query()->where('date', $day)->exists();
+        return Holiday::query()->whereDate('date', $day->toDateString())->where('is_day_off', true)
+            ->where(fn ($query) => $query->whereNull('company_id')->when($companyId !== null, fn ($scope) => $scope->orWhere('company_id', $companyId)))
+            ->exists();
     }
 
     public function detectMissingCheckout(Carbon $day): int

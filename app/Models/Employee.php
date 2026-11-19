@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Shared\Enums\EmployeeStatus;
+use App\Support\PermissionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Employee extends Model
 {
@@ -18,6 +20,21 @@ class Employee extends Model
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
 
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $employee): void {
+            app(PermissionService::class)->forget();
+            if ($employee->wasChanged('status') && $employee->status !== EmployeeStatus::Active && $employee->user_id !== null) {
+                // Remembered logins are revoked even when the employee has no active browser request.
+                User::find($employee->user_id)?->revokeSessions();
+                if (config('session.driver') === 'database') {
+                    DB::connection(config('session.connection'))
+                        ->table(config('session.table', 'sessions'))->where('user_id', $employee->user_id)->delete();
+                }
+            }
+        });
+    }
 
     protected function casts(): array
     {

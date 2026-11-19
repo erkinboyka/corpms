@@ -38,6 +38,9 @@ class AiAssistantService
 
     public function ask(Employee $asker, string $question): AiConversation
     {
+        // настройки AI (провайдер, таймауты) — в контексте компании спрашивающего
+        $this->useCompanyOf($asker);
+
         $facts = $this->collectFacts($asker);
         // память диалога: предыдущие реплики уходят в контекст LLM (S10)
         $history = $this->historyMessages($asker);
@@ -211,6 +214,14 @@ class AiAssistantService
 
     /* -------------------- LLM -------------------- */
 
+    /** Контекст настроек: компания сотрудника (для web, очереди и консоли). */
+    protected function useCompanyOf(Employee $employee): void
+    {
+        app(SettingsService::class)->useCompany(
+            $employee->company_id !== null ? (int) $employee->company_id : null,
+        );
+    }
+
     protected function llmEnabled(): bool
     {
         $settings = app(SettingsService::class);
@@ -241,7 +252,7 @@ class AiAssistantService
             $timeout = $this->syncTimeout($timeout); // D3: синхронный вызов не ждёт дольше потолка
         }
 
-        $system = 'Ты ассистент HR-аналитики корпоративной системы. '
+        $system = 'Ты Bumi, ассистент HR-аналитики корпоративной системы. '
             .'Отвечай только на основе приведённых фактов; если фактов не хватает — скажи об этом. '
             .'Учитывай предыдущие реплики диалога: уточнения и местоимения относи к уже заданным вопросам.'
             .$this->ragSystemMessage($rag)
@@ -391,7 +402,15 @@ class AiAssistantService
     public function retryLlm(AiConversation $conversation): bool
     {
         $employee = Employee::find($conversation->employee_id);
-        if ($employee === null || ! $this->llmEnabled()) {
+        if ($employee === null) {
+            return false;
+        }
+
+        // фоновый вызов вне HTTP: контекст компании — из сотрудника диалога,
+        // чтобы LLM-настройки читались из переопределений его компании
+        $this->useCompanyOf($employee);
+
+        if (! $this->llmEnabled()) {
             return false;
         }
 

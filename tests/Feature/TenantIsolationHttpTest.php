@@ -117,6 +117,7 @@ class TenantIsolationHttpTest extends TestCase
 
         // сотрудник компании A без учётки — для позитивного теста привязки
         $this->orphanEmployeeA = $this->employee($this->companyA, 'WA-2', 'Без', 'Учётки', null);
+        $this->orphanEmployeeA->update(['user_id' => null]);
 
         $this->departmentA = Department::create(['company_id' => $this->companyA->id, 'name' => 'Отдел А', 'code' => 'dep-a']);
         $this->departmentB = Department::create(['company_id' => $this->companyB->id, 'name' => 'Отдел Б', 'code' => 'dep-b']);
@@ -340,7 +341,7 @@ class TenantIsolationHttpTest extends TestCase
             'employee_id' => $orphan->id,
         ])->assertRedirect()->assertSessionHas('status');
 
-        $this->assertNotNull($orphan->refresh()->user_id);
+        $this->assertSame(User::where('email', 'own-link@tenant.test')->value('id'), $orphan->refresh()->user_id);
     }
 
     /* ---------------- графики и праздники ---------------- */

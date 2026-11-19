@@ -1,12 +1,13 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'planning')
 
 @section('title', 'Мой график')
 
 @php
     $kindTones = [
-        'public' => '#d63939',
-        'operating' => '#4299e1',
-        'shortened' => '#f76707',
+        'public' => 'var(--crm-danger)',
+        'operating' => 'var(--crm-info)',
+        'shortened' => 'var(--crm-warning)',
     ];
 @endphp
 
@@ -15,7 +16,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Планирование</div>
-            <h2 class="page-title mt-1">Мой график</h2>
+            <h1 class="page-title mt-1">Мой график</h1>
             <div class="text-secondary mt-1">Рабочее время, история назначений и производственный календарь</div>
         </div>
         <div class="col-auto d-print-none">
@@ -100,7 +101,7 @@
             <div class="crm-form__desc">Производственный календарь на текущий год.</div>
             <div class="crm-queue">
                 @forelse ($holidays as $holiday)
-                    <div class="crm-queue__item" style="--c: {{ $kindTones[$holiday->kind->value] ?? '#6c7a91' }};">
+                    <div class="crm-queue__item" style="--c: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};">
                         <div class="crm-queue__body">
                             <div class="crm-queue__title">{{ $holiday->name }}</div>
                             <div class="crm-queue__sub">{{ $holiday->date->format('d.m.Y') }} · {{ $holiday->date->translatedFormat('l') }}</div>
@@ -112,7 +113,7 @@
                         ][$holiday->kind->value] ?? 'crm-chip--grey' }}">{{ $crm_label('holiday_kind', $holiday->kind->value) }}</span>
                     </div>
                 @empty
-                    <div class="crm-queue__item" style="--c: #6c7a91;">
+                    <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                         <div class="crm-queue__body">
                             <div class="crm-queue__title">Праздников нет</div>
                             <div class="crm-queue__sub">Производственный календарь на год пуст.</div>

@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', 'Проект — '.$project->name)
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Проекты · Проект</div>
-            <h2 class="page-title mt-1">{{ $project->name }}</h2>
+            <h1 class="page-title mt-1">{{ $project->name }}</h1>
             <div class="text-secondary mt-1 d-flex align-items-center gap-2 flex-wrap">
                 <span class="crm-chip crm-chip--grey">{{ $project->code }}</span>
                 <span class="crm-chip {{ $project->status->value === 'active' ? 'crm-chip--green' : ($project->status->value === 'cancelled' ? 'crm-chip--red' : ($project->status->value === 'on_hold' ? 'crm-chip--orange' : 'crm-chip--cyan')) }}">{{ $crm_label('project_status', $project->status->value) }}</span>
@@ -32,27 +33,34 @@
     </div>
 </div>
 
+<section class="bm-project-progress" aria-labelledby="project-progress-title">
+    <div>
+        <h2 id="project-progress-title">Выполнение задач</h2>
+        <p>{{ $progress['completed'] }} из {{ $progress['total'] }} завершено</p>
+    </div>
+    @if ($progress['total'] > 0)
+        <progress aria-labelledby="project-progress-title" value="{{ $progress['completed'] }}" max="{{ $progress['total'] }}">{{ $progress['percent'] }}%</progress>
+        <strong>{{ $progress['percent'] }}%</strong>
+    @endif
+</section>
+
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-wallet"></i>Бюджет</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-wallet"></i>Бюджет</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $budget['planned'], 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">план проекта</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e5697a;"><i class="ti ti-cash"></i>Факт расходов</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-cash"></i>Факт расходов</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $budget['spent'], 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">из финансов · поступления {{ number_format((float) $budget['received'], 0, ',', ' ') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-scale"></i>Остаток</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-scale"></i>Остаток</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $budget['remaining'], 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">исполнение {{ $budget['percent'] === null ? '—' : $budget['percent'].'%' }}</div>
     </div>
-    <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-list-check"></i>Прогресс</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ $progress['percent'] }}%</div>
-        <div class="crm-metric__hint">{{ $progress['completed'] }} из {{ $progress['total'] }} задач</div>
-    </div>
+
 </div>
 
 <div class="row g-3">
@@ -80,13 +88,13 @@
             </div>
             @endcan
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table">
+                <table data-record-key="0" class="table table-hover table-vcenter card-table">
                     <thead>
                         <tr>
-                            <th>Задача</th>
-                            <th>Статус</th>
-                            <th>Срок</th>
-                            <th class="text-end">Действия</th>
+                            <th scope="col">Задача</th>
+                            <th scope="col">Статус</th>
+                            <th scope="col">Срок</th>
+                            <th scope="col" class="text-end">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -240,47 +248,58 @@
             @method('patch')
             <div class="modal-header"><h5 class="modal-title">Изменить проект</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep-name">Название<span class="req">*</span></label>
-                        <input type="text" id="ep-name" name="name" class="form-control" value="{{ $project->name }}" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep-manager">Менеджер</label>
-                        <select id="ep-manager" name="manager_id" class="form-select">
-                            <option value="">— не назначен —</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" @selected((int) $project->manager_id === (int) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep-department">Отдел</label>
-                        <select id="ep-department" name="department_id" class="form-select">
-                            <option value="">— не указан —</option>
-                            @foreach ($departments as $department)
-                                <option value="{{ $department->id }}" @selected((int) $project->department_id === (int) $department->id)>{{ $department->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep-start">Начало</label>
-                        <input type="date" id="ep-start" name="start_date" class="form-control" value="{{ $project->start_date?->toDateString() }}">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep-due">Срок</label>
-                        <input type="date" id="ep-due" name="due_date" class="form-control" value="{{ $project->due_date?->toDateString() }}">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ep-budget">Бюджет</label>
-                        <input type="number" id="ep-budget" name="budget" class="form-control" value="{{ (float) $project->budget }}" step="0.01" min="0">
+                <div class="crm-form__section">
+                    <h3>Проект</h3>
+                    <div class="crm-form__desc">Название, менеджер и отдел — выровнено с формой создания.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep-name">Название<span class="req">*</span></label>
+                            <input type="text" id="ep-name" name="name" class="form-control" value="{{ $project->name }}" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep-manager">Менеджер</label>
+                            <select id="ep-manager" name="manager_id" class="form-select">
+                                <option value="">— не назначен —</option>
+                                @foreach ($employees as $employee)
+                                    <option value="{{ $employee->id }}" @selected((int) $project->manager_id === (int) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep-department">Отдел</label>
+                            <select id="ep-department" name="department_id" class="form-select">
+                                <option value="">— не указан —</option>
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}" @selected((int) $project->department_id === (int) $department->id)>{{ $department->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ep-description">Описание</label>
-                    <textarea id="ep-description" name="description" class="form-control" rows="3" maxlength="5000">{{ $project->description }}</textarea>
+                <div class="crm-form__section">
+                    <h3>Сроки и бюджет</h3>
+                    <div class="crm-form__desc">Старт, срок и бюджет в одной строке.</div>
+                    <div class="crm-form__row crm-form__row--3">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep-start">Начало</label>
+                            <input type="date" id="ep-start" name="start_date" class="form-control" value="{{ $project->start_date?->toDateString() }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep-due">Срок</label>
+                            <input type="date" id="ep-due" name="due_date" class="form-control" value="{{ $project->due_date?->toDateString() }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ep-budget">Бюджет</label>
+                            <input type="number" id="ep-budget" name="budget" class="form-control" value="{{ (float) $project->budget }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="crm-form__section mb-0">
+                    <h3>Описание</h3>
+                    <div class="crm-form__desc">Цели, границы и критерии успеха проекта.</div>
+                    <div class="crm-form__field mb-0">
+                        <textarea data-crm-rich id="ep-description" name="description" class="form-control" rows="3" maxlength="5000">{{ $project->description }}</textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

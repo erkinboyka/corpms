@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'События биометрии')
 
@@ -16,7 +17,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Доступ</div>
-            <h2 class="page-title mt-1">Журнал биометрических событий</h2>
+            <h1 class="page-title mt-1">Журнал биометрических событий</h1>
             <div class="text-secondary mt-1">События терминалов: проходы, liveness, обработка · показано {{ $events->count() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -38,9 +39,9 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
-                <tr><th>Время</th><th>Сотрудник</th><th>Устройство</th><th>Направление</th><th>Достоверность</th><th>Liveness</th><th>Обработка</th></tr>
+                <tr><th scope="col">Время</th><th scope="col">Сотрудник</th><th scope="col">Устройство</th><th scope="col">Направление</th><th scope="col">Достоверность</th><th scope="col">Liveness</th><th scope="col">Обработка</th></tr>
             </thead>
             <tbody>
                 @forelse ($events as $event)

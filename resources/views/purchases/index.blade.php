@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Закупки')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Склад</div>
-            <h2 class="page-title mt-1">Закупочные заказы</h2>
+            <h1 class="page-title mt-1">Закупочные заказы</h1>
             <div class="text-secondary mt-1">Черновик → размещён → принят · приём оприходует товар на склад</div>
         </div>
         <div class="col-auto d-print-none">
@@ -39,16 +40,16 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Номер</th>
-                    <th>Поставщик</th>
-                    <th>Склад</th>
-                    <th>Статус</th>
-                    <th class="text-end">Сумма</th>
-                    <th>Дата</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Номер</th>
+                    <th scope="col">Поставщик</th>
+                    <th scope="col">Склад</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Сумма</th>
+                    <th scope="col">Дата</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>

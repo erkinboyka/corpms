@@ -131,10 +131,7 @@ class PayrollController extends Controller
         \assert($scope !== false, 'маршрут уже проверяет право');
 
         $linesQuery = $period->lines()->with(['employee', 'component']);
-        if ($scope === PermissionScope::Department) {
-            $deptEmployeeIds = Employee::query()->where('department_id', $me->department_id)->select('id');
-            $linesQuery->whereIn('employee_id', $deptEmployeeIds);
-        }
+        $linesQuery->whereIn('employee_id', $this->permissions->scopeEmployees(Employee::query(), $request->user(), 'payroll.view')->select('id'));
 
         /** @var Collection<int, PayrollLine> $lines */
         $lines = $linesQuery->get()->sortBy([
@@ -262,10 +259,7 @@ class PayrollController extends Controller
         TenantGuard::ensure($period, $me);
 
         $linesQuery = $period->lines()->with(['employee', 'component']);
-        if ($scope === PermissionScope::Department) {
-            $deptEmployeeIds = Employee::query()->where('department_id', $me->department_id)->select('id');
-            $linesQuery->whereIn('employee_id', $deptEmployeeIds);
-        }
+        $linesQuery->whereIn('employee_id', $this->permissions->scopeEmployees(Employee::query(), $request->user(), 'payroll.view')->select('id'));
         $lines = $linesQuery->get()->sortBy([
             fn (PayrollLine $a, PayrollLine $b) => [$a->employee?->last_name, $a->employee?->first_name] <=> [$b->employee?->last_name, $b->employee?->first_name],
         ])->values();
@@ -276,7 +270,7 @@ class PayrollController extends Controller
 
         $filename = 'payroll_'.$period->period_start->format('Y-m').'.csv';
 
-        return response()->streamDownload(function () use ($lines, $period) {
+        return response()->streamDownload(function () use ($lines) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM для Excel
 
@@ -296,9 +290,11 @@ class PayrollController extends Controller
                 ], ';');
             }
 
-            fputcsv($out, ['', 'ИТОГО начислено', '', '', '', '', '', number_format((float) $period->gross_amount, 2, '.', ''), ''], ';');
-            fputcsv($out, ['', 'ИТОГО удержано', '', '', '', '', '', number_format((float) $period->deduction_amount, 2, '.', ''), ''], ';');
-            fputcsv($out, ['', 'К выплате', '', '', '', '', '', number_format((float) $period->net_amount, 2, '.', ''), ''], ';');
+            $gross = (float) $lines->filter(fn ($line) => $line->component->kind === PayrollComponentKind::Earning)->sum('amount');
+            $deductions = (float) $lines->filter(fn ($line) => $line->component->kind === PayrollComponentKind::Deduction)->sum('amount');
+            fputcsv($out, ['', 'ИТОГО начислено', '', '', '', '', '', number_format($gross, 2, '.', ''), ''], ';');
+            fputcsv($out, ['', 'ИТОГО удержано', '', '', '', '', '', number_format($deductions, 2, '.', ''), ''], ';');
+            fputcsv($out, ['', 'К выплате', '', '', '', '', '', number_format($gross - $deductions, 2, '.', ''), ''], ';');
 
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -316,9 +312,7 @@ class PayrollController extends Controller
         $employeesQuery = Employee::query()
             ->where('company_id', $me->company_id)
             ->where('status', 'active');
-        if ($scope === PermissionScope::Department) {
-            $employeesQuery->where('department_id', $me->department_id);
-        }
+        $this->permissions->scopeEmployees($employeesQuery, $request->user(), 'payroll.view');
         $employees = $employeesQuery->orderBy('last_name')->get();
 
         $salaryRows = EmployeeSalary::query()

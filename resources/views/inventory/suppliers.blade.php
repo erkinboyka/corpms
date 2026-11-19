@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Склад — Поставщики')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Склад</div>
-            <h2 class="page-title mt-1">Поставщики</h2>
+            <h1 class="page-title mt-1">Поставщики</h1>
             <div class="text-secondary mt-1">Контрагенты закупок · {{ $suppliers->count() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -31,14 +32,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table" id="suppliers-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table" id="suppliers-table">
             <thead>
                 <tr>
-                    <th>Поставщик</th>
-                    <th>Контакты</th>
-                    <th>ИНН</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Поставщик</th>
+                    <th scope="col">Контакты</th>
+                    <th scope="col">ИНН</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -96,37 +97,47 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Добавить поставщика</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="ns-name">Название<span class="req">*</span></label>
-                    <input type="text" id="ns-name" name="name" class="form-control" value="{{ old('name') }}" placeholder='ООО «Поставка»' required>
-                </div>
-                <div class="crm-form__row">
+                <div class="crm-form__section">
+                    <h3>Поставщик</h3>
+                    <div class="crm-form__desc">Название и реквизиты — как в счетах и накладных.</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="ns-inn">ИНН</label>
-                        <input type="text" id="ns-inn" name="inn" class="form-control" value="{{ old('inn') }}" maxlength="32">
+                        <label class="form-label" for="ns-name">Название<span class="req">*</span></label>
+                        <input type="text" id="ns-name" name="name" class="form-control" value="{{ old('name') }}" placeholder='ООО «Поставка»' required>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ns-contact">Контактное лицо</label>
-                        <input type="text" id="ns-contact" name="contact_person" class="form-control" value="{{ old('contact_person') }}">
-                    </div>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ns-phone">Телефон</label>
-                        <input type="text" id="ns-phone" name="phone" class="form-control" value="{{ old('phone') }}" maxlength="32">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ns-email">Email</label>
-                        <input type="email" id="ns-email" name="email" class="form-control" value="{{ old('email') }}">
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ns-inn">ИНН</label>
+                            <input type="text" id="ns-inn" name="inn" class="form-control" value="{{ old('inn') }}" maxlength="32">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ns-contact">Контактное лицо</label>
+                            <input type="text" id="ns-contact" name="contact_person" class="form-control" value="{{ old('contact_person') }}">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ns-address">Адрес</label>
-                    <input type="text" id="ns-address" name="address" class="form-control" value="{{ old('address') }}" maxlength="1000">
-                </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="ns-notes">Примечание</label>
-                    <input type="text" id="ns-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
+                <div class="crm-form__section mb-0">
+                    <h3>Контакты</h3>
+                    <div class="crm-form__desc">Телефон, почта и адрес — для заказов и сверок.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ns-phone">Телефон</label>
+                            <input type="text" id="ns-phone" name="phone" class="form-control" value="{{ old('phone') }}" maxlength="32">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ns-email">Email</label>
+                            <input type="email" id="ns-email" name="email" class="form-control" value="{{ old('email') }}">
+                        </div>
+                    </div>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ns-address">Адрес</label>
+                            <input type="text" id="ns-address" name="address" class="form-control" value="{{ old('address') }}" maxlength="1000">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ns-notes">Примечание</label>
+                            <input type="text" id="ns-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

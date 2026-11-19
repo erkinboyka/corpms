@@ -1,58 +1,46 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# CorpMS / BM Systems
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Корпоративная система: структура компании и сотрудники, задачи, посещаемость и терминалы, документы, зарплата, склад и закупки, CRM, финансы, бухгалтерия, проекты, BI и помощник.
 
-## About Laravel
+PHP 8.3+, Laravel 13, Composer, PDO SQLite/MySQL, mbstring, XML/DOM, ZIP для копий вложений. Пользовательский интерфейс использует локальные ресурсы Tabler в `public/assets`; текущие Blade-layout не требуют Vite для запуска. `npm run build` относится к дополнительной Vite-сборке, если она используется в дальнейших изменениях.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Локальный запуск
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+1. Выполнить `composer install`.
+2. Создать `.env` из `.env.example`, настроить отдельную локальную БД и `APP_URL`.
+3. Для новой установки выполнить `php artisan key:generate`. Существующий `APP_KEY` при обновлении сохранять: он нужен для расшифровки секретов.
+4. Выполнить `php artisan migrate` для выбранной локальной БД.
+5. Настроить web-root на `public/` или выполнить `php artisan serve`.
+6. Для тестовой демонстрации в отдельной локальной БД: `php artisan db:seed --class=RbacSeeder`, затем `php artisan db:seed --class=DemoSeeder`. Демонстрационные учётки и пароли не предназначены для промышленной установки.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Первый администратор создаётся через `php artisan corpms:admin admin@example.org --company-code=main --company-name="Название компании"`. Команда запрашивает пароль скрытым вводом и не изменяет существующие учётки. Не запускать DemoSeeder на рабочих данных.
 
-## Learning Laravel
+## Проверки
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+php vendor/phpunit/phpunit/phpunit
+pwsh -File tools/verify-encoding.ps1
+pwsh -File tools/verify-layout.ps1
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+По умолчанию PHPUnit использует SQLite в памяти, массивы для cache/session и отключённые внешние AI-настройки. Не задавать рабочее подключение через переменные окружения при запуске тестов: внешние значения могут переопределить `phpunit.xml`. Для MySQL использовать только специально выделенную тестовую БД.
 
-## Contributing
+`php tools/verify-concurrency.php` использует настроенное MySQL/MariaDB-подключение только для создания отдельной случайно названной БД `corpms_verify_*_test`, выполняет миграции и проверки двух параллельных процессов, затем удаляет эту временную БД. Требует права CREATE/DROP DATABASE. Рабочие таблицы не являются целью проверки; перед миграциями проверяются имя подключения, конфигурация и `SELECT DATABASE()`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+`php tools/run-mysql-suite.php` создаёт отдельную временную MySQL-базу, выполняет весь PHPUnit-набор и удаляет только эту базу. Требует CREATE/DROP DATABASE; результат сохраняется в storage/logs/closure-mysql.xml.
 
-## Code of Conduct
+Браузерная приёмка: установить Python-зависимости из `tools/requirements-qa.txt` и Chromium (`python -m playwright install chromium`), создать fixture командой `php tools/acceptance-environment.php`, затем `python tools/verify-browser.py <выведенный-путь> --load`. Используются только отдельная SQLite-база с искусственными данными, локальный HTTP-сервер и отключённые интеграции. PHP_BINARY и BROWSER_EXECUTABLE задают пути к PHP и браузеру; без BROWSER_EXECUTABLE на Linux используется Playwright Chromium. Скриншоты и отчёт — storage/logs/browser-acceptance.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+CI проверяет PHP-синтаксис, тесты SQLite/MySQL, конкурентные операции, браузер/доступность, UTF-8/структуру layout и зависимости. Файл CI подготовлен в `.github/workflows/ci.yml`; облачное выполнение подтверждается отдельным запуском после отправки изменений.
 
-## Security Vulnerabilities
+## Выпуск и эксплуатация
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Подробная процедура: [docs/OPERATIONS.md](docs/OPERATIONS.md). Список пробелов, статусы и критерии готовности: [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md). Исходный аудит: [docs/AUDIT_REPORT_2026-11-19.md](docs/AUDIT_REPORT_2026-11-19.md).
 
-## License
+Полный продуктовый аудит по предоставленной концепции, оценки модулей, целевая архитектура и следующий спринт: [docs/BM_SYSTEMS_PRODUCT_AUDIT_2026-11-19.md](docs/BM_SYSTEMS_PRODUCT_AUDIT_2026-11-19.md).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Обязательные фоновые процессы: планировщик `php artisan schedule:run` каждую минуту и worker `php artisan queue:work` при асинхронной очереди. Расписание включает backup, health-check, просроченные задачи и незакрытые смены.
+
+`php artisan corpms:health --json` возвращает ненулевой код при проблемах БД, миграций, очереди и каталогов storage. Это проверка приложения; доступность scheduler/worker и резервных копий контролируется отдельно.
+
+`php artisan db:backup` сохраняет SQLite/MySQL-копию вне public. `php artisan files:backup` создаёт проверяемый архив вложений; `php artisan files:verify <путь.zip>` восстанавливает его в новую папку и сверяет SHA-256. APP_KEY резервируется отдельно в защищённом хранилище.

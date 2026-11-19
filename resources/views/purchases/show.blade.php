@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', 'Закупка '.$order->number)
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Склад · Закупки</div>
-            <h2 class="page-title mt-1">Заказ {{ $order->number }}</h2>
+            <h1 class="page-title mt-1">Заказ {{ $order->number }}</h1>
             <div class="text-secondary mt-1">
                 {{ $order->supplier?->name ?? 'поставщик не указан' }} · на склад «{{ $order->warehouse?->name ?? '—' }}»
             </div>
@@ -47,24 +48,24 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-clipboard"></i>Статус</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-clipboard"></i>Статус</div>
         <div class="crm-metric__value" style="font-size: 1.1rem; padding-top: 6px;">
             <span class="crm-chip {{ $statusChip }}">{{ $crm_label('purchase_order_status', $order->status->value) }}</span>
         </div>
         <div class="crm-metric__hint">текущее состояние</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-coins"></i>Сумма</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-coins"></i>Сумма</div>
         <div class="crm-metric__value" style="font-size: 1.1rem; padding-top: 6px;">{{ number_format((float) $order->total, 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">по позициям заказа</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-calendar"></i>Заказ</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-calendar"></i>Заказ</div>
         <div class="crm-metric__value" style="font-size: 1.1rem; padding-top: 6px;">{{ $order->order_date?->format('d.m.Y') ?? '—' }}</div>
         <div class="crm-metric__hint">ожидание: {{ $order->expected_at?->format('d.m.Y') ?? '—' }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-package-import"></i>Принят</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-package-import"></i>Принят</div>
         <div class="crm-metric__value" style="font-size: 1.1rem; padding-top: 6px;">{{ $order->received_at?->format('d.m.Y') ?? '—' }}</div>
         <div class="crm-metric__hint">дата оприходования</div>
     </div>
@@ -75,15 +76,15 @@
         <div class="card-title">Позиции заказа</div>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Товар</th>
-                    <th class="text-end">Количество</th>
-                    <th class="text-end">Цена</th>
-                    <th class="text-end">Сумма</th>
+                    <th scope="col">Товар</th>
+                    <th scope="col" class="text-end">Количество</th>
+                    <th scope="col" class="text-end">Цена</th>
+                    <th scope="col" class="text-end">Сумма</th>
                     @if ($canManage && $order->status->value === 'draft')
-                        <th class="text-end">Действия</th>
+                        <th scope="col" class="text-end">Действия</th>
                     @endif
                 </tr>
             </thead>

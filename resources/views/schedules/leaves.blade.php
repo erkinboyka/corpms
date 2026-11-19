@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Отпуска и заявки')
 
@@ -25,7 +26,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Кадры</div>
-            <h2 class="page-title mt-1">Отпуска и заявки</h2>
+            <h1 class="page-title mt-1">Отпуска и заявки</h1>
             <div class="text-secondary mt-1">Заявки на отпуск, больничные и отгулы · всего {{ $leaves->total() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -38,19 +39,19 @@
 
 <div class="crm-metrics mb-3">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #6c7a91;"><i class="ti ti-file-text"></i>Всего заявок</div>
+        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-file-text"></i>Всего заявок</div>
         <div class="crm-metric__value">{{ $counts->sum() }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-hourglass"></i>Ждут решения</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-hourglass"></i>Ждут решения</div>
         <div class="crm-metric__value">{{ $counts['pending'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-circle-check"></i>Одобрено</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>Одобрено</div>
         <div class="crm-metric__value">{{ $counts['approved'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #d63939;"><i class="ti ti-circle-x"></i>Отклонено</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-circle-x"></i>Отклонено</div>
         <div class="crm-metric__value">{{ $counts['rejected'] ?? 0 }}</div>
     </div>
 </div>
@@ -62,8 +63,8 @@
         <div class="crm-form__desc">Заявки, ждущие вашего решения. Решение попадает в историю.</div>
         <div class="crm-queue">
             @foreach ($pending as $leave)
-                <div class="crm-queue__item" style="--c: #f76707;">
-                    <span class="crm-entity__logo" style="width:38px;height:38px;font-size:15px;border-radius:11px;background:#f767071f;color:#f76707;">
+                <div class="crm-queue__item" style="--c: var(--crm-warning);">
+                    <span class="crm-entity__logo" style="width:38px;height:38px;font-size:15px;border-radius:11px;background:color-mix(in srgb, var(--crm-warning) 12%, transparent);color:var(--crm-warning);">
                         <i class="ti ti-{{ $typeIcons[$leave->type->value] ?? 'dots' }}"></i>
                     </span>
                     <div class="crm-queue__body">
@@ -107,8 +108,8 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table crm-thead-sticky">
-            <thead><tr><th>Сотрудник</th><th>Тип</th><th>Период</th><th>Дней</th><th>Статус</th><th>Решение</th><th></th></tr></thead>
+        <table data-record-key="0" class="table table-hover table-vcenter card-table crm-thead-sticky">
+            <thead><tr><th scope="col">Сотрудник</th><th scope="col">Тип</th><th scope="col">Период</th><th scope="col">Дней</th><th scope="col">Статус</th><th scope="col">Решение</th><th scope="col"></th></tr></thead>
             <tbody>
                 @forelse ($leaves as $leave)
                     <tr>

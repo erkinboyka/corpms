@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Биометрия')
 
@@ -34,7 +35,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Доступ</div>
-            <h2 class="page-title mt-1">Биометрия</h2>
+            <h1 class="page-title mt-1">Биометрия</h1>
             <div class="text-secondary mt-1">Устройства и профили доступа · offline после {{ $offlineAfter }} мин молчания</div>
         </div>
         <div class="col-auto d-print-none">
@@ -80,22 +81,22 @@
 
 <div class="crm-metrics mb-3" data-crm-sec="metrics" data-crm-sec-label="Метрики">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-devices"></i>Устройств</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-devices"></i>Устройств</div>
         <div class="crm-metric__value">{{ $devices->count() }}</div>
         <div class="crm-metric__hint">offline порог {{ $offlineAfter }} мин</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #2fb344;"><i class="ti ti-wifi"></i>Онлайн</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-wifi"></i>Онлайн</div>
         <div class="crm-metric__value">{{ $onlineCount }}</div>
         <div class="crm-metric__hint">{{ $offlineCount }} offline</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-fingerprint"></i>Профилей</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-fingerprint"></i>Профилей</div>
         <div class="crm-metric__value">{{ $profilesCount }}</div>
         <div class="crm-metric__hint">хэши шаблонов</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-bolt"></i>Событий сегодня</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-bolt"></i>Событий сегодня</div>
         <div class="crm-metric__value">{{ $eventsToday }}</div>
         <div class="crm-metric__hint">по всем устройствам</div>
     </div>
@@ -106,9 +107,9 @@
     <h3>Матрица устройств <span class="text-secondary fw-normal">({{ $devices->count() }})</span></h3>
     <div class="crm-form__desc">Состояния оборудования в реальном времени: связь, направление, нагрузка.</div>
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
-                <tr><th>Устройство</th><th>Тип</th><th>Производитель / модель</th><th>S/N</th><th>Направление</th><th>Статус</th><th>Виден</th><th>Событ. сегодня</th><th>Enrollment</th><th></th></tr>
+                <tr><th scope="col">Устройство</th><th scope="col">Тип</th><th scope="col">Производитель / модель</th><th scope="col">S/N</th><th scope="col">Направление</th><th scope="col">Статус</th><th scope="col">Виден</th><th scope="col">Событ. сегодня</th><th scope="col">Enrollment</th><th scope="col"></th></tr>
             </thead>
             <tbody>
                 @forelse ($devices as $device)
@@ -124,7 +125,7 @@
                         <td class="text-secondary">{{ $crm_label('device_direction', $device->direction->value) }}</td>
                         <td>
                             <span class="crm-chip {{ $statusChips[$computed->value] ?? 'crm-chip--grey' }}">
-                                <span class="crm-live-dot" style="background: {{ $computed->value === 'online' ? '#2fb344' : ($computed->value === 'offline' ? '#f76707' : '#6c7a91') }};"></span>
+                                <span class="crm-live-dot" style="background: {{ $computed->value === 'online' ? 'var(--crm-success)' : ($computed->value === 'offline' ? 'var(--crm-warning)' : 'var(--crm-text-secondary)') }};"></span>
                                 {{ $crm_label('device_status', $computed->value) }}
                             </span>
                         </td>
@@ -167,8 +168,8 @@
             </h3>
             <div class="crm-form__desc">Хэши биометрических шаблонов — сами данные на устройствах.</div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th>Сотрудник</th><th>Vendor</th><th>Хэш шаблона</th><th>Статус</th><th></th></tr></thead>
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
+                    <thead><tr><th scope="col">Сотрудник</th><th scope="col">Vendor</th><th scope="col">Хэш шаблона</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($profiles as $profile)
                             <tr>
@@ -209,8 +210,8 @@
             <h3>Журнал регистрации <span class="text-secondary fw-normal">({{ $enrollments->count() }})</span></h3>
             <div class="crm-form__desc">Кто, где и когда записывал биометрию.</div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th>Когда</th><th>Сотрудник</th><th>Устройство</th><th>Производитель</th><th>Оператор</th></tr></thead>
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
+                    <thead><tr><th scope="col">Когда</th><th scope="col">Сотрудник</th><th scope="col">Устройство</th><th scope="col">Производитель</th><th scope="col">Оператор</th></tr></thead>
                     <tbody>
                         @forelse ($enrollments as $enrollment)
                             <tr>
@@ -536,7 +537,7 @@
     }
     #registerDevice .wz-steps__item.is-done .wz-steps__num {
         background: rgba(47, 179, 68, .16);
-        color: #2fb344;
+        color: var(--crm-success);
         box-shadow: inset 0 0 0 1px rgba(47, 179, 68, .45);
     }
     [data-bs-theme="dark"] #registerDevice .wz-steps__item.is-done .wz-steps__num { color: #69db7c; }

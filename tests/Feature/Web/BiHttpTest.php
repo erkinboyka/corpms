@@ -147,11 +147,11 @@ class BiHttpTest extends TestCase
         $this->actingAs($this->adminUser)->get('/bi')->assertOk()->assertSee('Дашборды');
         $this->actingAs($this->adminUser)->get('/bi/metrics')->assertOk()->assertSee('Срезы витрины');
 
-        $routes = array_column(Sidebar::build($this->adminUser), 'route');
+        $routes = Sidebar::routes($this->adminUser);
         $this->assertContains('bi.index', $routes);
         $this->assertContains('bi.metrics.index', $routes);
 
-        $workerRoutes = array_column(Sidebar::build($workerUser), 'route');
+        $workerRoutes = Sidebar::routes($workerUser);
         $this->assertNotContains('bi.index', $workerRoutes);
     }
 

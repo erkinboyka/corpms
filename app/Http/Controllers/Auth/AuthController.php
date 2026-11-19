@@ -56,6 +56,9 @@ class AuthController extends Controller
         }
 
         $remember = $request->boolean('remember');
+        $credentials[] = fn ($query) => $query->where(fn ($scope) => $scope
+            ->whereDoesntHave('employee')
+            ->orWhereHas('employee', fn ($employee) => $employee->where('status', 'active')));
 
         if (Auth::attempt($credentials, $remember) === false) {
             RateLimiter::hit($key, self::FAIL_DECAY);

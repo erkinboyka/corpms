@@ -96,11 +96,12 @@ class CrmService
      */
     public function convertLead(CrmLead $lead, int $actorEmployeeId): CrmDeal
     {
-        if ($lead->status->isOpen() === false) {
-            throw new LogicException('Лид уже закрыт: конверсия невозможна');
-        }
-
         return DB::transaction(function () use ($lead, $actorEmployeeId): CrmDeal {
+            $lead = CrmLead::query()->whereKey($lead->id)->lockForUpdate()->firstOrFail();
+            if ($lead->status->isOpen() === false) {
+                throw new LogicException('Лид уже закрыт: конверсия невозможна');
+            }
+
             $client = $lead->client;
 
             if ($client === null) {

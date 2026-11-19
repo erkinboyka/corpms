@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'planning')
 
 @section('title', 'Оргструктура')
 
@@ -12,7 +13,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Организация</div>
-            <h2 class="page-title mt-1">Оргструктура</h2>
+            <h1 class="page-title mt-1">Оргструктура</h1>
             <div class="text-secondary mt-1">Иерархия подразделений · нажмите на узел, чтобы развернуть детей</div>
         </div>
         <div class="col-auto d-print-none">
@@ -75,3 +76,7 @@
     </div>
 @endforelse
 @endsection
+
+@push('scripts')
+    <script src="/assets/js/orgchart.js?v3" defer></script>
+@endpush

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         api: __DIR__.'/../routes/device.php',
         apiPrefix: '',
         health: '/up',
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             NoCacheHtml::class,
+            \App\Http\Middleware\EnsureActiveEmployee::class,
             // Межтенантная изоляция: после SubstituteBindings (ТЗ, анти-IDOR)
             EnsureTenantIsolation::class,
         ]);

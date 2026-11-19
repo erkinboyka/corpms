@@ -1,11 +1,12 @@
 /* ============================================================================
-   CorpMS Design Tokens v2.0 — Apple HIG-inspired
-   Каноническая тема — dark. Light — систематически выведенная.
-   Это единственный источник визуальных значений. Ничего кроме токенов.
-   Основа: Apple Human Interface Guidelines — Clarity / Deference / Depth.
+   BM SYSTEMS — DESIGN TOKENS v3.0
+   Premium Enterprise Glass. Каноническая тема — dark, light — системно выведенная.
+   ЕДИНСТВЕННЫЙ источник визуальных значений. Ничего кроме токенов.
+   Все имена токенов v2 сохранены (совместимость effects.css), значения обновлены,
+   добавлены: purple, статусные подложки, elevation 3/4, z-index, glass-набор.
    ============================================================================ */
 
-/* ---------- Шрифт: SF Pro (Apple) → системный → Inter Variable (кириллица) ---------- */
+/* ---------- Шрифт: Inter Variable (кириллица+латиница) → системный стек ---------- */
 @font-face {
     font-family: 'Inter Variable';
     font-style: normal;
@@ -24,28 +25,26 @@
 }
 
 :root {
-    /* ---------- Типографика: одна системная семья, иерархия — весом ----------
-       Шкала HIG (Large size): largeTitle 34 · title1 28 · title2 22 · title3 20
-       headline/body 17 · callout 16 · subhead 15 · footnote 13 · caption 12/11 */
-    --crm-font: 'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont,
-                'Segoe UI', system-ui, 'Inter Variable', 'Inter', sans-serif;
-    --crm-font-mono: 'SF Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, monospace;
+    /* ---------- Типографика: Inter Variable, иерархия — весом и размером ---------- */
+    --crm-font: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                system-ui, sans-serif;
+    --crm-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
 
-    --crm-text-display: 2.125rem;     /* 34px — large title */
-    --crm-text-heading: 1.75rem;      /* 28px — title 1 */
-    --crm-text-section: 1.375rem;     /* 22px — title 2 */
-    --crm-text-body-lg: 1.1875rem;    /* 19px — lead */
-    --crm-text-body: 1.0625rem;       /* 17px — body, потолок читаемости HIG */
-    --crm-text-callout: 1rem;         /* 16px */
-    --crm-text-subhead: .9375rem;     /* 15px */
-    --crm-text-caption: .8125rem;     /* 13px — footnote */
-    --crm-text-caption-2: .6875rem;   /* 11px — caption 2 */
+    --crm-text-display: 1.875rem;     /* 30px — приветствие, крупные значения */
+    --crm-text-heading: 1.375rem;     /* 22px — H1 страницы */
+    --crm-text-section: 1.0625rem;    /* 17px — H2 / заголовок блока */
+    --crm-text-body-lg: .9375rem;     /* 15px — lead */
+    --crm-text-body: .875rem;         /* 14px — body (совместимо с Tabler 14) */
+    --crm-text-callout: .84375rem;    /* 13.5px — вторичный текст */
+    --crm-text-caption: .78125rem;    /* 12.5px — caption */
+    --crm-text-caption-2: .6875rem;   /* 11px — label / eyebrow / бейджи */
+    --crm-text-numeric: 1.375rem;     /* 22px — KPI-значения */
 
-    --crm-lh-tight: 1.22;
-    --crm-lh-body: 1.47;   /* HIG-рекомендация ~1.4–1.5 для длинного текста */
-    --crm-lh-caption: 1.38;
+    --crm-lh-tight: 1.2;
+    --crm-lh-body: 1.45;
+    --crm-lh-caption: 1.35;
 
-    /* ---------- Spacing (8pt-сетка с 4pt-подразделениями) ---------- */
+    /* ---------- Spacing (4px-сетка) ---------- */
     --crm-space-1: 4px;
     --crm-space-2: 8px;
     --crm-space-3: 12px;
@@ -55,124 +54,224 @@
     --crm-space-7: 48px;
     --crm-space-8: 64px;
 
-    /* ---------- Radius (HIG: control 10 · card 16 · sheet 20) ---------- */
-    --crm-radius-sm: 6px;    /* чипы, точные элементы */
-    --crm-radius-xs: 8px;    /* мелкие кнопки (btn-sm) */
-    --crm-radius-md: 10px;   /* кнопки, инпуты, инпут-группы — control radius */
-    --crm-radius-lg: 16px;   /* карточки */
-    --crm-radius-xl: 20px;   /* модалки, dropdown, крупные панели — sheet radius */
+    /* ---------- Radius (сдержанные углы) ---------- */
+    --crm-radius-xs: 6px;    /* чипы, бейджи */
+    --crm-radius-sm: 8px;    /* мелкие кнопки */
+    --crm-radius-md: 10px;   /* кнопки, инпуты, контролы */
+    --crm-radius-lg: 14px;   /* карточки */
+    --crm-radius-xl: 18px;   /* модалки, панели */
+    --crm-radius-pill: 999px;
 
-    /* ---------- Touch: минимум HIG ---------- */
+    /* ---------- Touch ---------- */
     --crm-tap: 44px;
 
-    /* ---------- Accent (живое) ---------- */
-    --crm-accent-gradient: linear-gradient(135deg, #0A84FF 0%, #409CFF 55%, #7BB8FF 100%);
-    --crm-glow: 0 0 0 1px rgba(var(--crm-accent-rgb), .18), 0 8px 30px rgba(var(--crm-accent-rgb), .22);
+    /* ---------- Motion ----------
+       Единая система плавности. Правило: одна длительность = один уровень
+       значимости, одна кривая = один характер движения. Компоненты берут
+       длительность из --crm-motion-*, а не задают свои числа. */
+    --crm-ease: cubic-bezier(.25, .6, .25, 1);          /* базовый (наследие) */
+    --crm-ease-out: cubic-bezier(.16, 1, .3, 1);        /* выход/появление */
+    --crm-ease-spring: cubic-bezier(.34, 1.2, .64, 1);  /* акцент, редко */
+    --crm-ease-in: cubic-bezier(.4, 0, 1, 1);           /* уход элемента */
+    --crm-ease-standard: cubic-bezier(.2, 0, 0, 1);     /* нейтральный сдвиг */
+    --crm-ease-emphasized: cubic-bezier(.3, 0, 0, 1);   /* крупные панели */
 
-    /* ---------- Effects: Depth через слои и движение ---------- */
-    --crm-blur: 24px;
-    --crm-glass-alpha: .72;
-    --crm-ease: cubic-bezier(.25, .6, .25, 1);
-    --crm-ease-out: cubic-bezier(.16, 1, .3, 1);   /* системное затухание */
-    --crm-ease-spring: cubic-bezier(.34, 1.2, .64, 1);
-    --crm-dur-fast: 140ms;
-    --crm-dur-base: 220ms;
-    --crm-dur-slow: 360ms;
-    --crm-shadow-1: 0 1px 2px rgba(0, 0, 0, .06);
-    --crm-shadow-2: 0 8px 28px rgba(0, 0, 0, .10);
+    /* Ступени длительности: инстимент → мгновенный отклик (нажатие) */
+    --crm-dur-instant: 105ms;
+    --crm-dur-fast: 250ms;
+    --crm-dur-base: 360ms;
+    --crm-dur-slow: 520ms;
+    --crm-dur-slower: 660ms;
+
+    /* Длительности по ролям компонентов (использовать их, не числа) */
+    --crm-motion-feedback: var(--crm-dur-instant);  /* :active, ripple */
+    --crm-motion-control: var(--crm-dur-fast);      /* кнопка, чип, иконка */
+    --crm-motion-surface: var(--crm-dur-base);      /* карточка, поле, вкладка */
+    --crm-motion-overlay: var(--crm-dur-base);      /* dropdown, popover, тост */
+    --crm-motion-panel: var(--crm-dur-slow);        /* modal, drawer, offcanvas */
+    --crm-motion-sidebar: var(--crm-dur-slow);      /* сворачивание сайдбара */
+    --crm-motion-content: var(--crm-dur-slow);      /* подмена содержимого */
+    --crm-motion-page: var(--crm-dur-slower);         /* переход между страницами */
+    --crm-motion-skeleton: 1400ms;                  /* цикл shimmer */
+
+    /* Сдвиги для входа/выхода (одинаковые у всех слоёв) */
+    --crm-shift-1: 4px;
+    --crm-shift-2: 8px;
+    --crm-shift-3: 16px;
+    --crm-shift-panel: 24px;
+
+    /* Масштаб для входа overlay-элементов */
+    --crm-scale-in: .97;
+    --crm-scale-out: .98;
+
+    /* ---------- Glass ---------- */
+    --crm-blur: 20px;
+    --crm-glass-alpha: .7;
+    --crm-glass-blur: 20px;
+    --crm-glass-border: rgba(255, 255, 255, .08);
+    --crm-glass-highlight: rgba(255, 255, 255, .06);
+    --crm-glass-hover: rgba(255, 255, 255, .05);
+
+    /* ---------- Accent gradient (для главного действия/бренда) ---------- */
+    --crm-accent-gradient: linear-gradient(135deg, #4F46E5 0%, #6D79F4 55%, #8B93FF 100%);
+    --crm-glow: 0 0 0 1px rgba(var(--crm-accent-rgb), .4), 0 0 0 4px rgba(var(--crm-accent-rgb), .16);
+
+    /* ---------- Elevation ---------- */
+    --crm-shadow-1: 0 1px 2px rgba(2, 6, 14, .28);
+    --crm-shadow-2: 0 2px 6px rgba(2, 6, 14, .26), 0 12px 32px rgba(2, 6, 14, .30);
+    --crm-shadow-3: 0 4px 10px rgba(2, 6, 14, .30), 0 24px 64px rgba(2, 6, 14, .42);
+    --crm-shadow-4: 0 32px 90px rgba(2, 6, 14, .5);
 
     /* ---------- Layout ---------- */
-    --crm-sidebar-w: 256px;
+    --crm-sidebar-w: 264px;
+    --crm-sidebar-w-collapsed: 72px;
     --crm-topbar-h: 56px;
-    --crm-container-max: 1240px;
+    --crm-container-max: 1280px;
 
-    /* ---------- Адаптивные секции: базовые паддинги (меняются container-запросами) ---------- */
+    /* ---------- Z-index ---------- */
+    --crm-z-sidebar: 1020;
+    --crm-z-topbar: 1015;
+    --crm-z-dropdown: 1040;
+    --crm-z-palette: 1080;
+    --crm-z-modal: 1090;
+    --crm-z-toast: 1120;
+
+    /* ---------- Адаптивные секции ---------- */
     --crm-sec-pad-x: 20px;
     --crm-sec-pad-y: 18px;
 }
 
 /* ----------------------------------------------------------------------------
-   LIGHT — systemBackground / systemGroupedBackground, label-нейтрали
+   LIGHT — прохладная бумага, белые поверхности, индиго-акцент
    ---------------------------------------------------------------------------- */
 [data-bs-theme="light"] {
-    --crm-bg: #F2F2F7;                 /* systemGroupedBackground */
-    --crm-bg-rgb: 242, 242, 247;
+    color-scheme: light;
 
-    --crm-surface: rgba(255, 255, 255, .78);   /* Liquid Glass */
+    --crm-bg: #F3F4F8;                    /* cool paper */
+    --crm-bg-rgb: 243, 244, 248;
+
+    --crm-surface: rgba(255, 255, 255, .74);
     --crm-surface-solid: #FFFFFF;
     --crm-surface-raised: #FFFFFF;
 
-    --crm-text: #000000;               /* label */
-    --crm-text-secondary: #3C3C43;     /* secondaryLabel */
-    --crm-text-secondary-rgb: 60, 60, 67;
-    --crm-text-muted: #6C6C70;         /* tertiaryLabel */
+    --crm-text: #12141C;
+    --crm-text-secondary: #565D6E;
+    --crm-text-secondary-rgb: 86, 93, 110;
+    --crm-text-muted: #676D80;
 
-    --crm-accent: #007AFF;             /* systemBlue */
-    --crm-accent-strong: #007AFF;      /* systemBlue — действия, текст-акцент */
-    --crm-accent-rgb: 0, 122, 255;
+    --crm-accent: #4F46E5;
+    --crm-accent-strong: #4F46E5;
+    --crm-accent-rgb: 79, 70, 229;
 
-    --crm-border: #E3E3E8;             /* separator */
-    --crm-border-strong: #D1D1D6;      /* systemGray4 */
+    --crm-border: #E5E7EE;
+    --crm-border-strong: #D3D6E0;
 
-    --crm-success: #34C759;            /* systemGreen */
-    --crm-success-rgb: 52, 199, 89;
-    --crm-warning: #FF9500;            /* systemOrange */
-    --crm-warning-rgb: 255, 149, 0;
-    --crm-danger: #FF3B30;             /* systemRed */
-    --crm-danger-rgb: 255, 59, 48;
-    --crm-info: #007AFF;
-    --crm-info-rgb: 0, 122, 255;
+    --crm-success: #137333;
+    --crm-success-rgb: 22, 163, 74;
+    --crm-success-lt: #E8F7EE;
+    --crm-warning: #935000;
+    --crm-warning-rgb: 217, 119, 6;
+    --crm-warning-lt: #FCF3E3;
+    --crm-danger: #DC2626;
+    --crm-danger-rgb: 220, 38, 38;
+    --crm-danger-lt: #FCE8E8;
+    --crm-info: #075F91;
+    --crm-info-rgb: 2, 132, 199;
+    --crm-info-lt: #E3F3FB;
+    --crm-purple: #9333EA;
+    --crm-purple-rgb: 147, 51, 234;
+    --crm-purple-lt: #F5E9FD;
 
-    --crm-input-bg: rgba(255, 255, 255, .72);
-    --crm-table-hover: rgba(0, 122, 255, .05);
-    --crm-select-arrow: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236C6C70' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-    --crm-option-active-bg: #E5E5EA;
-    --crm-sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(248, 248, 250, .96));
+    --crm-glass-bg: rgba(255, 255, 255, .72);
+    --crm-glass-border: rgba(255, 255, 255, .65);
+    --crm-glass-highlight: rgba(255, 255, 255, .8);
+    --crm-glass-hover: rgba(17, 24, 39, .035);
+
+    --crm-glass-shadow-1: 0 1px 2px rgba(16, 24, 35, .05), 0 6px 20px rgba(16, 24, 35, .06);
+    --crm-glass-shadow-2: 0 2px 4px rgba(16, 24, 35, .06), 0 14px 36px rgba(16, 24, 35, .10);
+
+    --crm-input-bg: rgba(255, 255, 255, .85);
+    --crm-table-hover: rgba(79, 70, 229, .05);
+    --crm-select-arrow: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238A90A2' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    --crm-option-active-bg: #EEF0F6;
+    --crm-sidebar-bg: rgba(255, 255, 255, .82);
+    --crm-topbar-bg: rgba(255, 255, 255, .78);
 }
 
 /* ----------------------------------------------------------------------------
-   DARK — каноническая палитра (systemBackground чёрный, поверхности systemGray)
+   DARK — каноническая тема: глубокий нейтральный базис, слоистые поверхности
    ---------------------------------------------------------------------------- */
 [data-bs-theme="dark"] {
-    --crm-bg: #000000;                 /* systemBackground */
-    --crm-bg-rgb: 0, 0, 0;
+    color-scheme: dark;
 
-    --crm-surface: rgba(28, 28, 30, .68);   /* Liquid Glass над чёрным */
-    --crm-surface-solid: #1C1C1E;
-    --crm-surface-raised: #2C2C2E;
+    --crm-bg: #0B0D12;
+    --crm-bg-rgb: 11, 13, 18;
 
-    --crm-text: #FFFFFF;               /* label */
-    --crm-text-secondary: #98989E;     /* secondaryLabel поверх чёрного */
-    --crm-text-secondary-rgb: 152, 152, 158;
-    --crm-text-muted: #6C6C70;         /* tertiaryLabel */
+    --crm-surface: rgba(21, 23, 31, .62);
+    --crm-surface-solid: #15171F;
+    --crm-surface-raised: #1C1F28;
 
-    --crm-accent: #0A84FF;             /* systemBlue (dark) */
-    --crm-accent-strong: #0A84FF;
-    --crm-accent-rgb: 10, 132, 255;
+    --crm-text: #F2F3F7;
+    --crm-text-secondary: #A2A8B8;
+    --crm-text-secondary-rgb: 162, 168, 184;
+    --crm-text-muted: #808699;
 
-    --crm-border: #38383A;             /* systemGray5 (dark) */
-    --crm-border-strong: #48484A;      /* systemGray4 (dark) */
+    --crm-accent: #818CF8;
+    --crm-accent-strong: #6D79F4;
+    --crm-accent-rgb: 129, 140, 248;
 
-    --crm-success: #30D158;
-    --crm-success-rgb: 48, 209, 88;
-    --crm-warning: #FF9F0A;
-    --crm-warning-rgb: 255, 159, 10;
-    --crm-danger: #FF453A;
-    --crm-danger-rgb: 255, 69, 58;
-    --crm-info: #0A84FF;
-    --crm-info-rgb: 10, 132, 255;
+    --crm-border: rgba(255, 255, 255, .08);
+    --crm-border-strong: rgba(255, 255, 255, .14);
+
+    --crm-success: #3ECF8E;
+    --crm-success-rgb: 62, 207, 142;
+    --crm-success-lt: rgba(62, 207, 142, .13);
+    --crm-warning: #F5A524;
+    --crm-warning-rgb: 245, 165, 36;
+    --crm-warning-lt: rgba(245, 165, 36, .13);
+    --crm-danger: #F0616D;
+    --crm-danger-rgb: 240, 97, 109;
+    --crm-danger-lt: rgba(240, 97, 109, .13);
+    --crm-info: #38BDF8;
+    --crm-info-rgb: 56, 189, 248;
+    --crm-info-lt: rgba(56, 189, 248, .12);
+    --crm-purple: #C084FC;
+    --crm-purple-rgb: 192, 132, 252;
+    --crm-purple-lt: rgba(192, 132, 252, .13);
+
+    --crm-glass-bg: rgba(21, 23, 31, .66);
+    --crm-glass-border: rgba(255, 255, 255, .08);
+    --crm-glass-highlight: rgba(255, 255, 255, .06);
+    --crm-glass-hover: rgba(255, 255, 255, .05);
 
     --crm-glass-shadow-1: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 6px 20px rgba(0, 0, 0, .45);
-    --crm-glass-shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 14px 40px rgba(0, 0, 0, .60);
+    --crm-glass-shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 14px 40px rgba(0, 0, 0, .6);
 
-    --crm-input-bg: rgba(255, 255, 255, .055);
-    --crm-table-hover: rgba(10, 132, 255, .10);
-    --crm-select-arrow: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2398989E' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-    --crm-option-active-bg: #2C2C2E;
-    --crm-sidebar-bg: linear-gradient(180deg, rgba(0, 0, 0, .92), rgba(28, 28, 30, .96));
+    --crm-input-bg: rgba(255, 255, 255, .05);
+    --crm-table-hover: rgba(129, 140, 248, .09);
+    --crm-select-arrow: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23A2A8B8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    --crm-option-active-bg: #242735;
+    --crm-sidebar-bg: rgba(15, 17, 24, .8);
+    --crm-topbar-bg: rgba(13, 15, 21, .72);
 }
 
-[data-bs-theme="light"] {
-    --crm-glass-shadow-1: 0 1px 2px rgba(16, 24, 35, .05), 0 6px 20px rgba(16, 24, 35, .06);
-    --crm-glass-shadow-2: 0 2px 4px rgba(16, 24, 35, .06), 0 14px 36px rgba(16, 24, 35, .10);
+/* ----------------------------------------------------------------------------
+   Focus / Selection
+   ---------------------------------------------------------------------------- */
+:root {
+    --crm-focus-ring: 0 0 0 1px rgba(var(--crm-accent-rgb), .5), 0 0 0 4px rgba(var(--crm-accent-rgb), .16);
+    --crm-selection-bg: rgba(var(--crm-accent-rgb), .18);
+}
+::selection { background: var(--crm-selection-bg); }
+
+/* ----------------------------------------------------------------------------
+   Reduced motion — системное уважение настроек пользователя
+   ---------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

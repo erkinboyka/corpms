@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Склад — Склады')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Склад</div>
-            <h2 class="page-title mt-1">Склады</h2>
+            <h1 class="page-title mt-1">Склады</h1>
             <div class="text-secondary mt-1">Места хранения компании · {{ $warehouses->count() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -31,14 +32,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table" id="warehouses-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table" id="warehouses-table">
             <thead>
                 <tr>
-                    <th>Склад</th>
-                    <th>Адрес</th>
-                    <th class="text-end">Позиций с остатком</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Склад</th>
+                    <th scope="col">Адрес</th>
+                    <th scope="col" class="text-end">Позиций с остатком</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -84,19 +85,23 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Добавить склад</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nw-code">Код<span class="req">*</span></label>
-                        <input type="text" id="nw-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="MAIN" maxlength="32" required>
+                <div class="crm-form__section mb-0">
+                    <h3>Склад</h3>
+                    <div class="crm-form__desc">Код и название — как в накладных и остатках.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nw-code">Код<span class="req">*</span></label>
+                            <input type="text" id="nw-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="MAIN" maxlength="32" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="nw-name">Название<span class="req">*</span></label>
+                            <input type="text" id="nw-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Основной склад" required>
+                        </div>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="nw-name">Название<span class="req">*</span></label>
-                        <input type="text" id="nw-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Основной склад" required>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="nw-address">Адрес</label>
+                        <input type="text" id="nw-address" name="address" class="form-control" value="{{ old('address') }}" maxlength="1000" placeholder="г. Москва, ул. Складская, 1">
                     </div>
-                </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="nw-address">Адрес</label>
-                    <input type="text" id="nw-address" name="address" class="form-control" value="{{ old('address') }}" maxlength="1000" placeholder="г. Москва, ул. Складская, 1">
                 </div>
             </div>
             <div class="modal-footer">

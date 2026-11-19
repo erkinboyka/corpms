@@ -93,16 +93,18 @@ class TaskController extends Controller
         \assert($me !== null);
 
         $assigned = Task::query()
+            ->where('company_id', $me->company_id)
             ->whereIn('id', $this->assignedToMe($me)->select('task_id'))
             ->with('author')
             ->orderByDesc('id')
-            ->get();
+            ->paginate(20, ['*'], 'assigned_page')->withQueryString();
 
         $written = Task::query()
+            ->where('company_id', $me->company_id)
             ->where('author_id', $me->id)
             ->with('author')
             ->orderByDesc('id')
-            ->get();
+            ->paginate(20, ['*'], 'written_page')->withQueryString();
 
         $openLogs = TaskTimeLog::query()
             ->where('employee_id', $me->id)
@@ -110,7 +112,9 @@ class TaskController extends Controller
             ->with('task')
             ->first();
 
-        return view('tasks.mine', compact('assigned', 'written', 'openLogs'));
+        $departments = Department::query()->where('company_id', $me->company_id)->orderBy('name')->get();
+
+        return view('tasks.mine', compact('assigned', 'written', 'openLogs', 'departments'));
     }
 
     public function overdue(Request $request): View

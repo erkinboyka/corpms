@@ -103,11 +103,11 @@ class CrmHttpTest extends TestCase
         $this->actingAs($this->adminUser)->get('/crm/deals')->assertOk()->assertSee('Воронка сделок');
         $this->actingAs($this->adminUser)->get('/crm/activities')->assertOk();
 
-        $routes = array_column(Sidebar::build($this->adminUser), 'route');
+        $routes = Sidebar::routes($this->adminUser);
         $this->assertContains('crm.clients.index', $routes);
         $this->assertContains('crm.deals.index', $routes);
 
-        $workerRoutes = array_column(Sidebar::build($workerUser), 'route');
+        $workerRoutes = Sidebar::routes($workerUser);
         $this->assertNotContains('crm.clients.index', $workerRoutes);
     }
 

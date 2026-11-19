@@ -95,17 +95,31 @@ class AccountingEntryController extends Controller
             return back()->withErrors(['entry_date' => 'У сотрудника не указана компания'])->withInput();
         }
 
+        $mode = $request->validate(['entry_mode' => ['sometimes', 'required', 'in:simple,advanced']])['entry_mode'] ?? 'advanced';
         $validated = $request->validate([
             'entry_date' => ['required', 'date'],
             'description' => ['nullable', 'string', 'max:255'],
+        ] + ($mode === 'simple' ? [
+            'debit_account_id' => ['required', 'integer', 'min:1'],
+            'credit_account_id' => ['required', 'integer', 'min:1'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999999999', 'decimal:0,2'],
+        ] : [
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.account_id' => ['nullable', 'integer'],
             'lines.*.debit' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'lines.*.credit' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
-        ], [], ['entry_date' => 'дата', 'lines' => 'строки проводки']);
+        ]), [], [
+            'entry_date' => 'дата', 'lines' => 'строки проводки',
+            'debit_account_id' => 'счёт дебета', 'credit_account_id' => 'счёт кредита', 'amount' => 'сумма',
+        ]);
+
+        $lines = $mode === 'simple' ? [
+            ['account_id' => $validated['debit_account_id'], 'debit' => $validated['amount']],
+            ['account_id' => $validated['credit_account_id'], 'credit' => $validated['amount']],
+        ] : $validated['lines'];
 
         /** @var Collection<int, array<string, mixed>> $filled */
-        $filled = collect($validated['lines'])
+        $filled = collect($lines)
             ->filter(static fn (array $line): bool => (float) ($line['debit'] ?? 0) > 0 || (float) ($line['credit'] ?? 0) > 0);
 
         if ($filled->isEmpty()) {

@@ -1,6 +1,8 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Сотрудники')
+@section('body_class', 'bm-people-directory')
 
 @php
     $employeeCards = collect($employees->items())->map(static function ($e) {
@@ -19,8 +21,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Кадры</div>
-            <h2 class="page-title mt-1">Сотрудники</h2>
-            <div class="text-secondary mt-1">Список по scope доступа · всего {{ $employees->total() }} · показаны {{ $employees->firstItem() ?? 0 }}–{{ $employees->lastItem() ?? 0 }}</div>
+            <h1 class="page-title mt-1">Сотрудники</h1>
+            <div class="text-secondary mt-1">Всего {{ $employees->total() }} · показаны {{ $employees->firstItem() ?? 0 }}–{{ $employees->lastItem() ?? 0 }}</div>
         </div>
         @if ($canManage)
         <div class="col-auto d-print-none">
@@ -61,8 +63,8 @@
     <div data-view-only="list">
         <div class="card">
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table">
-                    <thead><tr><th>№</th><th>ФИО</th><th>Отдел</th><th>Должность</th><th>Роли</th><th>Статус</th><th></th></tr></thead>
+                <table data-record-key="1" class="table table-hover table-vcenter card-table">
+                    <thead><tr><th scope="col">№</th><th scope="col">ФИО</th><th scope="col">Отдел</th><th scope="col">Должность</th><th scope="col">Роли</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($employees as $employee)
                             <tr>

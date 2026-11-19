@@ -109,11 +109,11 @@ class AccountingHttpTest extends TestCase
         $this->actingAs($this->adminUser)->get('/accounting/documents')->assertOk();
         $this->actingAs($this->adminUser)->get('/accounting/reports')->assertOk();
 
-        $routes = array_column(Sidebar::build($this->adminUser), 'route');
+        $routes = Sidebar::routes($this->adminUser);
         $this->assertContains('accounting.chart.index', $routes);
         $this->assertContains('accounting.entries.index', $routes);
 
-        $workerRoutes = array_column(Sidebar::build($workerUser), 'route');
+        $workerRoutes = Sidebar::routes($workerUser);
         $this->assertNotContains('accounting.chart.index', $workerRoutes);
     }
 
@@ -139,6 +139,30 @@ class AccountingHttpTest extends TestCase
             ->assertSessionHasErrors('code');
 
         $this->get('/accounting/chart')->assertOk()->assertSee('Расчётные счета')->assertSee('76');
+    }
+
+    public function test_simple_entry_uses_one_amount_for_both_accounts(): void
+    {
+        $this->post('/accounting/chart/default')->assertSessionHasNoErrors();
+        $debit = $this->accountByCode('51');
+        $credit = $this->accountByCode('90.1');
+        $url = '/accounting/entries';
+        $payload = [
+            'entry_mode' => 'simple',
+            'entry_date' => now()->toDateString(),
+            'debit_account_id' => $debit->id,
+            'credit_account_id' => $credit->id,
+            'amount' => '1250.50',
+        ];
+
+        $this->post($url, array_replace($payload, ['amount' => '1250.505']))->assertSessionHasErrors('amount');
+        $this->assertDatabaseCount('acc_entries', 0);
+        $this->post($url, $payload)->assertSessionHasNoErrors();
+
+        $entry = AccEntry::query()->sole();
+        $this->assertCount(2, $entry->lines);
+        $this->assertDatabaseHas('acc_entry_lines', ['entry_id' => $entry->id, 'account_id' => $debit->id, 'debit' => 1250.5, 'credit' => 0]);
+        $this->assertDatabaseHas('acc_entry_lines', ['entry_id' => $entry->id, 'account_id' => $credit->id, 'debit' => 0, 'credit' => 1250.5]);
     }
 
     /** Ручная проводка: баланс дебета и кредита обязателен. */

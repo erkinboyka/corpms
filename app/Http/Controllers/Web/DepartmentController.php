@@ -38,7 +38,7 @@ class DepartmentController extends Controller
             ->withCount('activeEmployees')
             // межтенантная изоляция (P0): база списка — компания сотрудника
             ->where('company_id', $employee->company_id)
-            ->when($scope === PermissionScope::Department, fn ($q) => $q->whereKey($employee->department_id))
+            ->when($scope !== PermissionScope::Company, fn ($q) => $q->whereKey($employee->department_id))
             ->orderBy('name')
             ->get();
 

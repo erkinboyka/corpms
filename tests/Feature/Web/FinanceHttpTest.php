@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Domains\Ai\Services\AiToolRegistry;
 use App\Domains\Finance\Services\FinanceService;
 use App\Models\Company;
 use App\Models\CrmClient;
@@ -138,15 +139,57 @@ class FinanceHttpTest extends TestCase
         $this->actingAs($this->adminUser)->get('/finance/budgets')->assertOk();
         $this->actingAs($this->adminUser)->get('/finance/categories')->assertOk()->assertSee('Аренда');
 
-        $routes = array_column(Sidebar::build($this->adminUser), 'route');
+        $routes = Sidebar::routes($this->adminUser);
         $this->assertContains('finance.accounts.index', $routes);
         $this->assertContains('finance.invoices.index', $routes);
 
-        $workerRoutes = array_column(Sidebar::build($workerUser), 'route');
+        $workerRoutes = Sidebar::routes($workerUser);
         $this->assertNotContains('finance.accounts.index', $workerRoutes);
     }
 
     /** Баланс = opening_balance + доходы − расходы; направление статьи проверяется. */
+    public function test_mixed_currencies_are_separate_in_metrics_and_http_summaries(): void
+    {
+        $usd = FinAccount::create(['company_id' => $this->company->id, 'name' => 'Dollar bank',
+            'kind' => 'bank', 'currency' => 'USD', 'opening_balance' => 100, 'is_active' => true]);
+        foreach ([[$this->account, 'income', 500], [$usd, 'income', 20], [$usd, 'expense', 5]] as [$account, $direction, $amount]) {
+            FinTransaction::create(['company_id' => $this->company->id, 'account_id' => $account->id,
+                'direction' => $direction, 'amount' => $amount, 'occurred_at' => now()->toDateString(),
+                'source' => 'manual', 'created_by' => $this->adminUser->id]);
+        }
+        $metrics = app(FinanceService::class)->metrics($this->company->id);
+        $this->assertNull($metrics['balance']);
+        $this->assertNull($metrics['income']);
+        $this->assertNull($metrics['unpaid']);
+        $this->assertNull($metrics['budget_planned']);
+        $this->assertSame(1500.0, $metrics['by_currency']['RUB']['balance']);
+        $this->assertSame(115.0, $metrics['by_currency']['USD']['balance']);
+        $this->assertSame(15.0, $metrics['by_currency']['USD']['profit']);
+        $ai = app(AiToolRegistry::class)->execute($this->adminEmployee, 'finance_summary', []);
+        $this->assertTrue($ai['ok']);
+        $this->assertNull($ai['result']['income']);
+        $this->assertSame(20.0, $ai['result']['by_currency']['USD']['income']);
+        foreach (['accounts', 'transactions', 'invoices', 'budgets'] as $page) {
+            $this->get('/finance/'.$page)->assertOk()->assertSee('USD')->assertSee('RUB');
+        }
+    }
+
+    public function test_mixed_currency_budget_does_not_report_a_false_usage_percentage(): void
+    {
+        $usd = FinAccount::create(['company_id' => $this->company->id, 'name' => 'USD',
+            'kind' => 'bank', 'currency' => 'USD', 'opening_balance' => 0, 'is_active' => true]);
+        FinBudget::create(['company_id' => $this->company->id, 'period' => now()->startOfMonth()->toDateString(),
+            'direction' => 'expense', 'planned_amount' => 100]);
+        FinTransaction::create(['company_id' => $this->company->id, 'account_id' => $usd->id,
+            'direction' => 'expense', 'amount' => 25, 'occurred_at' => now()->toDateString(),
+            'source' => 'manual', 'created_by' => $this->adminUser->id]);
+        $budget = app(FinanceService::class)->budgetsWithActual($this->company->id, now()->format('Y-m'))->sole();
+        $this->assertNull($budget->actual);
+        $this->assertNull($budget->usage_percent);
+        $this->assertSame(['USD' => 25.0], $budget->actual_by_currency);
+        $this->get('/finance/budgets')->assertOk()->assertSee('Плану не назначена валюта');
+    }
+
     public function test_transactions_change_balance(): void
     {
         $this->post('/finance/transactions', [

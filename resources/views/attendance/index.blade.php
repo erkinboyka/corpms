@@ -1,6 +1,8 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'Посещаемость')
+@section('body_class', 'bm-attendance-day')
 
 @php
     $statusIcons = [
@@ -20,13 +22,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Посещаемость</div>
-            <h2 class="page-title mt-1">Сегодня · {{ now()->format('d.m.Y') }}</h2>
+            <h1 class="page-title mt-1">Сегодня · {{ now()->format('d.m.Y') }}</h1>
             <div class="text-secondary mt-1">Оперативный центр: отметки за день и поток событий</div>
-        </div>
-        <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('attendance.timesheet') }}"><i class="ti ti-table me-1"></i>Табель</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('attendance.anomalies') }}"><i class="ti ti-alert-triangle me-1"></i>Аномалии</a>
-            <a class="btn btn-ghost-secondary" href="{{ route('attendance.corrections') }}"><i class="ti ti-edit me-1"></i>Корректировки</a>
         </div>
     </div>
 </div>
@@ -52,13 +49,13 @@
     <div class="col-xl-7">
         <div class="card">
             <div class="card-header">
-                <strong>Табель за сегодня</strong>
+                <h2 class="card-title bm-section-title">Табель за сегодня</h2>
                 <span class="crm-chip ms-auto">{{ $records->count() }} записей</span>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                     <thead>
-                        <tr><th>Сотрудник</th><th>Вход</th><th>Выход</th><th>Статус</th><th class="text-end">Отраб.</th><th class="text-end">Поздно</th></tr>
+                        <tr><th scope="col">Сотрудник</th><th scope="col">Вход</th><th scope="col">Выход</th><th scope="col">Статус</th><th scope="col" class="text-end">Отраб.</th><th scope="col" class="text-end">Поздно</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($records as $record)
@@ -135,10 +132,18 @@
     const counter = document.getElementById('live-counter');
     if (list === null) { return; }
 
+    // Сигнатура уже отрисованного состояния: пока она не меняется, DOM не
+    // трогаем — иначе лента мигает каждые 10 с, хотя данных не пришло.
+    let renderedSignature = null;
+
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = String(text ?? '');
         return div.innerHTML;
+    }
+
+    function keyOf(ev) {
+        return [ev.time, ev.device, ev.employee, ev.direction].join('|');
     }
 
     async function refresh() {
@@ -150,23 +155,40 @@
             if (!response.ok) { return; }
 
             const data = await response.json();
+            const events = Array.isArray(data.events) ? data.events : [];
+            const signature = events.map(keyOf).join('\n');
+
+            if (counter !== null) {
+                counter.textContent = 'обновлено ' + data.generated_at;
+            }
+
+            // Данные не изменились — оставляем отрисованное как есть.
+            if (signature === renderedSignature) { return; }
+
+            const previous = new Set(
+                renderedSignature === null ? [] : renderedSignature.split('\n')
+            );
+            renderedSignature = signature;
 
             list.innerHTML = '';
-            if (data.events.length === 0) {
+            if (events.length === 0) {
                 list.innerHTML = '<div class="crm-timeline__item"><div class="crm-timeline__text">Событий за сегодня нет</div></div>';
+                return;
             }
-            for (const ev of data.events) {
+
+            for (const ev of events) {
                 const item = document.createElement('div');
                 item.className = 'crm-timeline__item';
+                // Только появившиеся события въезжают плавно; остальные
+                // не анимируются, чтобы не дёргать ленту при каждой перезагрузке.
+                if (!previous.has(keyOf(ev))) {
+                    item.classList.add('bm-enter');
+                }
                 const chip = ev.direction === 'in' ? 'crm-chip--green' : 'crm-chip--grey';
                 item.innerHTML = '<div class="crm-timeline__time">' + escapeHtml(ev.time) + ' · ' + escapeHtml(ev.device) + '</div>'
                     + '<div class="crm-timeline__title">' + escapeHtml(ev.employee)
                     + '<span class="crm-chip ' + chip + ' ms-1">' + escapeHtml(ev.direction) + '</span></div>';
                 list.appendChild(item);
-            }
-
-            if (counter !== null) {
-                counter.textContent = 'обновлено ' + data.generated_at;
             }
         } catch (e) {
             // тихо повторяем через 10 с

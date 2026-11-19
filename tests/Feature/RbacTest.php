@@ -24,6 +24,8 @@ class RbacTest extends TestCase
 
     protected PermissionService $service;
 
+    protected Company $company;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,13 +34,13 @@ class RbacTest extends TestCase
         $this->seed(RbacSeeder::class);
 
         // источники структуры для FK
-        Company::create(['name' => 'TEST Co', 'code' => 'testco']);
+        $this->company = Company::create(['name' => 'TEST Co', 'code' => 'testco']);
     }
 
     protected function employee(User $user, string ...$roleSlugs): Employee
     {
         $employee = Employee::create([
-            'company_id' => 1,
+            'company_id' => $this->company->id,
             'user_id' => $user->id,
             'employee_no' => 'T-'.uniqid(),
             'first_name' => 'Тест',

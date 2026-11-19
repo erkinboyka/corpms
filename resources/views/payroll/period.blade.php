@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Ведомость ' . $period->label())
 
@@ -16,7 +17,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Зарплата · ведомость</div>
-            <h2 class="page-title mt-1">{{ $period->label() }} <span class="crm-chip {{ $statusChip }} ms-2">{{ $crm_label('payroll_status', $period->status->value) }}</span></h2>
+            <h1 class="page-title mt-1">{{ $period->label() }} <span class="crm-chip {{ $statusChip }} ms-2">{{ $crm_label('payroll_status', $period->status->value) }}</span></h1>
             <div class="text-secondary mt-1">Период #{{ $period->id }} · {{ $period->company?->name ?? '' }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -50,17 +51,17 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-plus-circle"></i>Начислено</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-plus-circle"></i>Начислено</div>
         <div class="crm-metric__value">{{ number_format($totals['gross'], 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">все компоненты начислений</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e03131;"><i class="ti ti-minus-circle"></i>Удержано</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-minus-circle"></i>Удержано</div>
         <div class="crm-metric__value">{{ number_format($totals['deductions'], 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">авансы, налоги, прочее</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-cash-banknote"></i>К выплате</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>К выплате</div>
         <div class="crm-metric__value">{{ number_format($totals['net'], 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">начислено минус удержания</div>
     </div>
@@ -88,15 +89,15 @@
 @else
     <div class="card mb-3">
         <div class="card-header">
-            <strong>Сводка по сотрудникам</strong>
+            <h2 class="card-title bm-section-title">Сводка по сотрудникам</h2>
             <span class="crm-chip ms-auto">{{ $summary->count() }} чел.</span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-vcenter card-table mb-0">
+            <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th>Сотрудник</th><th class="text-end">Начислено</th><th class="text-end">Удержано</th>
-                        <th class="text-end">К выплате</th><th class="text-end">Строк</th>
+                        <th scope="col">Сотрудник</th><th scope="col" class="text-end">Начислено</th><th scope="col" class="text-end">Удержано</th>
+                        <th scope="col" class="text-end">К выплате</th><th scope="col" class="text-end">Строк</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,15 +124,15 @@
 
     <div class="card">
         <div class="card-header">
-            <strong>Детализация начислений</strong>
+            <h2 class="card-title bm-section-title">Детализация начислений</h2>
             <span class="crm-chip ms-auto">{{ $lines->count() }} строк</span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-vcenter card-table mb-0">
+            <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th>Сотрудник</th><th>Компонент</th><th>Тип</th><th>Расчёт</th>
-                        <th class="text-end">Кол-во</th><th class="text-end">Ставка</th><th class="text-end">Сумма</th><th>Источник</th>
+                        <th scope="col">Сотрудник</th><th scope="col">Компонент</th><th scope="col">Тип</th><th scope="col">Расчёт</th>
+                        <th scope="col" class="text-end">Кол-во</th><th scope="col" class="text-end">Ставка</th><th scope="col" class="text-end">Сумма</th><th scope="col">Источник</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,7 +172,7 @@
 
     @if ($period->calculated_at || $period->approved_at || $period->paid_at)
         <div class="card mt-3">
-            <div class="card-header"><strong>История ведомости</strong></div>
+            <div class="card-header"><h2 class="card-title bm-section-title">История ведомости</h2></div>
             <div class="card-body">
                 <div class="crm-timeline">
                     @if ($period->calculated_at)

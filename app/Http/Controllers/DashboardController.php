@@ -41,19 +41,27 @@ class DashboardController extends Controller
         $employee = $user->employee()->with(['company', 'department', 'position'])->first();
         \assert($employee === null || $employee instanceof Employee);
 
-        // мой срез: задачи, где я исполнитель
         $myTasks = Task::query()
+            ->where('company_id', $employee?->company_id)
             ->whereHas('assignments', fn ($q) => $q->where('employee_id', $employee?->id ?? 0));
 
-        $myTasksByStatus = $employee === null
+        $canViewTasks = $employee !== null && $this->permissions->check($user, 'tasks.view');
+        $myTasksByStatus = ! $canViewTasks
             ? []
-            : $myTasks->selectRaw('status, count(*) as cnt')->groupBy('status')->pluck('cnt', 'status')
+            : (clone $myTasks)->selectRaw('status, count(*) as cnt')->groupBy('status')->pluck('cnt', 'status')
                 ->map(static fn ($v) => (int) $v)->all();
 
-        $overdue = $employee === null ? 0 : $myTasks->clone()
-            ->where('deadline', '<', now())
-            ->whereNotIn('status', ['completed', 'cancelled', 'overdue'])
+        $openTasks = (clone $myTasks)->whereNotIn('status', ['completed', 'cancelled']);
+        $overdue = ! $canViewTasks ? 0 : (clone $openTasks)
+            ->where(fn ($q) => $q->where('status', 'overdue')->orWhere('deadline', '<', now()))
             ->count();
+
+        $upcomingTasks = ! $canViewTasks ? collect() : $openTasks
+            ->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('deadline')
+            ->orderByDesc('id')
+            ->limit(4)
+            ->get(['id', 'title', 'deadline', 'status', 'priority']);
 
         // посещаемость сегодня (scope по праву analytics.view либо только я)
         $attendance = null;
@@ -224,7 +232,7 @@ class DashboardController extends Controller
         }
 
         return view('dashboard', compact(
-            'employee', 'myTasksByStatus', 'overdue', 'attendance',
+            'employee', 'canViewTasks', 'myTasksByStatus', 'overdue', 'upcomingTasks', 'attendance',
             'waitingSignatures', 'waitingApprovals', 'pendingLeaves', 'todayRecord', 'biometrics',
             'trend', 'heatmap', 'heatmapTotal', 'heatmapFrom', 'heatmapTo',
             'userActivity', 'activityTotal',

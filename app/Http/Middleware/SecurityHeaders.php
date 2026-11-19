@@ -28,13 +28,27 @@ class SecurityHeaders
         // внешние скрипты/фреймы/объекты запрещены. 'unsafe-inline' для script/style
         // сохранён временно: инлайн-скрипты есть в layout и ~12 view; переход на nonce
         // — отдельная задача (см. ROADMAP, инфраструктура).
+        //
+        // connect-src: websocket к Reverb — только заданный в .env хост/порт,
+        // чтобы realtime-канал не расширял список разрешённых источников.
+        $connect = ["'self'"];
+
+        $reverbHost = (string) config('broadcasting.connections.reverb.options.host');
+        $reverbPort = (int) config('broadcasting.connections.reverb.options.port');
+        $reverbScheme = (string) config('broadcasting.connections.reverb.options.scheme');
+
+        if ($reverbHost !== '' && $reverbPort > 0) {
+            $wsScheme = $reverbScheme === 'https' ? 'wss' : 'ws';
+            $connect[] = $wsScheme.'://'.$reverbHost.($reverbPort === 80 || $reverbPort === 443 ? '' : ':'.$reverbPort);
+        }
+
         $response->headers->set('Content-Security-Policy', implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
-            "connect-src 'self'",
+            'connect-src '.implode(' ', $connect),
             "media-src 'self' blob:",
             "worker-src 'self' blob:",
             "object-src 'none'",

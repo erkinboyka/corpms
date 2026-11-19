@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', 'Подчинённые — ' . $employee->last_name)
 
@@ -13,7 +14,7 @@
                     <li class="breadcrumb-item active" aria-current="page">Подчинённые</li>
                 </ol>
             </nav>
-            <h2 class="page-title mt-1">Прямые подчинённые</h2>
+            <h1 class="page-title mt-1">Прямые подчинённые</h1>
             <div class="text-secondary mt-1">{{ $employee->last_name }} {{ $employee->first_name }} · {{ $employee->position?->name ?? 'должность не назначена' }}</div>
         </div>
         <div class="col-auto d-print-none">

@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Склад — Остатки')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Склад</div>
-            <h2 class="page-title mt-1">Остатки</h2>
+            <h1 class="page-title mt-1">Остатки</h1>
             <div class="text-secondary mt-1">Остаток = сумма журнала движений · товары с минимумом подсвечены</div>
         </div>
         <div class="col-auto d-print-none">
@@ -22,22 +23,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-box"></i>Товаров</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-box"></i>Товаров</div>
         <div class="crm-metric__value">{{ $metrics['products'] }}</div>
         <div class="crm-metric__hint">активной номенклатуры</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-building-warehouse"></i>Складов</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-building-warehouse"></i>Складов</div>
         <div class="crm-metric__value">{{ $metrics['warehouses'] }}</div>
         <div class="crm-metric__hint">в компании</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-alert-triangle"></i>Ниже минимума</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-alert-triangle"></i>Ниже минимума</div>
         <div class="crm-metric__value">{{ $metrics['low'] }}</div>
         <div class="crm-metric__hint">товаров требуют закупки</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-coins"></i>Стоимость остатков</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-coins"></i>Стоимость остатков</div>
         <div class="crm-metric__value" style="font-size: 1.1rem; padding-top: 6px;">{{ number_format($metrics['stockValue'], 2, ',', ' ') }}</div>
         <div class="crm-metric__hint">по цене закупки</div>
     </div>
@@ -62,14 +63,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Товар</th>
-                    <th class="text-end">Остаток</th>
-                    <th class="text-end">Минимум</th>
-                    <th class="text-end">Цена</th>
-                    <th>Статус</th>
+                    <th scope="col">Товар</th>
+                    <th scope="col" class="text-end">Остаток</th>
+                    <th scope="col" class="text-end">Минимум</th>
+                    <th scope="col" class="text-end">Цена</th>
+                    <th scope="col">Статус</th>
                 </tr>
             </thead>
             <tbody>
@@ -113,47 +114,58 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Операция со складом</h5></div>
             <div class="modal-body">
-                <div class="crm-form__field">
-                    <label class="form-label" for="mv-type">Тип операции<span class="req">*</span></label>
-                    <select id="mv-type" name="type" class="form-select" required>
-                        <option value="in" @selected(old('type') === 'in')>Приход</option>
-                        <option value="out" @selected(old('type') === 'out')>Расход</option>
-                        <option value="adjustment" @selected(old('type') === 'adjustment')>Корректировка (со знаком)</option>
-                        <option value="write_off" @selected(old('type') === 'write_off')>Списание</option>
-                    </select>
-                </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv-warehouse">Склад<span class="req">*</span></label>
-                        <select id="mv-warehouse" name="warehouse_id" class="form-select" required>
-                            @foreach ($warehouses as $w)
-                                <option value="{{ $w->id }}" @selected((string) old('warehouse_id') === (string) $w->id)>{{ $w->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv-product">Товар<span class="req">*</span></label>
-                        <select id="mv-product" name="product_id" class="form-select" required>
-                            @foreach ($products as $p)
-                                <option value="{{ $p->id }}" @selected((string) old('product_id') === (string) $p->id)>{{ $p->name }} ({{ $p->sku }})</option>
-                            @endforeach
+                <div class="crm-form__section">
+                    <h3>Операция</h3>
+                    <div class="crm-form__desc">Тип операции задаёт знак движения — приход, расход, корректировка или списание.</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="mv-type">Тип операции<span class="req">*</span></label>
+                        <select id="mv-type" name="type" class="form-select" required>
+                            <option value="in" @selected(old('type') === 'in')>Приход</option>
+                            <option value="out" @selected(old('type') === 'out')>Расход</option>
+                            <option value="adjustment" @selected(old('type') === 'adjustment')>Корректировка (со знаком)</option>
+                            <option value="write_off" @selected(old('type') === 'write_off')>Списание</option>
                         </select>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv-quantity">Количество<span class="req">*</span></label>
-                        <input type="number" id="mv-quantity" name="quantity" class="form-control" value="{{ old('quantity') }}" step="0.001" min="0.001" required>
-                        <div class="form-text">Для корректировки укажите знак: приход «+», списание «−».</div>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="mv-price">Цена единицы</label>
-                        <input type="number" id="mv-price" name="unit_price" class="form-control" value="{{ old('unit_price', '0') }}" step="0.01" min="0">
+                <div class="crm-form__section">
+                    <h3>Где и что</h3>
+                    <div class="crm-form__desc">Склад и товар рядом — что и куда движется.</div>
+                    <div class="crm-form__row mb-0">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv-warehouse">Склад<span class="req">*</span></label>
+                            <select id="mv-warehouse" name="warehouse_id" class="form-select" required>
+                                @foreach ($warehouses as $w)
+                                    <option value="{{ $w->id }}" @selected((string) old('warehouse_id') === (string) $w->id)>{{ $w->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv-product">Товар<span class="req">*</span></label>
+                            <select id="mv-product" name="product_id" class="form-select" required>
+                                @foreach ($products as $p)
+                                    <option value="{{ $p->id }}" @selected((string) old('product_id') === (string) $p->id)>{{ $p->name }} ({{ $p->sku }})</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__field mb-0">
-                    <label class="form-label" for="mv-note">Комментарий</label>
-                    <input type="text" id="mv-note" name="note" class="form-control" value="{{ old('note') }}" maxlength="1000" placeholder="Основание операции">
+                <div class="crm-form__section mb-0">
+                    <h3>Количество и стоимость</h3>
+                    <div class="crm-form__desc">Для корректировки укажите знак: приход «+», списание «−».</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv-quantity">Количество<span class="req">*</span></label>
+                            <input type="number" id="mv-quantity" name="quantity" class="form-control" value="{{ old('quantity') }}" step="0.001" min="0.001" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="mv-price">Цена единицы</label>
+                            <input type="number" id="mv-price" name="unit_price" class="form-control" value="{{ old('unit_price', '0') }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="mv-note">Комментарий</label>
+                        <input type="text" id="mv-note" name="note" class="form-control" value="{{ old('note') }}" maxlength="1000" placeholder="Основание операции">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

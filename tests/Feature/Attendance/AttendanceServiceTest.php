@@ -229,7 +229,7 @@ class AttendanceServiceTest extends TestCase
     public function deviceFor(string $direction): BiometricDevice
     {
         return BiometricDevice::firstOrCreate([
-            'company_id' => 1,
+            'company_id' => $this->employee->company_id,
             'name' => 'Main '.$direction,
             'serial_number' => 'SN-'.$direction.'-001',
             'direction' => $direction,

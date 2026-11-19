@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Финансы — Статьи')
 
@@ -7,12 +8,12 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Финансы</div>
-            <h2 class="page-title mt-1">Статьи доходов и расходов</h2>
+            <h1 class="page-title mt-1">Статьи доходов и расходов</h1>
             <div class="text-secondary mt-1">Аналитика операций и бюджетов · {{ $categories->count() }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.transactions.index') }}"><i class="ti ti-receipt me-1"></i>Операции</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.budgets.index') }}"><i class="ti ti-target me-1"></i>Бюджеты</a>
+
+
             @can('checkBoxPermission', 'finance.manage')
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCategory"><i class="ti ti-plus me-1"></i>Новая статья</button>
             @endcan
@@ -22,14 +23,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Статья</th>
-                    <th>Направление</th>
-                    <th class="text-center">Операций</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Статья</th>
+                    <th scope="col">Направление</th>
+                    <th scope="col" class="text-center">Операций</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>

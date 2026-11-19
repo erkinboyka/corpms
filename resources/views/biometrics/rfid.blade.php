@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'stream')
 
 @section('title', 'RFID-карты')
 
@@ -15,7 +16,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Доступ</div>
-            <h2 class="page-title mt-1">RFID-карты</h2>
+            <h1 class="page-title mt-1">RFID-карты</h1>
             <div class="text-secondary mt-1">Пропуска сотрудников и журнал проходов на ридерах</div>
         </div>
         <div class="col-auto d-print-none">
@@ -31,12 +32,12 @@
 
 <div class="crm-metrics mb-3" data-crm-sec="metrics" data-crm-sec-label="Метрики">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-credit-card"></i>Карт в системе</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-credit-card"></i>Карт в системе</div>
         <div class="crm-metric__value">{{ $cards->count() }}</div>
         <div class="crm-metric__hint">{{ $cards->filter(fn ($c) => $c->status->value === 'active')->count() }} активных</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-door-enter"></i>Проходов в журнале</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-door-enter"></i>Проходов в журнале</div>
         <div class="crm-metric__value">{{ $events->count() }}</div>
         <div class="crm-metric__hint">последние события ридеров</div>
     </div>
@@ -49,8 +50,8 @@
             <h3>Карты <span class="text-secondary fw-normal">({{ $cards->count() }})</span></h3>
             <div class="crm-form__desc">Выданные пропуска, сроки действия и блокировки.</div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th>UID</th><th>Сотрудник</th><th>Действ. до</th><th>Статус</th><th></th></tr></thead>
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
+                    <thead><tr><th scope="col">UID</th><th scope="col">Сотрудник</th><th scope="col">Действ. до</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($cards as $card)
                             <tr>
@@ -92,9 +93,9 @@
             <h3>Журнал проходов <span class="text-secondary fw-normal">({{ $events->count() }})</span></h3>
             <div class="crm-form__desc">События ридеров: карта, сотрудник, результат обработки.</div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                     <thead>
-                        <tr><th>Время</th><th>Карта</th><th>Сотрудник</th><th>Напр.</th><th>Результат</th></tr>
+                        <tr><th scope="col">Время</th><th scope="col">Карта</th><th scope="col">Сотрудник</th><th scope="col">Напр.</th><th scope="col">Результат</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($events as $event)

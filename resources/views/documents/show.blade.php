@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'record')
 
 @section('title', $document->title)
 
@@ -47,7 +48,7 @@
                         <span class="crm-chip crm-chip--cyan">рег. {{ $document->reg_number }}</span>
                     @endif
                 </div>
-                <h2 class="page-title mt-2 mb-1">{{ $document->title }}</h2>
+                <h1 class="page-title mt-2 mb-1">{{ $document->title }}</h1>
                 <div class="text-secondary">
                     <i class="ti ti-folder me-1"></i>{{ $document->category?->name ?? 'без категории' }}
                     <span class="mx-1">·</span>
@@ -101,8 +102,8 @@
             <h3>Версии <span class="text-secondary fw-normal">({{ $document->versions->count() }})</span></h3>
             <div class="crm-form__desc">История правок с хешем целостности.</div>
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th>#</th><th>Автор</th><th>sha256</th><th>Комментарий</th><th>Когда</th></tr></thead>
+                <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
+                    <thead><tr><th scope="col">#</th><th scope="col">Автор</th><th scope="col">sha256</th><th scope="col">Комментарий</th><th scope="col">Когда</th></tr></thead>
                     <tbody>
                         @forelse ($document->versions as $version)
                             <tr>
@@ -159,7 +160,7 @@
             @if ($document->approvals->isNotEmpty())
                 <div class="crm-queue mb-3">
                     @foreach ($document->approvals as $approval)
-                        <div class="crm-queue__item" style="--c: {{ $approval->status->value === 'approved' ? '#2fb344' : ($approval->status->value === 'rejected' ? '#d63939' : '#f76707') }};">
+                        <div class="crm-queue__item" style="--c: {{ $approval->status->value === 'approved' ? 'var(--crm-success)' : ($approval->status->value === 'rejected' ? 'var(--crm-danger)' : 'var(--crm-warning)') }};">
                             <div class="crm-queue__body">
                                 <div class="crm-queue__title">
                                     <strong>{{ $approval->workflowStep?->name ?? 'шаг' }}</strong>
@@ -293,8 +294,8 @@
                 <h3>Подписи <span class="text-secondary fw-normal">({{ $signatures->count() }})</span></h3>
                 <div class="crm-form__desc">Совершённые подписи и их статус.</div>
                 <div class="table-responsive">
-                    <table class="table table-hover table-vcenter card-table mb-0">
-                        <thead><tr><th>Кто</th><th>Статус</th><th>Когда</th><th></th></tr></thead>
+                    <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
+                        <thead><tr><th scope="col">Кто</th><th scope="col">Статус</th><th scope="col">Когда</th><th scope="col"></th></tr></thead>
                         <tbody>
                             @forelse ($signatures as $signature)
                                 <tr>

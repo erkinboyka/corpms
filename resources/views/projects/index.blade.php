@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'Проекты')
 
@@ -7,7 +8,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Работа</div>
-            <h2 class="page-title mt-1">Проекты</h2>
+            <h1 class="page-title mt-1">Проекты</h1>
             <div class="text-secondary mt-1">Портфель · всего {{ $projects->total() }}</div>
         </div>
         <div class="col-auto d-print-none">
@@ -21,22 +22,22 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-folders"></i>В работе</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-folders"></i>В работе</div>
         <div class="crm-metric__value">{{ $metrics['open'] }}</div>
         <div class="crm-metric__hint">из {{ $metrics['projects'] }} проектов</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-player-play"></i>Активных</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-player-play"></i>Активных</div>
         <div class="crm-metric__value">{{ $metrics['active'] }}</div>
         <div class="crm-metric__hint">завершено: {{ $metrics['completed'] }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e5697a;"><i class="ti ti-alarm"></i>Просрочено</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-alarm"></i>Просрочено</div>
         <div class="crm-metric__value">{{ $metrics['overdue'] }}</div>
         <div class="crm-metric__hint">сроки прошли</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-wallet"></i>Бюджет</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-wallet"></i>Бюджет</div>
         <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['budget'], 0, ',', ' ') }}</div>
         <div class="crm-metric__hint">факт: {{ number_format((float) $metrics['spent'], 0, ',', ' ') }}</div>
     </div>
@@ -59,17 +60,17 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="0" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Проект</th>
-                    <th>Статус</th>
-                    <th>Менеджер</th>
-                    <th>Сроки</th>
-                    <th class="text-end">Бюджет</th>
-                    <th class="text-center">Ресурсы</th>
-                    <th class="text-center">Задачи</th>
-                    <th class="text-end">Действия</th>
+                    <th scope="col">Проект</th>
+                    <th scope="col">Статус</th>
+                    <th scope="col">Менеджер</th>
+                    <th scope="col">Сроки</th>
+                    <th scope="col" class="text-end">Бюджет</th>
+                    <th scope="col" class="text-center">Ресурсы</th>
+                    <th scope="col" class="text-center">Задачи</th>
+                    <th scope="col" class="text-end">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -120,27 +121,43 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новый проект</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-code">Код<span class="req">*</span></label>
-                        <input type="text" id="np-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="PRJ-001" maxlength="32" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-name">Название<span class="req">*</span></label>
-                        <input type="text" id="np-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Внедрение CRM" required>
+                <div class="crm-form__section">
+                    <h3>Проект</h3>
+                    <div class="crm-form__desc">Код и название — по ним проект находят в списке и отчётах.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-code">Код<span class="req">*</span></label>
+                            <input type="text" id="np-code" name="code" class="form-control" value="{{ old('code') }}" placeholder="PRJ-001" maxlength="32" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-name">Название<span class="req">*</span></label>
+                            <input type="text" id="np-name" name="name" class="form-control" value="{{ old('name') }}" placeholder="Внедрение CRM" required>
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-manager">Менеджер</label>
-                        <select id="np-manager" name="manager_id" class="form-select">
-                            <option value="">— не назначен —</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" @selected((string) old('manager_id') === (string) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
-                            @endforeach
-                        </select>
+                <div class="crm-form__section">
+                    <h3>Управление</h3>
+                    <div class="crm-form__desc">Статус рядом с ответственным менеджером — видно, кто и в каком состоянии.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-status">Статус</label>
+                            <select id="np-status" name="status" class="form-select">
+                                @foreach ($statuses as $statusOption)
+                                    <option value="{{ $statusOption->value }}" @selected(old('status', 'planned') === $statusOption->value)>{{ $crm_label('project_status', $statusOption->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-manager">Менеджер</label>
+                            <select id="np-manager" name="manager_id" class="form-select">
+                                <option value="">— не назначен —</option>
+                                @foreach ($employees as $employee)
+                                    <option value="{{ $employee->id }}" @selected((string) old('manager_id') === (string) $employee->id)>{{ $employee->last_name }} {{ $employee->first_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="crm-form__field">
+                    <div class="crm-form__field mb-0">
                         <label class="form-label" for="np-department">Отдел</label>
                         <select id="np-department" name="department_id" class="form-select">
                             <option value="">— не указан —</option>
@@ -149,32 +166,31 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-status">Статус</label>
-                        <select id="np-status" name="status" class="form-select">
-                            @foreach ($statuses as $statusOption)
-                                <option value="{{ $statusOption->value }}" @selected(old('status', 'planned') === $statusOption->value)>{{ $crm_label('project_status', $statusOption->value) }}</option>
-                            @endforeach
-                        </select>
+                </div>
+                <div class="crm-form__section">
+                    <h3>Сроки и бюджет</h3>
+                    <div class="crm-form__desc">Старт, срок и бюджет в одной строке — планирование на глаз.</div>
+                    <div class="crm-form__row crm-form__row--3">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-start">Начало</label>
+                            <input type="date" id="np-start" name="start_date" class="form-control" value="{{ old('start_date') }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-due">Срок</label>
+                            <input type="date" id="np-due" name="due_date" class="form-control" value="{{ old('due_date') }}">
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="np-budget">Бюджет</label>
+                            <input type="number" id="np-budget" name="budget" class="form-control" value="{{ old('budget', 0) }}" step="0.01" min="0">
+                        </div>
                     </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-start">Начало</label>
-                        <input type="date" id="np-start" name="start_date" class="form-control" value="{{ old('start_date') }}">
+                <div class="crm-form__section mb-0">
+                    <h3>Описание</h3>
+                    <div class="crm-form__desc">Цели, границы и критерии успеха проекта.</div>
+                    <div class="crm-form__field mb-0">
+                        <textarea data-crm-rich id="np-description" name="description" class="form-control" rows="2" maxlength="5000">{{ old('description') }}</textarea>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-due">Срок</label>
-                        <input type="date" id="np-due" name="due_date" class="form-control" value="{{ old('due_date') }}">
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="np-budget">Бюджет</label>
-                        <input type="number" id="np-budget" name="budget" class="form-control" value="{{ old('budget', 0) }}" step="0.01" min="0">
-                    </div>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="np-description">Описание</label>
-                    <textarea id="np-description" name="description" class="form-control" rows="2" maxlength="5000">{{ old('description') }}</textarea>
                 </div>
             </div>
             <div class="modal-footer">

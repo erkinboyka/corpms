@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Компании')
 
@@ -18,7 +19,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Организация</div>
-            <h2 class="page-title mt-1">Компании</h2>
+            <h1 class="page-title mt-1">Компании</h1>
             <div class="text-secondary mt-1">Юридические лица · {{ $companies->count() }}</div>
         </div>
         @can('checkBoxPermission', 'companies.manage')

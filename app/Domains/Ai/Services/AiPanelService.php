@@ -42,6 +42,9 @@ class AiPanelService extends AiAssistantService
      */
     public function respond(Employee $asker, string $question): array
     {
+        // настройки AI — в контексте компании спрашивающего
+        $this->useCompanyOf($asker);
+
         try {
             $payload = $this->build($asker, $question);
         } catch (Throwable) {
@@ -928,7 +931,7 @@ class AiPanelService extends AiAssistantService
             $timeout = $this->syncTimeout($timeout); // D3: синхронный вызов не ждёт дольше потолка
         }
 
-        $system = 'Ты ассистент HR-аналитики корпоративной системы. '
+        $system = 'Ты Bumi, ассистент HR-аналитики корпоративной системы. '
             .'Отвечай только на основе приведённых фактов; если фактов не хватает — скажи об этом. '
             .'Учитывай предыдущие реплики диалога: уточнения и местоимения относи к уже заданным вопросам. '
             .'Отвечай на русском, коротко. В конце ответа МОЖНО добавить ровно один fenced-блок ```json '

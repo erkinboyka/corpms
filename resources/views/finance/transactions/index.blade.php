@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'ledger')
 
 @section('title', 'Финансы — Доходы и расходы')
 
@@ -7,11 +8,11 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Финансы</div>
-            <h2 class="page-title mt-1">Доходы и расходы</h2>
+            <h1 class="page-title mt-1">Доходы и расходы</h1>
             <div class="text-secondary mt-1">Журнал операций · {{ $month }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.accounts.index') }}"><i class="ti ti-cash-banknote me-1"></i>Счета</a>
+
             @can('checkBoxPermission', 'finance.manage')
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTransaction"><i class="ti ti-plus me-1"></i>Новая операция</button>
             @endcan
@@ -21,23 +22,23 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-arrow-down-left"></i>Доходы</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['income'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-arrow-down-left"></i>Доходы</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'income'])</div>
         <div class="crm-metric__hint">{{ $month }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #e5697a;"><i class="ti ti-arrow-up-right"></i>Расходы</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['expense'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-arrow-up-right"></i>Расходы</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'expense'])</div>
         <div class="crm-metric__hint">{{ $month }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #8ba9ff;"><i class="ti ti-scale"></i>Прибыль</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['profit'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-accent);"><i class="ti ti-scale"></i>Прибыль</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'profit'])</div>
         <div class="crm-metric__hint">доходы минус расходы</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-cash-banknote"></i>Баланс</div>
-        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">{{ number_format((float) $metrics['balance'], 0, ',', ' ') }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>Баланс</div>
+        <div class="crm-metric__value" style="font-size: 1.2rem; padding-top: 8px;">@include('finance.partials.metric', ['key' => 'balance'])</div>
         <div class="crm-metric__hint">все счета</div>
     </div>
 </div>
@@ -61,15 +62,15 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table">
             <thead>
                 <tr>
-                    <th>Дата</th>
-                    <th>Операция</th>
-                    <th>Статья</th>
-                    <th>Направление</th>
-                    <th class="text-end">Сумма</th>
-                    <th>Источник</th>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Операция</th>
+                    <th scope="col">Статья</th>
+                    <th scope="col">Направление</th>
+                    <th scope="col" class="text-end">Сумма</th>
+                    <th scope="col">Источник</th>
                 </tr>
             </thead>
             <tbody>
@@ -87,7 +88,7 @@
                             </span>
                         </td>
                         <td class="text-end fw-semibold {{ $transaction->direction->value === 'income' ? 'text-success' : 'text-danger' }}">
-                            {{ $transaction->direction->sign() > 0 ? '+' : '−' }}{{ number_format((float) $transaction->amount, 2, ',', ' ') }}
+                            {{ $transaction->direction->sign() > 0 ? '+' : '−' }}{{ number_format((float) $transaction->amount, 2, ',', ' ') }} {{ $transaction->account?->currency }}
                         </td>
                         <td class="text-secondary small">{{ $crm_label('fin_transaction_source', $transaction->source->value) }}</td>
                     </tr>
@@ -109,56 +110,67 @@
             @csrf
             <div class="modal-header"><h5 class="modal-title">Новая операция</h5></div>
             <div class="modal-body">
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ft-direction">Направление<span class="req">*</span></label>
-                        <select id="ft-direction" name="direction" class="form-select" required>
-                            @foreach ($directions as $directionOption)
-                                <option value="{{ $directionOption->value }}" @selected(old('direction', 'expense') === $directionOption->value)>{{ $crm_label('fin_direction', $directionOption->value) }}</option>
+                <div class="crm-form__section">
+                    <h3>Операция</h3>
+                    <div class="crm-form__desc">Направление, сумма и дата — основа проводки.</div>
+                    <div class="crm-form__row crm-form__row--3">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ft-direction">Направление<span class="req">*</span></label>
+                            <select id="ft-direction" name="direction" class="form-select" required>
+                                @foreach ($directions as $directionOption)
+                                    <option value="{{ $directionOption->value }}" @selected(old('direction', 'expense') === $directionOption->value)>{{ $crm_label('fin_direction', $directionOption->value) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ft-amount">Сумма<span class="req">*</span></label>
+                            <input type="number" id="ft-amount" name="amount" class="form-control" value="{{ old('amount') }}" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ft-date">Дата<span class="req">*</span></label>
+                            <input type="date" id="ft-date" name="occurred_at" class="form-control" value="{{ old('occurred_at', now()->toDateString()) }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="crm-form__section">
+                    <h3>Счёт и статья</h3>
+                    <div class="crm-form__desc">С какого счёта и по какой статье — рядом, чтобы не ошибиться.</div>
+                    <div class="crm-form__row">
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ft-account">Счёт<span class="req">*</span></label>
+                            <select id="ft-account" name="account_id" class="form-select" required>
+                                <option value="">— выберите —</option>
+                                @foreach ($accounts as $account)
+                                    <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>{{ $account->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ft-category">Статья</label>
+                            <select id="ft-category" name="category_id" class="form-select">
+                                <option value="">— без статьи —</option>
+                                @foreach ($categories as $category)
+                                    <option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>{{ $category->name }} ({{ $crm_label('fin_direction', $category->direction->value) }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="ft-project">Проект (для бюджета)</label>
+                        <select id="ft-project" name="project_id" class="form-select">
+                            <option value="">— без проекта —</option>
+                            @foreach ($projects as $project)
+                                <option value="{{ $project->id }}" @selected((string) old('project_id') === (string) $project->id)>{{ $project->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ft-amount">Сумма<span class="req">*</span></label>
-                        <input type="number" id="ft-amount" name="amount" class="form-control" value="{{ old('amount') }}" step="0.01" min="0.01" required>
-                    </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ft-date">Дата<span class="req">*</span></label>
-                        <input type="date" id="ft-date" name="occurred_at" class="form-control" value="{{ old('occurred_at', now()->toDateString()) }}" required>
-                    </div>
                 </div>
-                <div class="crm-form__row">
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ft-account">Счёт<span class="req">*</span></label>
-                        <select id="ft-account" name="account_id" class="form-select" required>
-                            <option value="">— выберите —</option>
-                            @foreach ($accounts as $account)
-                                <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>{{ $account->name }}</option>
-                            @endforeach
-                        </select>
+                <div class="crm-form__section mb-0">
+                    <h3>Описание</h3>
+                    <div class="crm-form__desc">Короткая подпись к операции — её видно в журнале.</div>
+                    <div class="crm-form__field mb-0">
+                        <input type="text" id="ft-description" name="description" class="form-control" value="{{ old('description') }}" maxlength="255" placeholder="Оплата аренды за ноябрь">
                     </div>
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ft-category">Статья</label>
-                        <select id="ft-category" name="category_id" class="form-select">
-                            <option value="">— без статьи —</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>{{ $category->name }} ({{ $crm_label('fin_direction', $category->direction->value) }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ft-project">Проект (для бюджета)</label>
-                    <select id="ft-project" name="project_id" class="form-select">
-                        <option value="">— без проекта —</option>
-                        @foreach ($projects as $project)
-                            <option value="{{ $project->id }}" @selected((string) old('project_id') === (string) $project->id)>{{ $project->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="crm-form__field">
-                    <label class="form-label" for="ft-description">Описание</label>
-                    <input type="text" id="ft-description" name="description" class="form-control" value="{{ old('description') }}" maxlength="255" placeholder="Оплата аренды за ноябрь">
                 </div>
             </div>
             <div class="modal-footer">

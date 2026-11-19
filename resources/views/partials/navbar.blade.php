@@ -14,7 +14,7 @@
                 @if ($canSearch)
                     <div class="crm-search" id="crm-search" data-hint-url="{{ route('search.hint') }}" data-full-url="{{ route('search.index') }}">
                         <form method="get" action="{{ route('search.index') }}" class="input-icon" role="search">
-                            <input type="text" name="q" value="{{ request('q', '') }}" class="form-control crm-search-input" placeholder="Поиск: сотрудники, задачи, документы…" autocomplete="off" aria-autocomplete="list" aria-expanded="false" />
+                            <input type="text" name="q" value="{{ request('q', '') }}" class="form-control crm-search-input" placeholder="Поиск: сотрудники, задачи, документы…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-haspopup="listbox" aria-controls="crm-search-panel" aria-label="Поиск по системе" />
                             <span class="input-icon-addon"><i class="ti ti-search"></i></span>
                         </form>
                         <div class="crm-search-panel" id="crm-search-panel" aria-busy="false" hidden></div>

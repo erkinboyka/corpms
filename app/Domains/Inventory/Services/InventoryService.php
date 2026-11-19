@@ -105,6 +105,12 @@ class InventoryService
         }
 
         return DB::transaction(function () use ($data, $type, $signed, $warehouseId, $productId, $companyId): StockMovement {
+            // A stable row exists even when the movement ledger is empty.
+            // Every writer locks the warehouse before reading its balance.
+            $warehouse = Warehouse::query()->where('company_id', $companyId)->whereKey($warehouseId)->lockForUpdate()->first();
+            if ($warehouse === null) {
+                throw new LogicException('Склад не найден в компании');
+            }
             if ($signed < 0) {
                 $current = $this->stock($companyId, $warehouseId, $productId);
                 if ($current + $signed < 0) {
@@ -139,17 +145,19 @@ class InventoryService
      */
     public function receive(PurchaseOrder $order, ?int $actorId = null): PurchaseOrder
     {
-        if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
-            throw new LogicException('Приём возможен только для заказа в статусе черновика или размещённого');
-        }
-
-        $order->loadMissing('items.product');
-
-        if ($order->items->isEmpty()) {
-            throw new LogicException('В заказе нет позиций');
-        }
-
         return DB::transaction(function () use ($order, $actorId): PurchaseOrder {
+            $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
+                throw new LogicException('Приём возможен только для заказа в статусе черновика или размещённого');
+            }
+
+            $order->loadMissing('items.product');
+
+            if ($order->items->isEmpty()) {
+                throw new LogicException('В заказе нет позиций');
+            }
+
+            Warehouse::query()->whereKey($order->warehouse_id)->where('company_id', $order->company_id)->lockForUpdate()->firstOrFail();
             foreach ($order->items as $item) {
                 // Услуги входят в заказ, но на склад не оприходуются.
                 if ($item->product?->isService()) {
@@ -197,15 +205,24 @@ class InventoryService
      */
     public function addItem(PurchaseOrder $order, array $data): PurchaseOrderItem
     {
-        $item = $order->items()->create([
-            'product_id' => (int) $data['product_id'],
-            'quantity' => $data['quantity'],
-            'unit_price' => $data['unit_price'] ?? 0,
-        ]);
+        return DB::transaction(function () use ($order, $data): PurchaseOrderItem {
+            $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->status !== PurchaseOrderStatus::Draft) {
+                throw new LogicException('Позиции можно менять только в черновике');
+            }
+            if (! Product::query()->where('company_id', $order->company_id)->whereKey($data['product_id'])->exists()) {
+                throw new LogicException('Товар не найден в компании');
+            }
+            $item = $order->items()->create([
+                'product_id' => (int) $data['product_id'],
+                'quantity' => $data['quantity'],
+                'unit_price' => $data['unit_price'] ?? 0,
+            ]);
 
-        $this->recalcTotal($order);
+            $this->recalcTotal($order);
 
-        return $item;
+            return $item;
+        });
     }
 
     /** Товары компании с текущим остатком по всем складам. */

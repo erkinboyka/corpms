@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'configuration')
 
 @section('title', 'Настройки системы')
 
@@ -29,8 +30,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Система</div>
-            <h2 class="page-title mt-1">Настройки системы</h2>
-            <div class="text-secondary mt-1">Значения в БД перекрывают <code>config/corpms.php</code> и <code>.env</code> · каждое сохранение пишется в журнал (settings.updated)</div>
+            <h1 class="page-title mt-1">Настройки системы</h1>
+            <div class="text-secondary mt-1">Значения сохраняются для вашей компании и перекрывают общие настройки, <code>config/corpms.php</code> и <code>.env</code> · каждое сохранение пишется в журнал (settings.updated)</div>
         </div>
         <div class="col-auto d-print-none">
             <span class="crm-chip {{ $canManage ? 'crm-chip--green' : 'crm-chip--grey' }}">
@@ -85,13 +86,13 @@
                                                name="settings[{{ $key }}]" value="{{ $meta['value'] }}"
                                                @if ($key === 'corpms.ai.base_url') placeholder="https://api.groq.com/openai/v1" @endif
                                                @if ($key === 'corpms.ai.model') placeholder="openai/gpt-oss-120b" @endif>
-                                        <span class="crm-chip {{ $meta['in_db'] ? 'crm-chip--green' : 'crm-chip--grey' }}">
-                                            {{ $meta['in_db'] ? 'из БД' : 'config' }}
+                                        <span class="crm-chip {{ $meta['scope'] === 'company' ? 'crm-chip--green' : ($meta['scope'] === 'global' ? 'crm-chip--cyan' : 'crm-chip--grey') }}">
+                                            {{ $meta['scope'] === 'company' ? 'компания' : ($meta['scope'] === 'global' ? 'общая' : 'config') }}
                                         </span>
                                     </div>
                                 @endif
                                 @if ($meta['type'] !== 'bool')
-                                    <div class="form-hint">текущий источник: {{ $meta['in_db'] ? 'сохранено в БД' : 'значение из config' }}</div>
+                                    <div class="form-hint">текущий источник: {{ $meta['scope'] === 'company' ? 'сохранено для вашей компании' : ($meta['scope'] === 'global' ? 'общая настройка (для всех компаний)' : 'значение из config') }}</div>
                                 @endif
                             </div>
                         </div>

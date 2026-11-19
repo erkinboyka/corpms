@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'directory')
 
 @section('title', 'Учётные записи')
 
@@ -12,7 +13,7 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Система</div>
-            <h2 class="page-title mt-1">Учётные записи</h2>
+            <h1 class="page-title mt-1">Учётные записи</h1>
             <div class="text-secondary mt-1">Вход в систему, привязка к карточкам сотрудников, сброс паролей</div>
         </div>
         <div class="col-auto d-print-none">
@@ -25,27 +26,27 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #0b9b72;"><i class="ti ti-key"></i>Учётных записей</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-key"></i>Учётных записей</div>
         <div class="crm-metric__value">{{ $users->count() }}</div>
         <div class="crm-metric__hint">максимум 300 в списке</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #4299e1;"><i class="ti ti-id-badge-2"></i>С карточкой сотрудника</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-id-badge-2"></i>С карточкой сотрудника</div>
         <div class="crm-metric__value">{{ $users->count() - $withoutCard }}</div>
         <div class="crm-metric__hint">имеют привязку</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #f76707;"><i class="ti ti-alert-triangle"></i>Без карточки</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-alert-triangle"></i>Без карточки</div>
         <div class="crm-metric__value">{{ $withoutCard }}</div>
         <div class="crm-metric__hint">вход есть, сотрудника нет</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #ae3ec9;"><i class="ti ti-shield"></i>С ролями</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-shield"></i>С ролями</div>
         <div class="crm-metric__value">{{ $withRoles }}</div>
         <div class="crm-metric__hint">права выданы через сотрудника</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: #6c7a91;"><i class="ti ti-link"></i>Кандидатов на привязку</div>
+        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-link"></i>Кандидатов на привязку</div>
         <div class="crm-metric__value">{{ $candidates->count() }}</div>
         <div class="crm-metric__hint">сотрудники без учётки</div>
     </div>
@@ -63,14 +64,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky users-table">
+        <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky users-table">
             <thead>
                 <tr>
-                    <th>E-mail</th>
-                    <th>Имя</th>
-                    <th>Сотрудник</th>
-                    <th>Роли</th>
-                    <th style="width: 340px">Сброс пароля</th>
+                    <th scope="col">E-mail</th>
+                    <th scope="col">Имя</th>
+                    <th scope="col">Сотрудник</th>
+                    <th scope="col">Роли</th>
+                    <th scope="col" style="width: 340px">Сброс пароля</th>
                 </tr>
             </thead>
             <tbody>

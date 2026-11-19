@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('workspace_layout', 'overview')
 
 @section('title', 'Задачи')
 
@@ -38,12 +39,8 @@
     <div class="row align-items-center g-2">
         <div class="col">
             <div class="crm-eyebrow">Работа</div>
-            <h2 class="page-title mt-1">Задачи</h2>
+            <h1 class="page-title mt-1">Задачи</h1>
             <div class="text-secondary mt-1">Список · всего {{ $tasks->total() }} · показаны {{ $tasks->firstItem() ?? 0 }}–{{ $tasks->lastItem() ?? 0 }}</div>
-        </div>
-        <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('tasks.mine') }}"><i class="ti ti-user-check me-1"></i>Мои</a>
-            <a class="btn btn-ghost-secondary" href="{{ route('tasks.overdue') }}"><i class="ti ti-alarm me-1"></i>Просроченные</a>
         </div>
     </div>
 </div>
@@ -74,8 +71,8 @@
     <div data-view-only="list">
         <div class="card">
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter card-table crm-thead-sticky">
-                    <thead><tr><th>№</th><th>Заголовок</th><th>Автор</th><th>Отдел</th><th>Приоритет</th><th>Дедлайн</th><th>Статус</th><th></th></tr></thead>
+                <table data-record-key="1" class="table table-hover table-vcenter card-table crm-thead-sticky">
+                    <thead><tr><th scope="col">№</th><th scope="col">Заголовок</th><th scope="col">Автор</th><th scope="col">Отдел</th><th scope="col">Приоритет</th><th scope="col">Дедлайн</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($tasks as $task)
                             @php
@@ -171,7 +168,7 @@
                         @for ($day = 1; $day <= $calDaysInMonth; $day++)
                             @php
                                 $dow = \Carbon\Carbon::create($calStart->year, $calStart->month, $day)->dayOfWeekIso;
-                                $isToday = $calStart->isToday() && $day === (int) now()->format('d');
+                                $isToday = $day === (int) now()->format('d');
                             @endphp
                             <div class="{{ $dow >= 6 ? 'is-weekend' : '' }}{{ $isToday ? ' is-today' : '' }}">
                                 <span class="crm-cal__day">{{ $day }}</span>
@@ -189,7 +186,7 @@
                     <div class="crm-form__desc">Незакрытые задачи с дедлайном впереди.</div>
                     <div class="crm-queue">
                         @forelse ($upcoming as $task)
-                            <a class="crm-queue__item text-reset text-decoration-none" style="--c: {{ $task->deadline->isPast() ? '#d63939' : '#0b9b72' }};" href="{{ route('tasks.show', $task) }}">
+                            <a class="crm-queue__item text-reset text-decoration-none" style="--c: {{ $task->deadline->isPast() ? 'var(--crm-danger)' : 'var(--crm-success)' }};" href="{{ route('tasks.show', $task) }}">
                                 <div class="crm-queue__body">
                                     <div class="crm-queue__title">{{ $task->title }}</div>
                                     <div class="crm-queue__sub">
