@@ -428,11 +428,13 @@ Route::middleware('auth')->group(function () {
         Route::middleware(['permission:lms.view', 'throttle:180,1'])->group(function (): void {
             Route::get('/', [LmsController::class, 'index'])->name('lms.index');
             Route::get('/courses/{course}', [LmsController::class, 'course'])->name('lms.courses.show');
+            Route::get('/courses/{course}/messages', [LmsController::class, 'courseMessages'])->name('lms.courses.messages');
             Route::get('/lessons/{lesson}', [LmsController::class, 'lesson'])->name('lms.lessons.show');
             Route::get('/whiteboards/{whiteboard}', [LmsController::class, 'whiteboard'])->name('lms.whiteboards.show');
             Route::get('/meetings/{meeting}', [LmsController::class, 'meeting'])->name('lms.meetings.show');
             Route::get('/assignments', [LmsController::class, 'assignments'])->name('lms.assignments.index');
             Route::get('/pulse', [LmsController::class, 'pulse'])->name('lms.pulse');
+            Route::get('/pulse/events', [LmsController::class, 'pulseEvents'])->name('lms.pulse.events');
         });
 
         Route::middleware(['permission:lms.manage', 'throttle:60,1'])->group(function (): void {
@@ -444,6 +446,7 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware(['permission:lms.join', 'throttle:240,1'])->group(function (): void {
             Route::post('/courses/{course}/enroll', [LmsController::class, 'enroll'])->name('lms.enroll');
+            Route::post('/courses/{course}/messages', [LmsController::class, 'storeCourseMessage'])->name('lms.courses.messages.store');
             Route::post('/lessons/{lesson}/progress', [LmsController::class, 'completeLesson'])->name('lms.lessons.progress');
 
             Route::get('/whiteboards/{whiteboard}/elements', [LmsController::class, 'whiteboardElements'])->name('lms.whiteboards.elements');
@@ -460,7 +463,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/meetings/{meeting}/participants', [LmsController::class, 'participants'])->name('lms.meetings.participants');
 
             Route::post('/assignments/{assignment}/submit', [LmsController::class, 'submitAssignment'])->name('lms.assignments.submit');
-            Route::get('/pulse/events', [LmsController::class, 'pulseEvents'])->name('lms.pulse.events');
         });
     });
 

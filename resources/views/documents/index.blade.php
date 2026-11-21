@@ -118,9 +118,17 @@
             @forelse ($documents as $document)
                 <div class="col-md-6 col-xl-4">
                     <div class="crm-entity h-100">
-                        <div class="crm-entity__logo" style="background: color-mix(in srgb, var(--crm-info) 12%, transparent); color: var(--crm-info);">
-                            <i class="ti ti-file-text"></i>
-                        </div>
+                        @if ($document->photo_path)
+                            @include('partials.entity-photo-display', [
+                                'photoPath' => $document->photo_path,
+                                'photoClass' => 'crm-entity__logo entity-photo-preview',
+                                'photoAlt' => $document->title,
+                            ])
+                        @else
+                            <div class="crm-entity__logo" style="background: color-mix(in srgb, var(--crm-info) 12%, transparent); color: var(--crm-info);">
+                                <i class="ti ti-file-text"></i>
+                            </div>
+                        @endif
                         <div class="crm-entity__body">
                             <div class="d-flex align-items-center gap-1 flex-wrap mb-1">
                                 <span class="crm-chip crm-chip--grey">{{ $document->document_number }}</span>
@@ -185,6 +193,7 @@
                         <label class="form-label" for="nd-file">{{ __('Файл') }}</label>
                         <input type="file" id="nd-file" name="file" class="form-control">
                     </div>
+                    @include('partials.entity-photo-field', ['id' => 'nd-photo', 'photoPath' => null])
                 </div>
                 <div class="crm-form__section mb-0">
                     <h3>{{ __('Классификация') }}</h3>

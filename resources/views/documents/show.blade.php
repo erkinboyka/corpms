@@ -7,6 +7,13 @@
     <style>
         .signature-qr-panel { border: 1px dashed var(--tblr-primary, #206bc4); border-radius: 12px; padding: 14px; background: var(--tblr-bg-surface-secondary, rgba(32, 107, 196, .04)); }
         .signature-qr-panel svg { max-width: 100%; height: auto; background: #fff; border-radius: 8px; padding: 6px; }
+        .signature-qr-quick__icon {
+            width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px;
+            display: grid; place-items: center; font-size: 20px;
+            background: rgba(32, 107, 196, .12); color: var(--tblr-primary, #206bc4);
+        }
+        .signature-qr-steps { padding-left: 20px; margin-bottom: 0; color: var(--tblr-secondary, #7c8693); font-size: .875rem; line-height: 1.7; }
+        .signature-qr-code { letter-spacing: .16em; font-variant-numeric: tabular-nums; }
     </style>
 @endpush
 
@@ -46,6 +53,9 @@
 <div class="crm-profile-hero card mb-3">
     <div class="card-body">
         <div class="d-flex flex-column flex-md-row align-items-md-start gap-3">
+            @if ($document->photo_path)
+                @include('partials.entity-photo-display', ['photoPath' => $document->photo_path])
+            @endif
             <div class="flex-grow-1 min-w-0">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="crm-chip crm-chip--grey">{{ $document->document_number }}</span>
@@ -248,18 +258,28 @@
     <div class="col-lg-5">
         <div class="crm-form__section">
             <h3>{{ __('Электронная подпись') }}</h3>
-            <div class="crm-form__desc">{{ __('Запросы подписи и ваша подпись по документу') }}</div>
+            <div class="crm-form__desc">{{ __('Один QR — одна подпись. Код подтверждения придёт в уведомлении.') }}</div>
 
-            {{-- Быстрая подпись: QR с одноразовой ссылкой, достаточно телефона --}}
-            @if ($canSign)
-                <div class="mt-3 pt-3 border-top">
+            {{-- Быстрая подпись: одна кнопка и три понятных шага --}}
+            @if ($canSign && ! in_array($document->status->value, ['signed', 'archived'], true))
+                <div class="signature-qr-quick mt-3 pt-3 border-top">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="signature-qr-quick__icon"><i class="ti ti-qrcode"></i></span>
+                        <div>
+                            <div class="fw-semibold">{{ __('Подпись за 3 шага') }}</div>
+                            <ol class="signature-qr-steps mt-2 mb-3">
+                                <li>{{ __('Нажмите «Подписать по QR»') }}</li>
+                                <li>{{ __('Отсканируйте QR телефоном или откройте ссылку') }}</li>
+                                <li>{{ __('Введите код из уведомления и подтвердите') }}</li>
+                            </ol>
+                        </div>
+                    </div>
                     <form method="post" action="{{ route('documents.signature.qr', $document) }}" data-submit-guard>
                         @csrf
                         <button class="btn btn-primary w-100 justify-content-center" type="submit">
                             <i class="ti ti-qrcode me-1"></i>{{ __('Подписать по QR') }}
                         </button>
                     </form>
-                    <div class="crm-form__desc mt-2">{{ __('Сгенерируйте код, отсканируйте телефоном и подтвердите подпись') }}</div>
 
                     @if (session('signature_qr'))
                         @php $qr = session('signature_qr'); @endphp
@@ -269,8 +289,17 @@
                                 <span class="text-secondary small">{{ $qr['expires_at'] }}</span>
                             </div>
                             {!! $qr['svg'] !!}
-                            <a class="small text-break d-block mt-2" href="{{ $qr['url'] }}" target="_blank" rel="noopener">{{ $qr['url'] }}</a>
-                            <div class="text-secondary small mt-1">{{ __('Или откройте ссылку на телефоне') }}</div>
+                            <a class="small d-block mt-2" href="{{ $qr['url'] }}" target="_blank" rel="noopener">{{ __('Открыть ссылку на телефоне') }}</a>
+                            <div class="alert alert-info small mt-3 mb-0 text-start">
+                                <div class="text-secondary">{{ __('Код подтверждения (6 цифр)') }}</div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <strong class="fs-3 signature-qr-code">{{ $qr['code'] }}</strong>
+                                    <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-copy-code="{{ $qr['code'] }}" title="{{ __('Скопировать код') }}">
+                                        <i class="ti ti-copy"></i>
+                                    </button>
+                                </div>
+                                <div class="small text-secondary mt-1">{{ __('Тот же код отправлен подписанту в уведомлении') }}</div>
+                            </div>
                         </div>
                     @endif
                 </div>
@@ -301,24 +330,27 @@
             @endif
 
             @if ($canRequestSignature && in_array($document->status->value, ['approved', 'signing'], true))
-                <form method="post" action="{{ route('documents.signature.request', $document) }}" class="mt-3 pt-3 border-top" data-submit-guard>
-                    @csrf
-                    <div class="crm-form__field">
-                        <label class="form-label" for="ds-signers">{{ __('Кого запросить подписать') }}</label>
-                        <select id="ds-signers" name="signer_ids[]" class="form-select" multiple size="4" required>
-                            @foreach ($employees as $option)
-                                <option value="{{ $option->id }}">{{ $option->last_name }} {{ $option->first_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-check form-switch mt-2">
-                        <input class="form-check-input" type="checkbox" name="requires_otp" value="1" id="requiresOtp">
-                        <label class="form-check-label text-secondary" for="requiresOtp">{{ __('Требовать OTP-код при подписи') }}</label>
-                    </div>
-                    <div class="mt-2">
-                        <button class="btn btn-outline-primary"><i class="ti ti-send me-1"></i>{{ __('Запросить подписи') }}</button>
-                    </div>
-                </form>
+                <details class="mt-3 pt-3 border-top">
+                    <summary class="small text-secondary">{{ __('Запросить подписи у коллег') }}</summary>
+                    <form method="post" action="{{ route('documents.signature.request', $document) }}" class="mt-3" data-submit-guard>
+                        @csrf
+                        <div class="crm-form__field">
+                            <label class="form-label" for="ds-signers">{{ __('Кого запросить подписать') }}</label>
+                            <select id="ds-signers" name="signer_ids[]" class="form-select" multiple size="4" required>
+                                @foreach ($employees as $option)
+                                    <option value="{{ $option->id }}">{{ $option->last_name }} {{ $option->first_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" name="requires_otp" value="1" id="requiresOtp">
+                            <label class="form-check-label text-secondary" for="requiresOtp">{{ __('Требовать OTP-код при подписи') }}</label>
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-outline-primary"><i class="ti ti-send me-1"></i>{{ __('Запросить подписи') }}</button>
+                        </div>
+                    </form>
+                </details>
             @endif
         </div>
 
@@ -369,3 +401,15 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('click', function (event) {
+        var button = event.target && event.target.closest ? event.target.closest('[data-copy-code]') : null;
+        if (!button || !navigator.clipboard) { return; }
+        navigator.clipboard.writeText(button.getAttribute('data-copy-code') || '').then(function () {
+            if (window.crmToast) { window.crmToast(@json(__('Код скопирован')), 'check'); }
+        });
+    });
+</script>
+@endpush

@@ -53,6 +53,13 @@
                     <div class="col-md-6">
                         <a class="lms-course-card" href="{{ route('lms.courses.show', $course) }}" style="--lms-accent: {{ $course->cover_color }}">
                             <div class="lms-course-card__glow"></div>
+                            @if ($course->photo_path)
+                                @include('partials.entity-photo-display', [
+                                    'photoPath' => $course->photo_path,
+                                    'photoClass' => 'lms-course-card__photo',
+                                    'photoAlt' => $course->title,
+                                ])
+                            @endif
                             <div class="lms-course-card__top">
                                 <span class="lms-course-card__icon"><i class="ti ti-school"></i></span>
                                 <span class="crm-chip crm-chip--{{ $course->status?->value === 'published' ? 'green' : 'cyan' }}">
@@ -122,7 +129,7 @@
     <div class="modal modal-blur fade" id="lmsCourseModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
-                <form method="post" action="{{ route('lms.courses.store') }}">
+                <form method="post" action="{{ route('lms.courses.store') }}" enctype="multipart/form-data">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title mb-0"><i class="ti ti-school me-2"></i>{{ __('Новый курс') }}</h5>
@@ -139,8 +146,9 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="lms-course-desc">{{ __('Программа') }}</label>
-                            <textarea id="lms-course-desc" name="description" class="form-control" rows="4"></textarea>
+                            <textarea data-crm-rich id="lms-course-desc" name="description" class="form-control" rows="4"></textarea>
                         </div>
+                        @include('partials.entity-photo-field', ['id' => 'lms-course-photo', 'photoPath' => null])
                         <div class="row g-3 align-items-end">
                             <div class="col-auto">
                                 <label class="form-label" for="lms-course-color">{{ __('Цвет курса') }}</label>

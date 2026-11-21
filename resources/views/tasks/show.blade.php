@@ -60,6 +60,9 @@
 <div class="crm-profile-hero card mb-3">
     <div class="card-body">
         <div class="d-flex flex-column flex-md-row align-items-md-start gap-3">
+            @if ($task->photo_path)
+                @include('partials.entity-photo-display', ['photoPath' => $task->photo_path])
+            @endif
             <div class="flex-grow-1 min-w-0">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="crm-chip crm-chip--grey">{{ $task->number }}</span>
@@ -92,8 +95,10 @@
                 @endif
             </div>
         </div>
-        @if ($task->description)
-            <div class="mt-3 pt-3 border-top text-secondary" style="white-space: pre-line;">{{ $task->description }}</div>
+        @if (filled($task->description))
+            <div class="mt-3 pt-3 border-top">
+                @include('partials.rich-text', ['value' => $task->description, 'class' => 'text-secondary'])
+            </div>
         @endif
     </div>
 </div>
@@ -450,7 +455,7 @@
 @if ($canEditTask)
 <div class="modal modal-blur fade" id="editTask" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
-        <form class="modal-content" method="post" action="{{ route('tasks.update', $task) }}" data-submit-guard>
+        <form class="modal-content" method="post" action="{{ route('tasks.update', $task) }}" enctype="multipart/form-data" data-submit-guard>
             @csrf @method('PATCH')
             <div class="modal-header"><h5 class="modal-title">{{ __('Правка задачи') }} {{ $task->number }}</h5></div>
             <div class="modal-body">
@@ -465,6 +470,7 @@
                         <label class="form-label" for="et-desc">{{ __('Описание') }}</label>
                         <textarea data-crm-rich id="et-desc" name="description" class="form-control" rows="4">{{ old('description', $task->description) }}</textarea>
                     </div>
+                    @include('partials.entity-photo-field', ['id' => 'et-photo', 'photoPath' => $task->photo_path])
                 </div>
                 <div class="crm-form__section mb-0">
                     <h3>{{ __('Приоритет и срок') }}</h3>

@@ -24,7 +24,7 @@
                         <label class="form-label mb-0" for="chat-settings-name">{{ __('Название') }}</label>
                         <input id="chat-settings-name" name="title" class="form-control" value="{{ $active->title }}" maxlength="120" required>
                         <label class="form-label mb-0" for="chat-settings-description">{{ __('Описание') }}</label>
-                        <textarea id="chat-settings-description" name="description" class="form-control" rows="2" maxlength="500">{{ $active->description }}</textarea>
+                        <textarea data-crm-rich id="chat-settings-description" name="description" class="form-control" rows="2" maxlength="500">{{ $active->description }}</textarea>
                         <div class="bm-chat-settings__upload">
                             <span class="bm-chat-settings__avatar" aria-hidden="true">
                                 {{ \App\Support\AvatarInitials::of($active->titleFor($me->id)) }}

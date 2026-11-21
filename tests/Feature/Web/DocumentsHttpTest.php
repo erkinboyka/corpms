@@ -193,7 +193,7 @@ class DocumentsHttpTest extends TestCase
         $this->post('/signatures/'.$signature->id.'/verify')
             ->assertRedirect()
             ->assertSessionHas('status', function ($value) {
-                return str_contains((string) $value, 'valid');
+                return str_contains((string) $value, 'Действует');
             });
 
         // архив

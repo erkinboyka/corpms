@@ -16,6 +16,7 @@ use App\Models\TaskComment;
 use App\Models\TaskTimeLog;
 use App\Shared\Enums\PermissionScope;
 use App\Shared\Enums\TaskStatus;
+use App\Support\EntityPhotoService;
 use App\Support\PermissionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -214,6 +215,8 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'photo' => app(EntityPhotoService::class)->rules(),
+            'reset_photo' => ['nullable', 'boolean'],
             'type' => ['required', 'in:task,order,document_task,approval_task,document_prep,document_sign,document_review,service'],
             'priority' => ['required', 'in:low,medium,high,critical'],
             'deadline' => ['nullable', 'date'],
@@ -286,6 +289,8 @@ class TaskController extends Controller
             'department_id' => $departments[0] ?? $me->department_id,
         ]);
 
+        app(EntityPhotoService::class)->sync($task, $request, 'tasks');
+
         return redirect()->route('tasks.show', $task)->with('status', 'Задача создана: '.$task->number);
     }
 
@@ -338,6 +343,8 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
+            'photo' => app(EntityPhotoService::class)->rules(),
+            'reset_photo' => ['nullable', 'boolean'],
             'priority' => ['required', 'in:low,medium,high,critical'],
             'deadline' => ['nullable', 'date'],
         ]);
@@ -345,6 +352,7 @@ class TaskController extends Controller
         $old = $task->only(['title', 'description', 'priority', 'deadline']);
 
         $task->update($validated);
+        app(EntityPhotoService::class)->sync($task, $request, 'tasks');
 
         $this->audit->log($request->user(), 'task.updated', 'task', $task->id, $old, $validated);
 

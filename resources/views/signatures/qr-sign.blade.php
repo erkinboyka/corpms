@@ -50,6 +50,13 @@
 
             <form method="POST" action="{{ route('signature.qr.sign', $token) }}">
                 @csrf
+                <div class="mb-3">
+                    <label class="form-label" for="qr-otp">{{ __('Код подтверждения') }}</label>
+                    <input type="text" id="qr-otp" name="otp_code" class="form-control form-control-lg text-center"
+                           inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
+                           placeholder="000000" required autofocus>
+                    <div class="form-text">{{ __('Код отправлен подписанту в уведомлении') }}</div>
+                </div>
                 <button type="submit" class="btn btn-primary btn-lg w-100">
                     <i class="ti ti-signature me-2" aria-hidden="true"></i>{{ __('Подписать') }}
                 </button>

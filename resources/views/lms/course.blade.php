@@ -23,10 +23,21 @@
     <div class="card lms-course-hero mb-3" style="--lms-accent: {{ $course->cover_color }}">
         <div class="lms-course-hero__glow"></div>
         <div class="card-body d-flex flex-wrap align-items-center gap-4">
-            <div class="flex-fill">
+            @if ($course->photo_path)
+                @include('partials.entity-photo-display', [
+                    'photoPath' => $course->photo_path,
+                    'photoClass' => 'lms-course-hero__photo',
+                    'photoAlt' => $course->title,
+                ])
+            @endif
+            <div class="flex-fill" style="min-width: 240px;">
                 <div class="lms-course-hero__eyebrow"><i class="ti ti-school me-1"></i>{{ __('Учебное пространство') }}</div>
                 <h2 class="lms-course-hero__title mb-2">{{ $course->title }}</h2>
-                <div class="text-secondary" style="max-width: 720px">{{ $course->description ?: $course->summary ?: __('Здесь собраны уроки, доска для разбора задач, практика и видеозвонки команды.') }}</div>
+                @if (filled($course->description))
+                    @include('partials.rich-text', ['value' => $course->description, 'class' => 'text-secondary'])
+                @else
+                    <div class="text-secondary" style="max-width: 720px">{{ $course->summary ?: __('Здесь собраны уроки, доска для разбора задач, практика и видеозвонки команды.') }}</div>
+                @endif
             </div>
             <div class="lms-course-hero__action">
                 @if ($enrollment)
@@ -44,7 +55,7 @@
         </div>
     </div>
 
-    <div class="row g-3">
+    <div class="row g-3 align-items-start">
         <div class="col-lg-8">
             <section class="card mb-3">
                 <div class="card-header d-flex align-items-center justify-content-between">
@@ -97,15 +108,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            <section class="card">
-                <div class="card-header">
-                    <h2 class="card-title mb-0"><i class="ti ti-list-check me-2"></i>{{ __('Практика') }}</h2>
-                </div>
-                <div class="card-body">
-                    @include('lms.partials.assignment-board', ['board' => $assignmentBoard['board'], 'canManage' => $canManage])
                 </div>
             </section>
         </div>
@@ -166,7 +168,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="lms-lesson-content">{{ __('Материал') }}</label>
-                            <textarea id="lms-lesson-content" name="content" class="form-control" rows="5"></textarea>
+                            <textarea data-crm-rich id="lms-lesson-content" name="content" class="form-control" rows="5"></textarea>
                         </div>
                         <div class="row g-3">
                             <div class="col-6">

@@ -11,25 +11,24 @@
         <a href="{{ route('lms.pulse') }}" class="btn btn-outline-secondary"><i class="ti ti-pulse me-1"></i>{{ __('Пульс') }}</a>
     </x-page-header>
 
-    <div class="card mb-3">
-        <div class="card-body d-flex flex-wrap align-items-end gap-3">
-            <form method="get" action="{{ route('lms.assignments.index') }}" class="d-flex align-items-end gap-2">
-                <div>
-                    <label class="form-label" for="lmsAssignmentCourse">{{ __('Курс') }}</label>
-                    <select id="lmsAssignmentCourse" name="course_id" class="form-select">
-                        <option value="0">{{ __('Все курсы') }}</option>
-                        @foreach ($courses as $course)
-                            <option value="{{ $course->id }}" @selected($courseId === $course->id)>{{ $course->title }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <button class="btn btn-outline-primary"><i class="ti ti-filter me-1"></i>{{ __('Показать') }}</button>
-            </form>
-            <div class="ms-auto d-flex gap-2 text-secondary small">
-                <span><i class="ti ti-files me-1"></i>{{ count($board['draft']) }} {{ __('черновиков') }}</span>
-                <span><i class="ti ti-send me-1"></i>{{ count($board['submitted']) }} {{ __('на проверке') }}</span>
-                <span><i class="ti ti-circle-check me-1"></i>{{ count($board['reviewed']) }} {{ __('проверено') }}</span>
+    <div class="crm-toolbar mb-3">
+        <form method="get" action="{{ route('lms.assignments.index') }}" class="d-flex align-items-end gap-2 flex-wrap">
+            <div>
+                <label class="form-label mb-1" for="lmsAssignmentCourse">{{ __('Курс') }}</label>
+                <select id="lmsAssignmentCourse" name="course_id" class="form-select">
+                    <option value="0">{{ __('Все курсы') }}</option>
+                    @foreach ($courses as $course)
+                        <option value="{{ $course->id }}" @selected($courseId === $course->id)>{{ $course->title }}</option>
+                    @endforeach
+                </select>
             </div>
+            <button class="btn btn-outline-primary"><i class="ti ti-filter me-1"></i>{{ __('Показать') }}</button>
+        </form>
+        <div class="crm-toolbar__spacer"></div>
+        <div class="crm-toolbar__count d-flex gap-3 flex-wrap">
+            <span><i class="ti ti-files me-1"></i>{{ count($board['draft']) }} {{ __('черновиков') }}</span>
+            <span><i class="ti ti-send me-1"></i>{{ count($board['submitted']) }} {{ __('на проверке') }}</span>
+            <span><i class="ti ti-circle-check me-1"></i>{{ count($board['reviewed']) }} {{ __('проверено') }}</span>
         </div>
     </div>
 
@@ -40,7 +39,7 @@
     <div class="modal modal-blur fade" id="lmsAssignmentModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
-                <form method="post" action="{{ route('lms.assignments.store') }}">
+                <form method="post" action="{{ route('lms.assignments.store') }}" enctype="multipart/form-data">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title mb-0"><i class="ti ti-clipboard-list me-2"></i>{{ __('Новое практическое задание') }}</h5>
@@ -61,8 +60,9 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="lms-assignment-desc">{{ __('Описание') }}</label>
-                            <textarea id="lms-assignment-desc" name="description" class="form-control" rows="4"></textarea>
+                            <textarea data-crm-rich id="lms-assignment-desc" name="description" class="form-control" rows="4"></textarea>
                         </div>
+                        @include('partials.entity-photo-field', ['id' => 'lms-assignment-photo', 'photoPath' => null])
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label" for="lms-assignment-due">{{ __('Дедлайн') }}</label>
@@ -83,14 +83,6 @@
         </div>
     </div>
 @endif
-@endsection
 
-@push('scripts')
-<script>
-    window.LMS_I18N = Object.assign(window.LMS_I18N || {}, {
-        submitTitle: @json(__('Сдать практическое задание')),
-        submitSent: @json(__('Работа отправлена')),
-        submitFailed: @json(__('Не удалось отправить работу'))
-    });
-</script>
-@endpush
+@include('lms.partials.submit-modal')
+@endsection

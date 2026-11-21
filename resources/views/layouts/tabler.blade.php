@@ -53,7 +53,7 @@
     <link rel="preload" href="/assets/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/vendor/tabler-icons.min.css">
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
-    <link rel="stylesheet" href="/assets/css/effects.css?v60">
+    <link rel="stylesheet" href="/assets/css/effects.css?v61">
     <link rel="stylesheet" href="/assets/css/corpms.css?v7">
     <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
     <link rel="stylesheet" href="/assets/css/ai-panel.css?v16">
@@ -62,7 +62,7 @@
     <script src="/assets/js/corpms.js?v48" defer></script>
     <script src="/assets/js/bm-ui.js?v4" defer></script>
     <script src="/assets/js/crm-select.js?v1" defer></script>
-    <script src="/assets/js/lms.js?v1" defer></script>
+    <script src="/assets/js/lms.js?v6" defer></script>
     <script src="/assets/js/lms-whiteboard.js?v1" defer></script>
     <script src="/assets/js/lms-meeting.js?v1" defer></script>
     <script src="/assets/js/lms-pulse.js?v1" defer></script>
@@ -75,7 +75,7 @@
     <link rel="stylesheet" href="/assets/css/bumi-tools.css?v2">
     <link rel="stylesheet" href="/assets/css/legal.css?v3">
     <link rel="stylesheet" href="/assets/css/crm-select.css?v1">
-    <link rel="stylesheet" href="/assets/css/lms.css?v1">
+    <link rel="stylesheet" href="/assets/css/lms.css?v10">
     @stack('styles')
 </head>
 <body class="crm-app @yield('body_class')">

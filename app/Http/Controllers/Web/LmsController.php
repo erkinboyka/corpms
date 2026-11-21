@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Domains\Audit\Services\AuditService;
 use App\Domains\Lms\Services\LmsService;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
@@ -11,6 +12,7 @@ use App\Models\LmsAssignment;
 use App\Models\LmsCourse;
 use App\Models\LmsLesson;
 use App\Models\LmsMeeting;
+use App\Models\LmsMessage;
 use App\Models\LmsSubmission;
 use App\Models\LmsWhiteboard;
 use App\Models\LmsWhiteboardElement;
@@ -77,7 +79,6 @@ class LmsController extends Controller
             'progress' => $progress,
             'board' => $course->whiteboards()->whereNull('lesson_id')->first(),
             'meetings' => $course->meetings()->with('host')->limit(8)->get(),
-            'assignmentBoard' => $this->lms->assignmentBoard($course->id, $me),
             'activities' => $this->lms->activities($me, 8),
             'tips' => $tips,
             'canManage' => $this->can($request, 'lms.manage'),
@@ -120,6 +121,26 @@ class LmsController extends Controller
         $me = $this->me($request);
         $this->lms->assertTenant($me, $whiteboard->company_id);
 
+        $course = $whiteboard->course ?: $whiteboard->lesson?->course;
+        $meeting = $whiteboard->lesson
+            ? $whiteboard->lesson->meetings()->where('status', '!=', 'ended')->latest()->first()
+            : null;
+        $meeting ??= $course?->meetings()->where('status', '!=', 'ended')->latest()->first();
+
+        // Общая комната нужна всегда: доска без созвона бесполезна.
+        if ($meeting === null && $course !== null) {
+            $meeting = $this->lms->createMeeting([
+                'title' => __('Общая комната').': '.$course->title,
+                'course_id' => $course->id,
+            ], $request->user(), $me);
+        }
+
+        $servers = (array) config('lms.ice_servers', []);
+        $turn = (array) config('lms.turn', []);
+        if (! empty($turn['urls'])) {
+            $servers[] = array_filter($turn, static fn ($value) => $value !== null && $value !== '');
+        }
+
         return view('lms.whiteboard', [
             'whiteboard' => $whiteboard->load(['course', 'lesson']),
             'me' => $me,
@@ -127,6 +148,12 @@ class LmsController extends Controller
             'myName' => trim($me->last_name.' '.$me->first_name) ?: $me->employee_no,
             'myColor' => $this->cursorColor($me),
             'pollMs' => (int) config('lms.poll_ms', 1600),
+            'chatCourse' => $course,
+            'meeting' => $meeting,
+            'meetingParticipants' => $meeting ? $this->lms->participants($meeting, $me) : [],
+            'iceServers' => $servers,
+            'assignmentBoard' => $this->lms->assignmentBoard($course?->id, $me),
+            'canManage' => $this->can($request, 'lms.manage'),
         ]);
     }
 
@@ -195,9 +222,12 @@ class LmsController extends Controller
             'description' => ['nullable', 'string'],
             'cover_color' => ['nullable', 'string', 'max:16'],
             'publish' => ['sometimes', 'boolean'],
+            'photo' => app(\App\Support\EntityPhotoService::class)->rules(),
+            'reset_photo' => ['nullable', 'boolean'],
         ]);
 
         $course = $this->lms->createCourse($data, $request->user(), $this->me($request));
+        app(\App\Support\EntityPhotoService::class)->sync($course, $request, 'lms-courses');
 
         return redirect()->route('lms.courses.show', $course)->with('status', __('Курс создан'));
     }
@@ -363,21 +393,33 @@ class LmsController extends Controller
             'lesson_id' => ['nullable', 'integer', 'exists:lms_lessons,id'],
             'due_at' => ['nullable', 'date'],
             'max_score' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'photo' => app(\App\Support\EntityPhotoService::class)->rules(),
+            'reset_photo' => ['nullable', 'boolean'],
         ]);
 
         $assignment = $this->lms->createAssignment($data, $request->user(), $this->me($request));
+        app(\App\Support\EntityPhotoService::class)->sync($assignment, $request, 'lms-assignments');
 
         return redirect()->route('lms.assignments.index')->with('status', __('Задание создано'));
     }
 
-    public function submitAssignment(Request $request, LmsAssignment $assignment): RedirectResponse
+    public function submitAssignment(Request $request, LmsAssignment $assignment): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'body' => ['nullable', 'string', 'max:10000'],
             'link' => ['nullable', 'url', 'max:500'],
         ]);
 
-        $this->lms->submitAssignment($assignment, (string) ($data['body'] ?? ''), $data['link'] ?? null, $this->me($request), $request->user());
+        $submission = $this->lms->submitAssignment($assignment, (string) ($data['body'] ?? ''), $data['link'] ?? null, $this->me($request), $request->user());
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'id' => $submission->id,
+                'status' => $submission->status?->value ?? $submission->status,
+                'message' => __('Работа отправлена на проверку'),
+            ]);
+        }
 
         return back()->with('status', __('Работа отправлена на проверку'));
     }
@@ -392,6 +434,69 @@ class LmsController extends Controller
         $this->lms->reviewAssignment($submission, $data['status'], $data['score'] === null ? null : (int) $data['score'], $this->me($request), $request->user());
 
         return back()->with('status', __('Проверка сохранена'));
+    }
+
+    public function courseMessages(Request $request, LmsCourse $course): JsonResponse
+    {
+        $me = $this->me($request);
+        $this->lms->assertTenant($me, $course->company_id);
+
+        $since = (int) $request->query('since', 0);
+        $messages = LmsMessage::query()
+            ->where('company_id', $me->company_id)
+            ->where('course_id', $course->id)
+            ->when($since > 0, static fn ($query) => $query->where('id', '>', $since))
+            ->with('employee')
+            ->orderBy('id')
+            ->limit(100)
+            ->get()
+            ->map(static fn (LmsMessage $message): array => [
+                'id' => $message->id,
+                'body' => $message->body,
+                'employee_id' => $message->employee_id,
+                'author' => $message->employee
+                    ? (trim($message->employee->last_name.' '.$message->employee->first_name)
+                        ?: $message->employee->employee_no)
+                    : __('Система'),
+                'created_at' => $message->created_at?->format('d.m.Y H:i'),
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'last_id' => (int) $messages->max('id'),
+            'messages' => $messages->values(),
+        ]);
+    }
+
+    public function storeCourseMessage(Request $request, LmsCourse $course): JsonResponse
+    {
+        $me = $this->me($request);
+        $this->lms->assertTenant($me, $course->company_id);
+
+        $data = $request->validate([
+            'body' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $message = LmsMessage::create([
+            'company_id' => $me->company_id,
+            'course_id' => $course->id,
+            'employee_id' => $me->id,
+            'body' => trim($data['body']),
+        ]);
+
+        app(AuditService::class)->log(
+            $request->user(),
+            'lms.course_message.created',
+            'LmsMessage',
+            $message->id,
+            null,
+            ['course_id' => $course->id, 'body' => $message->body],
+        );
+
+        return response()->json([
+            'ok' => true,
+            'id' => $message->id,
+        ], 201);
     }
 
     public function pulseEvents(Request $request): JsonResponse

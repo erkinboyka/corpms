@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Shared\Enums\ProjectMemberRole;
 use App\Shared\Enums\ProjectStatus;
+use App\Support\EntityPhotoService;
 use App\Support\PermissionService;
 use App\Support\TenantGuard;
 use Illuminate\Http\RedirectResponse;
@@ -136,6 +137,8 @@ class ProjectController extends Controller
             'created_by' => $me->user_id,
         ]);
 
+        app(EntityPhotoService::class)->sync($project, $request, 'projects');
+
         $this->audit->log($request->user(), 'project.created', 'project', $project->id, null, [
             'code' => $project->code,
             'name' => $project->name,
@@ -164,6 +167,8 @@ class ProjectController extends Controller
             'due_date' => $validated['due_date'] ?? null,
             'budget' => $validated['budget'] ?? 0,
         ])->save();
+
+        app(EntityPhotoService::class)->sync($project, $request, 'projects');
 
         $this->audit->log($request->user(), 'project.updated', 'project', $project->id, $before, [
             'name' => $project->name,
@@ -254,6 +259,8 @@ class ProjectController extends Controller
             'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+            'photo' => app(EntityPhotoService::class)->rules(),
+            'reset_photo' => ['nullable', 'boolean'],
         ];
 
         if ($withCode) {

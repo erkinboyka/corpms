@@ -586,66 +586,78 @@
 .lms-action-card strong { font-size: var(--crm-text-body); }
 .lms-action-card small { margin-top: 2px; color: var(--crm-text-secondary); font-size: var(--crm-text-caption-2); }
 
-/* ---------- Доска заданий ---------- */
-.lms-board {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(220px, 1fr));
-    gap: var(--crm-space-3);
+/* ---------- Доска практики: карточки как в канбане задач ---------- */
+.lms-assignment-kanban { align-items: stretch; }
+.lms-assignment-kanban .crm-kanban__col { flex-basis: 290px; }
+.lms-assignment-kanban__list { display: grid; gap: 8px; align-content: start; min-height: 60px; }
+.lms-assignment-card { cursor: default; }
+.lms-assignment-card .k-title { padding-right: 0; }
+.lms-assignment-card.has-photo .k-title { padding-left: 28px; }
+.lms-assignment-card .k-thumb {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    object-fit: cover;
 }
-
-.lms-board__col {
-    min-height: 260px;
-    border: 1px solid var(--crm-border);
-    border-radius: var(--crm-radius-lg);
-    background: var(--crm-surface);
+.lms-assignment-card .k-meta { margin-top: 1px; }
+.lms-assignment-card .k-note {
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid var(--tblr-border-color);
+    color: var(--tblr-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
-
-.lms-board__head {
+.lms-assignment-card .k-foot {
     display: flex;
     align-items: center;
-    gap: var(--crm-space-2);
-    padding: var(--crm-space-3) var(--crm-space-4);
-    border-bottom: 1px solid var(--crm-border);
-    font-size: var(--crm-text-caption);
-    font-weight: 650;
+    gap: 6px;
+    margin-top: 7px;
+    color: var(--tblr-secondary);
+    font-size: 12px;
 }
-
-.lms-board__count {
-    margin-left: auto;
-    padding: 1px 7px;
-    border-radius: var(--crm-radius-pill);
-    background: var(--crm-border);
-    color: var(--crm-text-secondary);
-    font-size: var(--crm-text-caption-2);
-}
-
-.lms-board__list { display: grid; gap: var(--crm-space-2); padding: var(--crm-space-2); max-height: 620px; overflow-y: auto; }
-.lms-board__card {
-    padding: var(--crm-space-3);
-    border: 1px solid var(--crm-border);
-    border-radius: var(--crm-radius-md);
-    background: var(--crm-surface-solid);
-    box-shadow: var(--crm-shadow-1);
-}
-.lms-board__card-top { display: flex; align-items: center; justify-content: space-between; gap: var(--crm-space-2); }
-.lms-board__due { color: var(--crm-text-muted); font-size: var(--crm-text-caption-2); white-space: nowrap; }
-.lms-board__title { margin: var(--crm-space-2) 0; font-size: var(--crm-text-caption); font-weight: 650; line-height: var(--crm-lh-body); }
-.lms-board__author { display: flex; align-items: center; gap: var(--crm-space-2); color: var(--crm-text-secondary); font-size: var(--crm-text-caption-2); }
-.lms-board__avatar {
+.lms-assignment-card .k-avatar {
     display: grid;
-    flex: 0 0 auto;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: rgba(var(--crm-accent-rgb), .14);
     color: var(--crm-accent);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
 }
-.lms-board__score { margin-top: var(--crm-space-2); color: var(--crm-warning); font-size: var(--crm-text-caption-2); font-weight: 600; }
-.lms-board__review { display: grid; grid-template-columns: 1fr; }
-.lms-board__empty { padding: var(--crm-space-5); color: var(--crm-text-muted); font-size: var(--crm-text-caption-2); text-align: center; }
+.lms-assignment-card .k-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lms-assignment-card .k-action { flex: 1 1 auto; min-width: 0; }
+.lms-assignment-card .k-review { flex: 0 0 auto; }
+.lms-assignment-card .k-review[open] { flex: 1 1 100%; }
+.lms-assignment-card .k-review summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 7px;
+    color: var(--tblr-primary);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.lms-assignment-card .k-review summary::-webkit-details-marker { display: none; }
+.lms-assignment-card .k-review summary:hover { background: rgba(var(--crm-accent-rgb), .1); }
+.lms-assignment-card .k-review form { display: grid; gap: 6px; margin-top: 6px; min-width: 190px; }
+/* Аватары участников созвона */
+.lms-board__avatar {
+    display: grid; place-items: center; flex: 0 0 auto;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(var(--crm-accent-rgb), .14);
+    color: var(--crm-accent); font-size: 10px; font-weight: 700;
+}
 
 /* ---------- Совместная доска ---------- */
 .lms-board-shell {
@@ -829,14 +841,13 @@
 
 /* ---------- Адаптив ---------- */
 @media (max-width: 991.98px) {
-    .lms-board { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
     .lms-board-teaser { grid-template-columns: 1fr; }
     .lms-board-teaser__canvas { width: 100%; }
     .lms-board-toolbar__hint { display: none; }
 }
 
 @media (max-width: 575.98px) {
-    .lms-board { grid-template-columns: 1fr; }
+    .lms-assignment-kanban .crm-kanban__col { flex-basis: 86vw; }
     .lms-course-hero__title { font-size: var(--crm-text-heading); }
     .lms-meet-grid { min-height: 320px; }
     .lms-meet-tile { min-height: 180px; }
@@ -850,4 +861,103 @@
     .lms-pulse-item,
     .lms-pulse-node { animation: none; }
     .lms-presence-cursor { transition: none; }
+}
+
+/* ---------- Исправления вёрстки и модалки заданий ---------- */
+/* Модалка живёт вне карточек: убираем двойную анимацию диалога и содержимого. */
+#lmsSubmitModal.modal.fade .modal-dialog,
+#lmsSubmitModal.modal.fade.show .modal-dialog {
+    transform: none !important;
+    transition: opacity .12s ease !important;
+}
+#lmsSubmitModal .modal-content { animation: none !important; }
+
+/* Layout уже даёт container-xl — внутренний дубль сужал доску и толкал её под пульс. */
+.lms-page.container-xl { max-width: none; padding-left: 0; padding-right: 0; }
+.lms-page .row > [class*="col-"] { min-width: 0; }
+.lms-assignment-kanban .crm-kanban__col { min-width: 0; }
+
+/* ---------- Чат курса и связка доска + созвон ---------- */
+.lms-chat-card { display: flex; flex-direction: column; min-height: 320px; }
+.lms-chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: var(--crm-space-2);
+    padding: var(--crm-space-3);
+    height: 300px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, .02);
+}
+.lms-chat-item {
+    align-self: flex-start;
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px 12px 12px 4px;
+    background: var(--crm-bg-subtle, #f1f5f9);
+}
+.lms-chat-item.is-mine {
+    align-self: flex-end;
+    border-radius: 12px 12px 4px 12px;
+    background: var(--crm-primary-bg, rgba(32, 107, 196, .12));
+}
+.lms-chat-item__who { display: block; font-size: var(--crm-text-caption-2); font-weight: 600; color: var(--crm-text-secondary); }
+.lms-chat-item__body { font-size: var(--crm-text-body); overflow-wrap: anywhere; line-height: 1.45; }
+.lms-chat-item__time { display: block; margin-top: 2px; font-size: var(--crm-text-caption-2); color: var(--crm-text-secondary); text-align: right; }
+.lms-chat-form { display: flex; gap: var(--crm-space-2); padding: var(--crm-space-3); border-top: 1px solid var(--crm-border); }
+.lms-chat-form .form-control { flex: 1 1 auto; min-width: 0; }
+.lms-meet-embed { min-width: 0; }
+.lms-section-title { display: flex; align-items: center; gap: 8px; margin: 18px 0 8px; font-size: var(--crm-text-heading-small, 1.05rem); font-weight: 600; }
+
+/* Фото курсов */
+.lms-course-card__photo {
+    width: 100%;
+    height: 88px;
+    object-fit: cover;
+    border-radius: 10px 10px 0 0;
+}
+.lms-course-hero__photo {
+    width: 140px;
+    height: 104px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid var(--crm-border);
+    flex-shrink: 0;
+}
+.lms-course-hero .crm-rich-text { max-width: 720px; }
+
+/* ---------- Переключатель разделов доски и плавающий звонок ---------- */
+.lms-section-toolbar { margin-bottom: var(--crm-space-3); }
+[data-lms-section][hidden] { display: none !important; }
+.lms-meet-window {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    width: 560px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
+    border: 1px solid var(--crm-border);
+    border-radius: 12px;
+    background: var(--tblr-bg-surface, #fff);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+}
+.lms-meet-window[hidden] { display: none !important; }
+.lms-meet-window__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--crm-border);
+    background: var(--tblr-bg-surface-secondary, #f8fafc);
+    cursor: move;
+    user-select: none;
+}
+.lms-meet-window__body { padding: 8px; overflow: auto; }
+.lms-meet-window.is-minimized { width: 300px; }
+.lms-meet-window.is-minimized .lms-meet-window__body { display: none; }
+@media (max-width: 575.98px) {
+    .lms-meet-window { right: 12px; bottom: 12px; left: 12px !important; width: auto; max-height: calc(100vh - 24px); }
 }

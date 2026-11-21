@@ -31,6 +31,8 @@ class SignatureQrHttpTest extends TestCase
 
     protected Employee $employee;
 
+    protected string $lastCode = '';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -84,6 +86,8 @@ class SignatureQrHttpTest extends TestCase
         $response->assertSessionHas('signature_qr');
         $qr = $response->getSession()->get('signature_qr');
         $this->assertStringContainsString('<svg', $qr['svg']);
+        $this->lastCode = (string) $qr['code'];
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $this->lastCode);
 
         return (string) basename((string) parse_url($qr['url'], PHP_URL_PATH));
     }
@@ -103,9 +107,10 @@ class SignatureQrHttpTest extends TestCase
         $this->get('/sign/'.$token)
             ->assertOk()
             ->assertSee('Договор для QR подписи')
+            ->assertSee('Код подтверждения')
             ->assertSee('Подписать');
 
-        $this->post('/sign/'.$token)->assertRedirect();
+        $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertRedirect();
 
         $signature = DocumentSignature::query()->sole();
         $this->assertSame('qr_approval', $signature->signature_type->value);
@@ -122,14 +127,33 @@ class SignatureQrHttpTest extends TestCase
             ->assertSee($signature->signature_id);
     }
 
+    public function test_qr_signing_requires_delivered_code(): void
+    {
+        $document = $this->makeDocument('Подпись только по коду');
+        $token = $this->issueToken($document);
+
+        $notification = \App\Models\AppNotification::query()
+            ->where('type', 'signature.otp')->latest()->first();
+        $this->assertNotNull($notification);
+        $this->assertStringContainsString($this->lastCode, (string) $notification->body);
+
+        $this->app['auth']->guard()->logout();
+        $this->post('/sign/'.$token)->assertSessionHasErrors('field');
+        $this->post('/sign/'.$token, ['otp_code' => '000000'])->assertSessionHasErrors('field');
+        $this->assertSame(0, DocumentSignature::query()->count());
+
+        $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertRedirect();
+        $this->assertSame(1, DocumentSignature::query()->count());
+    }
+
     public function test_qr_token_is_one_time_and_cannot_sign_twice(): void
     {
         $document = $this->makeDocument('Одноразовая QR подпись');
         $token = $this->issueToken($document);
 
         $this->app['auth']->guard()->logout();
-        $this->post('/sign/'.$token)->assertRedirect();
-        $this->post('/sign/'.$token)->assertSessionHasErrors('field');
+        $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertRedirect();
+        $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertSessionHasErrors('field');
 
         $this->assertSame(1, DocumentSignature::query()->count());
     }
@@ -185,7 +209,7 @@ class SignatureQrHttpTest extends TestCase
         $token = $this->issueToken($document);
 
         $this->app['auth']->guard()->logout();
-        $this->post('/sign/'.$token)->assertRedirect();
+        $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertRedirect();
 
         $this->app['auth']->guard()->login($this->user);
         $this->post('/documents/'.$document->id.'/signature-qr')->assertSessionHasErrors('field');

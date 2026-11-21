@@ -63,6 +63,20 @@
 
 </div>
 
+@if ($project->photo_path || filled($project->description))
+    <div class="card mb-3">
+        <div class="card-header"><div class="card-title">{{ __('О проекте') }}</div></div>
+        <div class="card-body d-flex flex-wrap gap-3">
+            @if ($project->photo_path)
+                @include('partials.entity-photo-display', ['photoPath' => $project->photo_path])
+            @endif
+            <div class="flex-fill" style="min-width: 240px;">
+                @include('partials.rich-text', ['value' => $project->description, 'class' => 'text-secondary'])
+            </div>
+        </div>
+    </div>
+@endif
+
 <div class="row g-3">
     <div class="col-lg-7">
         <div class="card h-100">
@@ -243,7 +257,7 @@
 @can('checkBoxPermission', 'projects.manage')
 <div class="modal modal-blur fade" id="editProject" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
-        <form class="modal-content" method="post" action="{{ route('projects.update', $project) }}" data-submit-guard>
+        <form class="modal-content" method="post" action="{{ route('projects.update', $project) }}" enctype="multipart/form-data" data-submit-guard>
             @csrf
             @method('patch')
             <div class="modal-header"><h5 class="modal-title">{{ __('Изменить проект') }}</h5></div>
@@ -301,6 +315,7 @@
                         <textarea data-crm-rich id="ep-description" name="description" class="form-control" rows="3" maxlength="5000">{{ $project->description }}</textarea>
                     </div>
                 </div>
+                @include('partials.entity-photo-field', ['id' => 'ep-photo', 'photoPath' => $project->photo_path])
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>

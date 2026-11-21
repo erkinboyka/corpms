@@ -247,7 +247,7 @@ class SignatureService
      * здесь делается явное исключение: черновик/отклонённая версия переводится в
      * `signing` отдельным действием quick_qr_signature с записью в журнал переходов и аудит.
      *
-     * @return array{0: DocumentSignatureRequest, 1: string} запрос и открытый токен
+     * @return array{0: DocumentSignatureRequest, 1: string, 2: string} запрос, открытый токен и код подтверждения
      */
     public function prepareQrSignature(Employee $signer, Document $document): array
     {
@@ -262,7 +262,7 @@ class SignatureService
 
         return DB::transaction(function () use ($signer, $document, $version) {
             // Переиспользуем уже ожидающий запрос этого подписанта, чтобы не
-            // плодить дубли. QR сам является подтверждением — OTP не нужен.
+            // плодить дубли. Код подтверждения обязателен даже при QR-подписи.
             $request = $document->signatureRequests()
                 ->where('signer_id', $signer->id)
                 ->whereIn('status', ['pending', 'partial'])
@@ -311,6 +311,8 @@ class SignatureService
 
             $plain = Str::random(48);
             $ttlHours = max(1, (int) app(SettingsService::class)->get('corpms.signature.qr_token_ttl_hours', 24));
+            $code = (string) random_int(100000, 999999);
+            $codeTtl = max(1, (int) app(SettingsService::class)->get('corpms.signature.otp_ttl', 5));
 
             QrToken::create([
                 'token_hash' => hash('sha256', $plain),
@@ -320,15 +322,36 @@ class SignatureService
                 'one_time' => true,
                 'expires_at' => now()->addHours($ttlHours),
                 'created_by' => $signer->id,
-                'meta' => ['document_id' => $document->id, 'driver' => 'qr_approval'],
+                'meta' => [
+                    'document_id' => $document->id,
+                    'driver' => 'qr_approval',
+                    'otp_code' => hash('sha256', $code),
+                    'otp_expires_at' => now()->addMinutes($codeTtl)->toDateTimeString(),
+                    'otp_attempts' => 0,
+                ],
             ]);
+
+            // Код уходит подписанту в уведомление; без него подпись невозможна.
+            try {
+                $this->notifications->notify(
+                    $signer,
+                    'signature.otp',
+                    __('Код подтверждения для подписи документа'),
+                    __('Документ «').($document->title ?? __('без названия')).'». '
+                        .__('Код подтверждения').': '.$code,
+                    $document,
+                );
+            } catch (Throwable $e) {
+                Log::warning('signature qr code delivery failed', ['error' => $e->getMessage(), 'document_id' => $document->id]);
+            }
 
             $this->audit->log($signer->user, 'signature.qr_prepared', 'document', $document->id, null, [
                 'signature_request_id' => $request->id,
                 'ttl_hours' => $ttlHours,
+                'code_ttl_minutes' => $codeTtl,
             ]);
 
-            return [$request, $plain];
+            return [$request, $plain, $code];
         });
     }
 
@@ -372,15 +395,47 @@ class SignatureService
         return ['token' => $token, 'signer' => $signer, 'request' => $request, 'document' => $document];
     }
 
-    /** Подпись по токену из QR без входа в систему: владелец токена — подписант. */
-    public function signWithQrToken(string $plainToken, ?string $ip = null, ?string $userAgent = null): DocumentSignature
+    /**
+     * Подпись по токену из QR без входа в систему: владелец токена — подписант.
+     * Обязательно требует код, отправленный подписанту при генерации QR.
+     */
+    public function signWithQrToken(string $plainToken, ?string $code = null, ?string $ip = null, ?string $userAgent = null): DocumentSignature
     {
         $resolved = $this->resolveQrSignToken($plainToken);
         if ($resolved === null) {
             throw new RuntimeException(__('QR-код подписи недействителен или истёк'));
         }
 
+        $this->verifyQrCode($resolved['token'], $code);
+
         return $this->signByQrToken($resolved['signer'], $resolved['request'], $plainToken, $ip, $userAgent);
+    }
+
+    /** Проверка отправленного кода подтверждения (жёстко: 5 попыток). */
+    protected function verifyQrCode(QrToken $token, ?string $code): void
+    {
+        $meta = $token->meta ?? [];
+        $stored = $meta['otp_code'] ?? null;
+        if ($stored === null) {
+            throw new RuntimeException(__('Код подтверждения не выдан. Сгенерируйте новый QR-код'));
+        }
+
+        $expiresAt = $meta['otp_expires_at'] ?? null;
+        if ($expiresAt !== null && now()->gt(Carbon::parse($expiresAt))) {
+            throw new RuntimeException(__('Код подтверждения истёк. Сгенерируйте новый QR-код'));
+        }
+
+        $attempts = (int) ($meta['otp_attempts'] ?? 0) + 1;
+        $meta['otp_attempts'] = $attempts;
+        if ($attempts > 5) {
+            $token->forceFill(['meta' => $meta, 'revoked_at' => now()])->save();
+            throw new RuntimeException(__('Слишком много попыток. Сгенерируйте новый QR-код'));
+        }
+        $token->forceFill(['meta' => $meta])->saveQuietly();
+
+        if ($code === null || ! hash_equals($stored, hash('sha256', $code))) {
+            throw new RuntimeException(__('Неверный код подтверждения'));
+        }
     }
 
     public function decline(Employee $signer, DocumentSignatureRequest $request, string $reason): DocumentSignatureRequest

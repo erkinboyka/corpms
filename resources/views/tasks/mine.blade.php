@@ -114,7 +114,7 @@
 
 <div class="modal modal-blur fade" id="newTask" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
-        <form class="modal-content" method="post" action="{{ route('tasks.store') }}" data-submit-guard>
+        <form class="modal-content" method="post" action="{{ route('tasks.store') }}" enctype="multipart/form-data" data-submit-guard>
             @csrf
             <input type="hidden" name="type" value="task">
             <div class="modal-header"><h5 class="modal-title">{{ __('Новая задача') }}</h5></div>
@@ -130,6 +130,7 @@
                         <label class="form-label" for="nt-desc">{{ __('Описание') }}</label>
                         <textarea data-crm-rich id="nt-desc" class="form-control" name="description" rows="3" placeholder="{{ __("Подробности, критерии выполнения") }}">{{ old('description') }}</textarea>
                     </div>
+                    @include('partials.entity-photo-field', ['id' => 'nt-photo', 'photoPath' => null])
                 </div>
                 <div class="crm-form__section mb-0">
                     <h3>{{ __('Сроки и исполнители') }}</h3>

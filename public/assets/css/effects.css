@@ -3075,3 +3075,18 @@ html[data-crm-scale="lg"] {
     overflow-y: auto;
     overscroll-behavior: contain;
 }
+
+/* Предпросмотр фото сущностей */
+.entity-photo-preview {
+    max-width: 180px;
+    max-height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--crm-border);
+}
+.entity-photo-card { max-width: 240px; border-radius: 10px; overflow: hidden; }
+.crm-rich-text { line-height: 1.55; overflow-wrap: anywhere; }
+.crm-rich-text > :last-child { margin-bottom: 0; }
+.crm-rich-text p { margin: 0 0 .6rem; }
+.crm-rich-text ul, .crm-rich-text ol { padding-left: 1.3rem; margin: 0 0 .6rem; }
+.crm-rich-text a { color: var(--crm-primary, #206bc4); }

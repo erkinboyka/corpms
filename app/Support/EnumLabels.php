@@ -128,6 +128,7 @@ final class EnumLabels
             'register' => 'Зарегистрировано',
             'archive' => 'В архив',
             'request_signatures' => 'Запрошены подписи',
+            'quick_qr_signature' => 'Быстрая подпись по QR',
             'sign' => 'Подписано',
             'decline' => 'Подпись отклонена',
             'calculate' => 'Рассчитано',

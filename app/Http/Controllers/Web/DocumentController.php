@@ -16,6 +16,8 @@ use App\Models\DocumentVersion;
 use App\Models\Employee;
 use App\Models\QrToken;
 use App\Shared\Enums\DocumentType;
+use App\Support\EntityPhotoService;
+use App\Support\EnumLabels;
 use App\Support\PermissionService;
 use App\Support\QrCodeGenerator;
 use App\Support\SettingsService;
@@ -190,6 +192,8 @@ class DocumentController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'exists:document_categories,id'],
             'body' => ['nullable', 'string'],
+            'photo' => app(EntityPhotoService::class)->rules(),
+            'reset_photo' => ['nullable', 'boolean'],
             'file' => ['nullable', 'file', 'max:'.(int) app(SettingsService::class)->get('corpms.documents.max_file_size_mb', 25) * 1024,
                 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,rtf,odt,ods,jpg,jpeg,png,webp,zip,7z'],
 
@@ -201,6 +205,7 @@ class DocumentController extends Controller
         ]);
 
         $document = $this->documents->create($me, $validated, $request->file('file'));
+        app(EntityPhotoService::class)->sync($document, $request, 'documents');
 
         return redirect()->route('documents.show', $document)->with('status', 'Документ создан: '.$document->document_number);
     }
@@ -407,7 +412,8 @@ class DocumentController extends Controller
 
         $verified = $this->signatures->verify($signature);
 
-        return back()->with('status', 'Подпись '.$verified->signature_id.': '.$verified->status->value);
+        return back()->with('status', __('Подпись').' '.$verified->signature_id.': '
+            .EnumLabels::label('signature_status', $verified->status->value));
     }
 
     public function revokeSignature(DocumentSignature $signature): RedirectResponse
@@ -438,7 +444,7 @@ class DocumentController extends Controller
         TenantGuard::ensureDocument($document, $me);
 
         try {
-            [$qrRequest, $plainToken] = $this->signatures->prepareQrSignature($me, $document);
+            [$qrRequest, $plainToken, $code] = $this->signatures->prepareQrSignature($me, $document);
         } catch (LogicException|\RuntimeException $e) {
             return back()->withErrors(['field' => $e->getMessage()]);
         }
@@ -446,13 +452,14 @@ class DocumentController extends Controller
         $ttlHours = max(1, (int) app(SettingsService::class)->get('corpms.signature.qr_token_ttl_hours', 24));
 
         return back()->with([
-            'status' => __('QR-код для подписи готов — отсканируйте его телефоном'),
+            'status' => __('QR-код готов. Код подтверждения отправлен подписанту'),
             'signature_qr' => [
                 'svg' => QrCodeGenerator::svg(route('signature.qr.show', $plainToken), 240, 'signature-qr__svg'),
                 'url' => route('signature.qr.show', $plainToken),
                 'expires_at' => now()->addHours($ttlHours)->format('d.m.Y H:i'),
                 'document' => $document->title,
                 'request_id' => $qrRequest->id,
+                'code' => $code,
             ],
         ]);
     }
@@ -492,7 +499,12 @@ class DocumentController extends Controller
     public function signByQr(Request $request, string $token): RedirectResponse
     {
         try {
-            $signature = $this->signatures->signWithQrToken($token, $request->ip(), $request->userAgent());
+            $signature = $this->signatures->signWithQrToken(
+                $token,
+                $request->input('otp_code'),
+                $request->ip(),
+                $request->userAgent(),
+            );
         } catch (LogicException|\RuntimeException $e) {
             return back()->withErrors(['field' => $e->getMessage()]);
         }

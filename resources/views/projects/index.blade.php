@@ -117,7 +117,7 @@
 @can('checkBoxPermission', 'projects.manage')
 <div class="modal modal-blur fade" id="newProject" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
-        <form class="modal-content" method="post" action="{{ route('projects.store') }}" data-submit-guard>
+        <form class="modal-content" method="post" action="{{ route('projects.store') }}" enctype="multipart/form-data" data-submit-guard>
             @csrf
             <div class="modal-header"><h5 class="modal-title">{{ __('Новый проект') }}</h5></div>
             <div class="modal-body">
@@ -192,6 +192,7 @@
                         <textarea data-crm-rich id="np-description" name="description" class="form-control" rows="2" maxlength="5000">{{ old('description') }}</textarea>
                     </div>
                 </div>
+                @include('partials.entity-photo-field', ['id' => 'np-photo', 'photoPath' => null])
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
