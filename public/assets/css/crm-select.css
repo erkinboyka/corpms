@@ -1,0 +1,118 @@
+/* ---------------------------------------------------------------------------
+   Плавное раскрытие select.form-select.
+   Нативный popup рисуется ОС и не анимируется — поэтому список зеркалится в DOM.
+   Оригинальный <select> остаётся в форме и получает все события change.
+   --------------------------------------------------------------------------- */
+
+.crm-select { position: relative; display: block; }
+
+.crm-select__native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.crm-select__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    width: 100%;
+    min-height: 38px;
+    padding: .45rem .75rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-md);
+    background: var(--crm-surface-solid);
+    color: var(--crm-text);
+    font: inherit;
+    font-size: var(--crm-text-body, .9375rem);
+    line-height: 1.45;
+    text-align: start;
+    cursor: pointer;
+    transition:
+        border-color var(--crm-motion-control) var(--crm-ease-standard),
+        box-shadow var(--crm-motion-control) var(--crm-ease-standard);
+}
+.crm-select__trigger:hover:not(:disabled) { border-color: var(--crm-accent); }
+.crm-select__trigger:focus-visible { outline: none; border-color: var(--crm-accent); box-shadow: var(--crm-focus-ring); }
+.crm-select--sm .crm-select__trigger { min-height: 32px; padding: .28rem .6rem; font-size: .8125rem; }
+.crm-select--lg .crm-select__trigger { min-height: 46px; padding: .6rem .9rem; font-size: 1.0625rem; }
+.crm-select.is-disabled .crm-select__trigger { opacity: .6; cursor: not-allowed; }
+
+.crm-select__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-select__value.is-placeholder { color: var(--crm-text-muted); }
+.crm-select__arrow {
+    flex: none;
+    font-size: 1rem;
+    color: var(--crm-text-muted);
+    transition: transform var(--crm-motion-control) var(--crm-ease-out);
+}
+.crm-select.is-open .crm-select__arrow { transform: rotate(180deg); }
+.crm-select.is-open .crm-select__trigger { border-color: var(--crm-accent); box-shadow: var(--crm-focus-ring); }
+.crm-select.is-invalid .crm-select__trigger { border-color: var(--crm-danger); }
+
+.crm-select__menu {
+    position: absolute;
+    z-index: 1080;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: min(18rem, 50vh);
+    overflow-y: auto;
+    padding: .3rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-md);
+    background: var(--crm-surface-solid);
+    box-shadow: var(--crm-shadow-2);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(calc(-1 * var(--crm-shift-1))) scale(var(--crm-scale-out));
+    transform-origin: top center;
+    transition:
+        opacity var(--crm-motion-overlay) var(--crm-ease-out),
+        transform var(--crm-motion-overlay) var(--crm-ease-out),
+        visibility 0s linear var(--crm-motion-overlay);
+}
+.crm-select.is-open .crm-select__menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition-delay: 0s;
+}
+
+.crm-select__group { padding: .4rem .55rem .15rem; color: var(--crm-text-muted); font-size: var(--crm-text-caption, .75rem); text-transform: uppercase; letter-spacing: .05em; }
+.crm-select__option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    width: 100%;
+    padding: .42rem .6rem;
+    border: 0;
+    border-radius: var(--crm-radius-sm, 6px);
+    background: transparent;
+    color: var(--crm-text);
+    font: inherit;
+    font-size: var(--crm-text-body, .9375rem);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--crm-motion-feedback) var(--crm-ease-standard), color var(--crm-motion-feedback) var(--crm-ease-standard);
+}
+.crm-select__option:hover,
+.crm-select__option.is-active { background: rgba(var(--crm-accent-rgb), .10); }
+.crm-select__option[aria-selected="true"] { color: var(--crm-accent); font-weight: 600; }
+.crm-select__option:disabled { opacity: .45; cursor: not-allowed; }
+.crm-select__option i.ti { color: var(--crm-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+    .crm-select__menu { transition-duration: .01ms; }
+    .crm-select__arrow { transition-duration: .01ms; }
+}

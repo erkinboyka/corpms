@@ -120,7 +120,7 @@ class ProjectService
     public function removeMember(Project $project, ProjectMember $member): void
     {
         if ((int) $member->project_id !== (int) $project->id) {
-            throw new LogicException('Участник не относится к проекту');
+            throw new LogicException(__('Участник не относится к проекту'));
         }
 
         $member->delete();
@@ -166,7 +166,7 @@ class ProjectService
     public function detachTask(Project $project, Task $task): Task
     {
         if ((int) $task->project_id !== (int) $project->id) {
-            throw new LogicException('Задача не относится к проекту');
+            throw new LogicException(__('Задача не относится к проекту'));
         }
 
         $task->project_id = null;

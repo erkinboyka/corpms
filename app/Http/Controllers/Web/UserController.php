@@ -111,7 +111,7 @@ class UserController extends Controller
         $employee = $user->employee;
 
         if ($employee === null) {
-            return back()->with('status', 'Нет карточки сотрудника');
+            return back()->with('status', __('Нет карточки сотрудника'));
         }
 
         $old = $employee->only(array_keys($validated));
@@ -136,7 +136,7 @@ class UserController extends Controller
             ], Arr::only($validated, $changed));
         }
 
-        return back()->with('status', 'Профиль обновлён');
+        return back()->with('status', __('Профиль обновлён'));
     }
 
     /** Загрузка фото профиля: public-диск storage/app/public/avatars, старое фото удаляется. */
@@ -150,7 +150,7 @@ class UserController extends Controller
         $employee = $user->employee;
 
         if ($employee === null) {
-            return back()->with('status', 'Нет карточки сотрудника');
+            return back()->with('status', __('Нет карточки сотрудника'));
         }
 
         /** @var UploadedFile $file */
@@ -170,7 +170,7 @@ class UserController extends Controller
 
         $this->audit->log($user, 'profile.photo_changed', 'employee', $employee->id, ['photo_path' => $oldPath], ['photo_path' => $newPath]);
 
-        return back()->with('status', 'Фото профиля обновлено');
+        return back()->with('status', __('Фото профиля обновлено'));
     }
 
     /** Подготавливает только известные данные; сохранение требует отправки формы. */
@@ -179,20 +179,20 @@ class UserController extends Controller
         $user = $request->user();
         $employee = $user->employee;
         if ($employee === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         $values = [];
         if (blank($employee->email) && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
             $values['email'] = $user->email;
         }
         if ($values === []) {
-            return back()->with('status', 'Нет подтверждённых данных для автозаполнения. Укажите сведения вручную.');
+            return back()->with('status', __('Нет подтверждённых данных для автозаполнения. Укажите сведения вручную.'));
         }
         $this->audit->log($user, 'profile.suggestions_prepared', 'employee', $employee->id,
             null, ['fields' => array_keys($values), 'source' => 'current_account']);
 
         return back()->with('profile_suggestions', $values)
-            ->with('status', 'Подготовлены данные учётной записи. Проверьте форму и нажмите «Сохранить».');
+            ->with('status', __('Подготовлены данные учётной записи. Проверьте форму и нажмите «Сохранить».'));
     }
 
     /** Смена собственного пароля: текущий проверяется, новый — с подтверждением. */
@@ -202,7 +202,7 @@ class UserController extends Controller
             'current_password' => ['required', 'current_password:web'],
             'password' => ['required', 'string', Password::min(12), 'confirmed'],
         ], [
-            'password.min' => 'Новый пароль должен содержать не менее 12 символов.',
+            'password.min' => __('Новый пароль должен содержать не менее 12 символов.'),
         ]);
 
         $user = $request->user();
@@ -212,7 +212,7 @@ class UserController extends Controller
 
         $this->audit->log($user, 'profile.password_changed', 'user', $user->id, null, null);
 
-        return back()->with('status', 'Пароль изменён');
+        return back()->with('status', __('Пароль изменён'));
     }
 
     /** Создание учётной записи (сотруднику или пустой). */
@@ -226,13 +226,13 @@ class UserController extends Controller
             'employee_id' => ['nullable', 'exists:employees,id'],
             'password' => ['nullable', 'string', Password::min(12)],
         ], [
-            'password.min' => 'Пароль должен содержать не менее 12 символов.',
+            'password.min' => __('Пароль должен содержать не менее 12 символов.'),
         ]);
 
         // привязать учётку можно только к сотруднику своей компании
         $employeeId = $validated['employee_id'] ?? null;
         if ($employeeId !== null) {
-            TenantGuard::ensureReference('employees', (int) $employeeId, $me, 'Сотрудник из другой компании');
+            TenantGuard::ensureReference('employees', (int) $employeeId, $me, __('Сотрудник из другой компании'));
         }
 
         $password = $validated['password'] ?? null;
@@ -246,7 +246,7 @@ class UserController extends Controller
                 ? Employee::query()->whereKey($employeeId)->lockForUpdate()->firstOrFail()
                 : null;
             if ($employee !== null && ($employee->user_id !== null || $employee->status !== EmployeeStatus::Active)) {
-                throw ValidationException::withMessages(['employee_id' => 'Сотрудник неактивен или уже имеет учётную запись']);
+                throw ValidationException::withMessages(['employee_id' => __('Сотрудник неактивен или уже имеет учётную запись')]);
             }
             $user = User::create(['name' => $validated['name'], 'email' => $validated['email'], 'password' => $password]);
             $employee?->update(['user_id' => $user->id]);
@@ -273,7 +273,7 @@ class UserController extends Controller
         $request->validate([
             'password' => ['nullable', 'string', Password::min(12)],
         ], [
-            'password.min' => 'Новый пароль должен содержать не менее 12 символов.',
+            'password.min' => __('Новый пароль должен содержать не менее 12 символов.'),
         ]);
 
         $password = $request->input('password');

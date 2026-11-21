@@ -1,29 +1,29 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'overview')
 
-@section('title', 'Аналитика')
+@section('title', __('Аналитика'))
 
 @php
     $taskMeta = [
-        'new' => ['Новые', 'var(--crm-info)'],
-        'planned' => ['Запланированные', 'var(--crm-accent)'],
-        'in_progress' => ['В работе', 'var(--crm-success)'],
-        'review' => ['На проверке', 'var(--crm-warning)'],
-        'returned' => ['Возвращённые', 'var(--crm-purple)'],
-        'completed' => ['Завершённые', 'var(--crm-success)'],
-        'cancelled' => ['Отменённые', 'var(--crm-text-secondary)'],
-        'overdue' => ['Просроченные', 'var(--crm-danger)'],
+        'new' => [__('Новые'), 'var(--crm-info)'],
+        'planned' => [__('Запланированные'), 'var(--crm-accent)'],
+        'in_progress' => [__('В работе'), 'var(--crm-success)'],
+        'review' => [__('На проверке'), 'var(--crm-warning)'],
+        'returned' => [__('Возвращённые'), 'var(--crm-purple)'],
+        'completed' => [__('Завершённые'), 'var(--crm-success)'],
+        'cancelled' => [__('Отменённые'), 'var(--crm-text-secondary)'],
+        'overdue' => [__('Просроченные'), 'var(--crm-danger)'],
     ];
     $docMeta = [
-        'draft' => ['Черновик', 'var(--crm-text-secondary)'],
-        'submitted' => ['На согласовании', 'var(--crm-info)'],
-        'review' => ['На проверке', 'var(--crm-warning)'],
-        'revision' => ['Доработка', 'var(--crm-purple)'],
-        'approved' => ['Согласовано', 'var(--crm-success)'],
-        'signing' => ['На подписании', 'var(--crm-success)'],
-        'signed' => ['Подписано', 'var(--crm-success)'],
-        'registered' => ['Зарегистрировано', 'var(--crm-info)'],
-        'archived' => ['В архиве', 'var(--crm-text-secondary)'],
+        'draft' => [__('Черновик'), 'var(--crm-text-secondary)'],
+        'submitted' => [__('На согласовании'), 'var(--crm-info)'],
+        'review' => [__('На проверке'), 'var(--crm-warning)'],
+        'revision' => [__('Доработка'), 'var(--crm-purple)'],
+        'approved' => [__('Согласовано'), 'var(--crm-success)'],
+        'signing' => [__('На подписании'), 'var(--crm-success)'],
+        'signed' => [__('Подписано'), 'var(--crm-success)'],
+        'registered' => [__('Зарегистрировано'), 'var(--crm-info)'],
+        'archived' => [__('В архиве'), 'var(--crm-text-secondary)'],
     ];
 
     $openTasks = ($tasks['new'] ?? 0) + ($tasks['planned'] ?? 0) + ($tasks['in_progress'] ?? 0) + ($tasks['review'] ?? 0);
@@ -49,16 +49,16 @@
 
     /* --- виджеты (п.3): меты и максимумы для столбчатых диаграмм --- */
     $prioMeta = [
-        'critical' => ['Критический', 'var(--crm-danger)'],
-        'high' => ['Высокий', 'var(--crm-warning)'],
-        'medium' => ['Средний', 'var(--crm-info)'],
-        'low' => ['Низкий', 'var(--crm-text-secondary)'],
+        'critical' => [__('Критический'), 'var(--crm-danger)'],
+        'high' => [__('Высокий'), 'var(--crm-warning)'],
+        'medium' => [__('Средний'), 'var(--crm-info)'],
+        'low' => [__('Низкий'), 'var(--crm-text-secondary)'],
     ];
     $leaveMeta = [
-        'pending' => ['Ожидают решения', 'var(--crm-warning)'],
-        'approved' => ['Согласованы', 'var(--crm-success)'],
-        'rejected' => ['Отклонены', 'var(--crm-danger)'],
-        'cancelled' => ['Отменены', 'var(--crm-text-secondary)'],
+        'pending' => [__('Ожидают решения'), 'var(--crm-warning)'],
+        'approved' => [__('Согласованы'), 'var(--crm-success)'],
+        'rejected' => [__('Отклонены'), 'var(--crm-danger)'],
+        'cancelled' => [__('Отменены'), 'var(--crm-text-secondary)'],
     ];
     $prioTotal = array_sum($priorities);
     $deadlineMax = max(1, max(array_values($deadlines)));
@@ -124,13 +124,13 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Данные</div>
-            <h1 class="page-title mt-1">Аналитика</h1>
-            <div class="text-secondary mt-1">Сводные показатели по посещаемости, задачам, документам и кадрам</div>
+            <div class="crm-eyebrow">{{ __('Данные') }}</div>
+            <h1 class="page-title mt-1">{{ __('Аналитика') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Сводные показатели по посещаемости, задачам, документам и кадрам') }}</div>
         </div>
         <div class="col-auto d-print-none">
             <span class="crm-chip {{ $scope === 'company' ? 'crm-chip--green' : ($scope === 'department' ? 'crm-chip--cyan' : 'crm-chip--grey') }}">
-                <i class="ti ti-scope me-1"></i>Scope: {{ $scope === 'company' ? 'компания' : ($scope === 'department' ? 'подразделение' : 'личный') }}
+                <i class="ti ti-scope me-1"></i>Scope: {{ $scope === 'company' ? __('компания') : ($scope === 'department' ? __('подразделение') : __('личный')) }}
             </span>
         </div>
     </div>
@@ -139,56 +139,56 @@
 {{-- ===== KPI-лента ===== --}}
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-users"></i>Сотрудников</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-users"></i>{{ __('Сотрудников') }}</div>
         <div class="crm-metric__value">{{ $headcount['active'] }} <small>/ {{ $headcount['total'] }}</small></div>
-        <div class="crm-metric__hint">активных / всего в области доступа</div>
+        <div class="crm-metric__hint">{{ __('активных / всего в области доступа') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-door-enter"></i>На месте сегодня</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-door-enter"></i>{{ __('На месте сегодня') }}</div>
         <div class="crm-metric__value">{{ $attendance['present'] }}</div>
-        <div class="crm-metric__hint">опоздали: {{ $attendance['late'] }} · удалённо: {{ $attendance['remote'] }} · без отметки: {{ $attendance['absent_from_schedule'] }}</div>
+        <div class="crm-metric__hint">{{ __('опоздали') }} {{ $attendance['late'] }} {{ __('удалённо') }} {{ $attendance['remote'] }} {{ __('без отметки') }} {{ $attendance['absent_from_schedule'] }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-list-check"></i>Открытых задач</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-list-check"></i>{{ __('Открытых задач') }}</div>
         <div class="crm-metric__value">{{ $openTasks }}</div>
         <div class="crm-metric__hint">
             @if (($tasks['overdue'] ?? 0) > 0)
-                <span class="text-danger">просрочено: {{ $tasks['overdue'] }}</span>
+                <span class="text-danger">{{ __('просрочено') }} {{ $tasks['overdue'] }}</span>
             @else
-                просроченных нет
+                {{ __('просроченных нет') }}
             @endif
         </div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-calendar-event"></i>Отпуска в ожидании</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-calendar-event"></i>{{ __('Отпуска в ожидании') }}</div>
         <div class="crm-metric__value">{{ $leaves['pending'] ?? 0 }}</div>
-        <div class="crm-metric__hint">согласовано: {{ $leaves['approved'] ?? 0 }} · отклонено: {{ $leaves['rejected'] ?? 0 }}</div>
+        <div class="crm-metric__hint">{{ __('согласовано') }} {{ $leaves['approved'] ?? 0 }} {{ __('отклонено') }} {{ $leaves['rejected'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>Выполнение задач</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>{{ __('Выполнение задач') }}</div>
         <div class="crm-metric__value">{{ $completion['pct'] }}<small>%</small></div>
-        <div class="crm-metric__hint">завершено {{ $completion['completed'] }} · в работе {{ $completion['active'] }}</div>
+        <div class="crm-metric__hint">{{ __('завершено') }} {{ $completion['completed'] }} {{ __('в работе') }} {{ $completion['active'] }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-clock-hour-4"></i>Учтено времени</div>
-        <div class="crm-metric__value">{{ $trackedHours }}<small> ч</small></div>
-        <div class="crm-metric__hint">записей тайм-трекинга: {{ $timeTracking['records'] }}</div>
+        <div class="crm-metric__label" style="color: var(--crm-purple);"><i class="ti ti-clock-hour-4"></i>{{ __('Учтено времени') }}</div>
+        <div class="crm-metric__value">{{ $trackedHours }}<small> {{ __('ч') }}</small></div>
+        <div class="crm-metric__hint">{{ __('записей тайм-трекинга') }} {{ $timeTracking['records'] }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-file-text"></i>Документов</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-file-text"></i>{{ __('Документов') }}</div>
         <div class="crm-metric__value">{{ $docTotal }}</div>
-        <div class="crm-metric__hint">автор или подписант</div>
+        <div class="crm-metric__hint">{{ __('автор или подписант') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: {{ ($tasks['overdue'] ?? 0) > 0 ? 'var(--crm-danger)' : 'var(--crm-success)'; }}"><i class="ti ti-alert-triangle"></i>Просрочено задач</div>
+        <div class="crm-metric__label" style="color: {{ ($tasks['overdue'] ?? 0) > 0 ? 'var(--crm-danger)' : 'var(--crm-success)'; }}"><i class="ti ti-alert-triangle"></i>{{ __('Просрочено задач') }}</div>
         <div class="crm-metric__value">{{ $tasks['overdue'] ?? 0 }}</div>
-        <div class="crm-metric__hint">@if (($tasks['overdue'] ?? 0) > 0)требуют внимания@else сроки соблюдаются@endif</div>
+        <div class="crm-metric__hint">@if (($tasks['overdue'] ?? 0) > 0){{ __('требуют внимания') }}@else {{ __('сроки соблюдаются') }}@endif</div>
     </div>
     @if ($canAudit && $auditTrend !== null)
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-activity"></i>Событий журнала</div>
+            <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-activity"></i>{{ __('Событий журнала') }}</div>
             <div class="crm-metric__value">{{ $auditTrend['total'] }}</div>
-            <div class="crm-metric__hint">за последние 14 дней</div>
+            <div class="crm-metric__hint">{{ __('за последние 14 дней') }}</div>
         </div>
     @endif
 </div>
@@ -199,10 +199,10 @@
         <div class="card crm-panel h-100">
             <div class="card-header d-flex align-items-start justify-content-between gap-2">
                 <div>
-                    <div class="card-title mb-0">Посещаемость, последние {{ count($trend) }} дней</div>
-                    <div class="crm-panel__sub">столбец — отметки за день · наведите для деталей</div>
+                    <div class="card-title mb-0">{{ __('Посещаемость, последние') }} {{ count($trend) }} {{ __('дней') }}</div>
+                    <div class="crm-panel__sub">{{ __('столбец — отметки за день · наведите для деталей') }}</div>
                 </div>
-                <span class="crm-chip crm-chip--green">пик {{ $trendMax }}</span>
+                <span class="crm-chip crm-chip--green">{{ __('пик') }} {{ $trendMax }}</span>
             </div>
             <div class="card-body d-flex flex-column">
                 @if ($marksTotal > 0)
@@ -214,19 +214,19 @@
                         <div class="crm-bar {{ $row['date']->isWeekend() ? 'crm-bar--dim' : '' }}">
                             <div class="crm-bar__col"
                                  style="--h: {{ max(6, (int) round(100 * $dayTotal / $trendMax)) }}%"
-                                 data-tip="{{ $row['date']->format('d.m') }} · на месте {{ $row['present'] }} · опоздали {{ $row['late'] }} · удалённо {{ $row['remote'] }}"></div>
+                                 data-tip="{{ $row['date']->format('d.m') }} · {{ __('на месте') }} {{ $row['present'] }} · {{ __('опоздали') }} {{ $row['late'] }} · {{ __('удалённо') }} {{ $row['remote'] }}"></div>
                             <div class="crm-bar__label">{{ $row['date']->format('d.m') }}</div>
                         </div>
                     @endforeach
                     </div>
                     <div class="crm-legend mt-3">
-                        <span><i style="--c: var(--crm-success)"></i>на месте {{ $sumPresent }}</span>
-                        <span><i style="--c: var(--crm-warning)"></i>опоздали {{ $sumLate }}</span>
-                        <span><i style="--c: var(--crm-info)"></i>удалённо {{ $sumRemote }}</span>
-                        <span><i style="--c: rgba(var(--crm-accent-rgb), .3)"></i>выходные</span>
+                        <span><i style="--c: var(--crm-success)"></i>{{ __('на месте') }} {{ $sumPresent }}</span>
+                        <span><i style="--c: var(--crm-warning)"></i>{{ __('опоздали') }} {{ $sumLate }}</span>
+                        <span><i style="--c: var(--crm-info)"></i>{{ __('удалённо') }} {{ $sumRemote }}</span>
+                        <span><i style="--c: rgba(var(--crm-accent-rgb), .3)"></i>{{ __('выходные') }}</span>
                     </div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'calendar-off', 'title' => 'Отметок за период нет', 'text' => 'Здесь появятся столбцы посещаемости, когда сотрудники начнут отмечать вход и выход за последние ' . count($trend) . ' дней.'])
+                    @include('partials.empty-state', ['icon' => 'calendar-off', 'title' => __('Отметок за период нет'), 'text' => __('Здесь появятся столбцы посещаемости, когда сотрудники начнут отмечать вход и выход за последние ') . count($trend) . __(' дней.')])
                 @endif
             </div>
         </div>
@@ -237,13 +237,13 @@
         <div class="card crm-panel mb-3">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Задачи по статусам</div>
-                    <div class="crm-panel__sub">всего {{ $taskTotal }} в области доступа</div>
+                    <div class="card-title mb-0">{{ __('Задачи по статусам') }}</div>
+                    <div class="crm-panel__sub">{{ __('всего') }} {{ $taskTotal }} {{ __('в области доступа') }}</div>
                 </div>
             </div>
             <div class="card-body">
                 @if ($taskTotal > 0)
-                    <div class="crm-stack" role="img" aria-label="Распределение задач по статусам">
+                    <div class="crm-stack" role="img" aria-label="{{ __("Распределение задач по статусам") }}">
                         @foreach ($taskMeta as $key => $meta)
                             @if (($tasks[$key] ?? 0) > 0)
                                 <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $tasks[$key] / max($taskTotal, 1)) }}%; --c: {{ $meta[1] }}" title="{{ $meta[0] }}: {{ $tasks[$key] }}"></span>
@@ -264,7 +264,7 @@
                         @endforeach
                     </div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'list-check', 'title' => 'Задач нет', 'text' => 'В вашей области доступа нет задач по назначенным сотрудникам.'])
+                    @include('partials.empty-state', ['icon' => 'list-check', 'title' => __('Задач нет'), 'text' => __('В вашей области доступа нет задач по назначенным сотрудникам.')])
                 @endif
             </div>
         </div>
@@ -272,13 +272,13 @@
         <div class="card crm-panel">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Документы по статусам</div>
-                    <div class="crm-panel__sub">всего {{ $docTotal }} · автор или подписант</div>
+                    <div class="card-title mb-0">{{ __('Документы по статусам') }}</div>
+                    <div class="crm-panel__sub">{{ __('всего') }} {{ $docTotal }} {{ __('автор или подписант') }}</div>
                 </div>
             </div>
             <div class="card-body">
                 @if ($docTotal > 0)
-                    <div class="crm-stack" role="img" aria-label="Распределение документов по статусам">
+                    <div class="crm-stack" role="img" aria-label="{{ __("Распределение документов по статусам") }}">
                         @foreach ($docMeta as $key => $meta)
                             @if (($documents[$key] ?? 0) > 0)
                                 <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $documents[$key] / max($docTotal, 1)) }}%; --c: {{ $meta[1] }}" title="{{ $meta[0] }}: {{ $documents[$key] }}"></span>
@@ -299,7 +299,7 @@
                         @endforeach
                     </div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'file-text', 'title' => 'Документов нет', 'text' => 'Документы появятся здесь, когда вы станете автором или подписантам.'])
+                    @include('partials.empty-state', ['icon' => 'file-text', 'title' => __('Документов нет'), 'text' => __('Документы появятся здесь, когда вы станете автором или подписантам.')])
                 @endif
             </div>
         </div>
@@ -313,13 +313,13 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Приоритеты задач</div>
-                    <div class="crm-panel__sub">всего {{ $prioTotal }} в области доступа</div>
+                    <div class="card-title mb-0">{{ __('Приоритеты задач') }}</div>
+                    <div class="crm-panel__sub">{{ __('всего') }} {{ $prioTotal }} {{ __('в области доступа') }}</div>
                 </div>
             </div>
             <div class="card-body">
                 @if ($prioTotal > 0)
-                    <div class="crm-stack" role="img" aria-label="Распределение задач по приоритетам">
+                    <div class="crm-stack" role="img" aria-label="{{ __("Распределение задач по приоритетам") }}">
                         @foreach ($prioMeta as $key => $meta)
                             @if (($priorities[$key] ?? 0) > 0)
                                 <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $priorities[$key] / max($prioTotal, 1)) }}%; --c: {{ $meta[1] }}" title="{{ $meta[0] }}: {{ $priorities[$key] }}"></span>
@@ -338,7 +338,7 @@
                         @endforeach
                     </div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'flag', 'title' => 'Задач нет', 'text' => 'В вашей области доступа нет задач по назначенным сотрудникам.'])
+                    @include('partials.empty-state', ['icon' => 'flag', 'title' => __('Задач нет'), 'text' => __('В вашей области доступа нет задач по назначенным сотрудникам.')])
                 @endif
             </div>
         </div>
@@ -349,20 +349,20 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Сроки задач</div>
-                    <div class="crm-panel__sub">открытые задачи по дате дедлайна</div>
+                    <div class="card-title mb-0">{{ __('Сроки задач') }}</div>
+                    <div class="crm-panel__sub">{{ __('открытые задачи по дате дедлайна') }}</div>
                 </div>
                 @if ($deadlines['overdue'] > 0)
-                    <span class="crm-chip crm-chip--red">{{ $deadlines['overdue'] }} просрочено</span>
+                    <span class="crm-chip crm-chip--red">{{ $deadlines['overdue'] }} {{ __('просрочено') }}</span>
                 @endif
             </div>
             <div class="card-body">
                 @php
                     $deadlineRows = [
-                        ['Срок прошёл', $deadlines['overdue'], 'var(--crm-danger)'],
-                        ['Ближайшие 7 дней', $deadlines['week'], 'var(--crm-warning)'],
-                        ['Позже', $deadlines['later'], 'var(--crm-success)'],
-                        ['Без срока', $deadlines['none'], 'var(--crm-text-secondary)'],
+                        [__('Срок прошёл'), $deadlines['overdue'], 'var(--crm-danger)'],
+                        [__('Ближайшие 7 дней'), $deadlines['week'], 'var(--crm-warning)'],
+                        [__('Позже'), $deadlines['later'], 'var(--crm-success)'],
+                        [__('Без срока'), $deadlines['none'], 'var(--crm-text-secondary)'],
                     ];
                     $deadlineSum = array_sum($deadlines);
                 @endphp
@@ -380,7 +380,7 @@
                         </div>
                     @endforeach
                 @else
-                    @include('partials.empty-state', ['icon' => 'calendar-off', 'title' => 'Открытых задач нет', 'text' => 'Просроченные задачи и горизонт дедлайнов появятся, когда задачи будут в работе.'])
+                    @include('partials.empty-state', ['icon' => 'calendar-off', 'title' => __('Открытых задач нет'), 'text' => __('Просроченные задачи и горизонт дедлайнов появятся, когда задачи будут в работе.')])
                 @endif
             </div>
         </div>
@@ -391,8 +391,8 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Загрузка исполнителей</div>
-                    <div class="crm-panel__sub">открытых задач на сотрудника</div>
+                    <div class="card-title mb-0">{{ __('Загрузка исполнителей') }}</div>
+                    <div class="crm-panel__sub">{{ __('открытых задач на сотрудника') }}</div>
                 </div>
             </div>
             <div class="card-body">
@@ -401,7 +401,7 @@
                         <div class="d-flex align-items-center gap-3 py-1">
                             <div class="flex-grow-1 min-w-0">
                                 <div class="small text-truncate">{{ $person['name'] }}</div>
-                                <div class="crm-kpi__bar mt-1" title="{{ $person['count'] }} открытых задач">
+                                <div class="crm-kpi__bar mt-1" title="{{ $person['count'] }} {{ __('открытых задач') }}">
                                     <i style="--w: {{ max(4, (int) round(100 * $person['count'] / $assigneeMax)) }}%"></i>
                                 </div>
                             </div>
@@ -409,7 +409,7 @@
                         </div>
                     @endforeach
                 @else
-                    @include('partials.empty-state', ['icon' => 'users', 'title' => 'Нет открытых задач', 'text' => 'Все задачи в области доступа закрыты или ещё не назначены.'])
+                    @include('partials.empty-state', ['icon' => 'users', 'title' => __('Нет открытых задач'), 'text' => __('Все задачи в области доступа закрыты или ещё не назначены.')])
                 @endif
             </div>
         </div>
@@ -423,10 +423,10 @@
             <div class="card crm-panel h-100">
                 <div class="card-header d-flex align-items-start justify-content-between gap-2">
                     <div>
-                        <div class="card-title mb-0">Активность журнала, 14 дней</div>
-                        <div class="crm-panel__sub">события действий пользователей · наведите для деталей</div>
+                        <div class="card-title mb-0">{{ __('Активность журнала, 14 дней') }}</div>
+                        <div class="crm-panel__sub">{{ __('события действий пользователей · наведите для деталей') }}</div>
                     </div>
-                    <span class="crm-chip crm-chip--cyan">{{ $auditTrend['total'] }} событий</span>
+                    <span class="crm-chip crm-chip--cyan">{{ $auditTrend['total'] }} {{ __('событий') }}</span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <div class="crm-bars flex-grow-1" style="min-height: 168px;">
@@ -434,14 +434,14 @@
                             <div class="crm-bar {{ $day['count'] === 0 ? 'crm-bar--dim' : '' }}">
                                 <div class="crm-bar__col"
                                      style="--h: {{ max(4, (int) round(100 * $day['count'] / $auditMax)) }}%"
-                                     data-tip="{{ $day['date']->format('d.m') }} · {{ $day['count'] }} событий"></div>
+                                     data-tip="{{ $day['date']->format('d.m') }} · {{ $day['count'] }} {{ __('событий') }}"></div>
                                 <div class="crm-bar__label">{{ $day['date']->format('d.m') }}</div>
                             </div>
                         @endforeach
                     </div>
                     <div class="crm-legend mt-3">
-                        <span><i style="--c: rgba(var(--crm-accent-rgb), .8)"></i>события журнала</span>
-                        <span><i style="--c: rgba(var(--crm-accent-rgb), .3)"></i>дней без событий</span>
+                        <span><i style="--c: rgba(var(--crm-accent-rgb), .8)"></i>{{ __('события журнала') }}</span>
+                        <span><i style="--c: rgba(var(--crm-accent-rgb), .3)"></i>{{ __('дней без событий') }}</span>
                     </div>
                 </div>
             </div>
@@ -451,10 +451,10 @@
             <div class="card crm-panel h-100">
                 <div class="card-header">
                     <div>
-                        <div class="card-title mb-0">Частые действия</div>
-                        <div class="crm-panel__sub">топ за 14 дней</div>
+                        <div class="card-title mb-0">{{ __('Частые действия') }}</div>
+                        <div class="crm-panel__sub">{{ __('топ за 14 дней') }}</div>
                     </div>
-                    <div class="ms-auto"><a class="btn btn-sm btn-ghost-primary" href="{{ route('audit.index') }}">Журнал<i class="ti ti-arrow-right ms-1"></i></a></div>
+                    <div class="ms-auto"><a class="btn btn-sm btn-ghost-primary" href="{{ route('audit.index') }}">{{ __('Журнал') }}<i class="ti ti-arrow-right ms-1"></i></a></div>
                 </div>
                 <div class="card-body">
                     @if (count($auditActions) > 0)
@@ -470,7 +470,7 @@
                             </div>
                         @endforeach
                     @else
-                        @include('partials.empty-state', ['icon' => 'history', 'title' => 'Событий нет', 'text' => 'За последние 14 дней журнал действий пуст.'])
+                        @include('partials.empty-state', ['icon' => 'history', 'title' => __('Событий нет'), 'text' => __('За последние 14 дней журнал действий пуст.')])
                     @endif
                 </div>
             </div>
@@ -485,8 +485,8 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Пунктуальность, 14 дней</div>
-                    <div class="crm-panel__sub">доля отметок без опоздания</div>
+                    <div class="card-title mb-0">{{ __('Пунктуальность, 14 дней') }}</div>
+                    <div class="crm-panel__sub">{{ __('доля отметок без опоздания') }}</div>
                 </div>
             </div>
             <div class="card-body">
@@ -498,21 +498,21 @@
                         <span class="crm-stat__dot" style="--c:var(--crm-success)"></span>
                         <div>
                             <div class="crm-stat__val">{{ $onTimePct }}%</div>
-                            <div class="crm-stat__label">пришли вовремя</div>
+                            <div class="crm-stat__label">{{ __('пришли вовремя') }}</div>
                         </div>
                     </div>
-                    <div class="crm-stack" role="img" aria-label="Структура отметок за 14 дней">
-                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumPresent / $marksTotal) }}%; --c: var(--crm-success)" title="на месте: {{ $sumPresent }}"></span>
-                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumLate / $marksTotal) }}%; --c: var(--crm-warning)" title="опоздали: {{ $sumLate }}"></span>
-                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumRemote / $marksTotal) }}%; --c: var(--crm-info)" title="удалённо: {{ $sumRemote }}"></span>
+                    <div class="crm-stack" role="img" aria-label="{{ __("Структура отметок за 14 дней") }}">
+                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumPresent / $marksTotal) }}%; --c: var(--crm-success)" title="{{ __('на месте') }}: {{ $sumPresent }}"></span>
+                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumLate / $marksTotal) }}%; --c: var(--crm-warning)" title="{{ __('опоздали') }}: {{ $sumLate }}"></span>
+                        <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $sumRemote / $marksTotal) }}%; --c: var(--crm-info)" title="{{ __('удалённо') }}: {{ $sumRemote }}"></span>
                     </div>
                     <div class="crm-legend mt-3">
-                        <span><i style="--c: var(--crm-success)"></i>на месте {{ $sumPresent }}</span>
-                        <span><i style="--c: var(--crm-warning)"></i>опоздали {{ $sumLate }}</span>
-                        <span><i style="--c: var(--crm-info)"></i>удалённо {{ $sumRemote }}</span>
+                        <span><i style="--c: var(--crm-success)"></i>{{ __('на месте') }} {{ $sumPresent }}</span>
+                        <span><i style="--c: var(--crm-warning)"></i>{{ __('опоздали') }} {{ $sumLate }}</span>
+                        <span><i style="--c: var(--crm-info)"></i>{{ __('удалённо') }} {{ $sumRemote }}</span>
                     </div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'clock-off', 'title' => 'Отметок нет', 'text' => 'За последние 14 дней в области доступа нет записей посещаемости.'])
+                    @include('partials.empty-state', ['icon' => 'clock-off', 'title' => __('Отметок нет'), 'text' => __('За последние 14 дней в области доступа нет записей посещаемости.')])
                 @endif
             </div>
         </div>
@@ -523,8 +523,8 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Стаж сотрудников</div>
-                    <div class="crm-panel__sub">по дате приёма · всего {{ $headcount['total'] }}</div>
+                    <div class="card-title mb-0">{{ __('Стаж сотрудников') }}</div>
+                    <div class="crm-panel__sub">{{ __('по дате приёма · всего') }} {{ $headcount['total'] }}</div>
                 </div>
             </div>
             <div class="card-body">
@@ -546,13 +546,13 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Заявки на отпуск</div>
-                    <div class="crm-panel__sub">всего {{ $leaveTotal }} в области доступа</div>
+                    <div class="card-title mb-0">{{ __('Заявки на отпуск') }}</div>
+                    <div class="crm-panel__sub">{{ __('всего') }} {{ $leaveTotal }} {{ __('в области доступа') }}</div>
                 </div>
             </div>
             <div class="card-body">
                 @if ($leaveTotal > 0)
-                    <div class="crm-stack" role="img" aria-label="Заявки на отпуск по статусам">
+                    <div class="crm-stack" role="img" aria-label="{{ __("Заявки на отпуск по статусам") }}">
                         @foreach ($leaveMeta as $key => $meta)
                             @if (($leaves[$key] ?? 0) > 0)
                                 <span class="crm-stack__seg" style="--w: {{ (int) round(100 * $leaves[$key] / max($leaveTotal, 1)) }}%; --c: {{ $meta[1] }}" title="{{ $meta[0] }}: {{ $leaves[$key] }}"></span>
@@ -571,7 +571,7 @@
                         @endforeach
                     </div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'plane-departure', 'title' => 'Заявок нет', 'text' => 'Заявки на отпуск появятся здесь, когда сотрудники начнут их оформлять.'])
+                    @include('partials.empty-state', ['icon' => 'plane-departure', 'title' => __('Заявок нет'), 'text' => __('Заявки на отпуск появятся здесь, когда сотрудники начнут их оформлять.')])
                 @endif
             </div>
         </div>
@@ -582,10 +582,10 @@
 <div class="card crm-panel mt-3">
     <div class="card-header d-flex align-items-start justify-content-between gap-2">
         <div>
-            <div class="card-title mb-0">Численность по подразделениям</div>
-            <div class="crm-panel__sub">активные сотрудники в области доступа · всего {{ $headcount['total'] }}</div>
+            <div class="card-title mb-0">{{ __('Численность по подразделениям') }}</div>
+            <div class="crm-panel__sub">{{ __('активные сотрудники в области доступа · всего') }} {{ $headcount['total'] }}</div>
         </div>
-        <span class="crm-chip crm-chip--cyan">{{ count($departments) }} подразделений</span>
+        <span class="crm-chip crm-chip--cyan">{{ count($departments) }} {{ __('подразделений') }}</span>
     </div>
     <div class="card-body">
         @if (count($departments) > 0)
@@ -597,12 +597,12 @@
                                 <span class="crm-entity__logo">{{ mb_strtoupper(mb_substr($row['name'], 0, 2)) }}</span>
                                 <div class="min-w-0">
                                     <div class="crm-entity__name">{{ $row['name'] }}</div>
-                                    <div class="crm-entity__sub">Руководитель: {{ $row['director'] ?? '—' }}</div>
+                                    <div class="crm-entity__sub">{{ __('Руководитель') }} {{ $row['director'] ?? '—' }}</div>
                                 </div>
                             </div>
                             <div class="crm-entity__meta">
-                                <span><i class="ti ti-users me-1"></i>{{ $row['headcount'] }} чел.</span>
-                                <span>{{ (int) round(100 * $row['headcount'] / max($headcount['total'], 1)) }}% от scope</span>
+                                <span><i class="ti ti-users me-1"></i>{{ $row['headcount'] }} {{ __('чел') }}</span>
+                                <span>{{ (int) round(100 * $row['headcount'] / max($headcount['total'], 1)) }}% {{ __('от') }} scope</span>
                             </div>
                             <div class="crm-entity__footer">
                                 <div class="crm-kpi__bar flex-grow-1" style="--w: {{ max(4, (int) round(100 * $row['headcount'] / $maxHeadcount)) }}%"><i></i></div>
@@ -612,7 +612,7 @@
                 @endforeach
             </div>
         @else
-            @include('partials.empty-state', ['icon' => 'building', 'title' => 'Подразделений нет', 'text' => 'Создайте структуру компании, чтобы видеть численность по отделам.'])
+            @include('partials.empty-state', ['icon' => 'building', 'title' => __('Подразделений нет'), 'text' => __('Создайте структуру компании, чтобы видеть численность по отделам.')])
         @endif
     </div>
 </div>
@@ -623,16 +623,16 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Динамика посещаемости</div>
-                    <div class="crm-panel__sub">линейный график · последние {{ count($trend) }} дней</div>
+                    <div class="card-title mb-0">{{ __('Динамика посещаемости') }}</div>
+                    <div class="crm-panel__sub">{{ __('линейный график · последние') }} {{ count($trend) }} {{ __('дней') }}</div>
                 </div>
                 <span class="crm-chip crm-chip--green"><i class="ti ti-chart-line me-1"></i>Line</span>
             </div>
             <div class="card-body">
                 @if (count($chartTrendLabels) > 0)
-                    <div class="crm-chart-box"><canvas id="crmChartLine" aria-label="Линейный график посещаемости"></canvas></div>
+                    <div class="crm-chart-box"><canvas id="crmChartLine" aria-label="{{ __("Линейный график посещаемости") }}"></canvas></div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'chart-line', 'title' => 'Нет данных', 'text' => 'За период нет отметок посещаемости.'])
+                    @include('partials.empty-state', ['icon' => 'chart-line', 'title' => __('Нет данных'), 'text' => __('За период нет отметок посещаемости.')])
                 @endif
             </div>
         </div>
@@ -642,16 +642,16 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Задачи по статусам</div>
-                    <div class="crm-panel__sub">столбчатая диаграмма · всего {{ $taskTotal }}</div>
+                    <div class="card-title mb-0">{{ __('Задачи по статусам') }}</div>
+                    <div class="crm-panel__sub">{{ __('столбчатая диаграмма · всего') }} {{ $taskTotal }}</div>
                 </div>
                 <span class="crm-chip crm-chip--cyan"><i class="ti ti-chart-bar me-1"></i>Bar</span>
             </div>
             <div class="card-body">
                 @if ($taskTotal > 0 && count($chartTasks['data']) > 0)
-                    <div class="crm-chart-box"><canvas id="crmChartBar" aria-label="Столбчатая диаграмма задач по статусам"></canvas></div>
+                    <div class="crm-chart-box"><canvas id="crmChartBar" aria-label="{{ __("Столбчатая диаграмма задач по статусам") }}"></canvas></div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'chart-bar', 'title' => 'Задач нет', 'text' => 'В вашей области доступа нет задач по назначенным сотрудникам.'])
+                    @include('partials.empty-state', ['icon' => 'chart-bar', 'title' => __('Задач нет'), 'text' => __('В вашей области доступа нет задач по назначенным сотрудникам.')])
                 @endif
             </div>
         </div>
@@ -661,16 +661,16 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Документы по статусам</div>
-                    <div class="crm-panel__sub">кольцевая диаграмма · всего {{ $docTotal }}</div>
+                    <div class="card-title mb-0">{{ __('Документы по статусам') }}</div>
+                    <div class="crm-panel__sub">{{ __('кольцевая диаграмма · всего') }} {{ $docTotal }}</div>
                 </div>
                 <span class="crm-chip crm-chip--orange"><i class="ti ti-chart-donut me-1"></i>Doughnut</span>
             </div>
             <div class="card-body">
                 @if ($docTotal > 0 && count($chartDocs['data']) > 0)
-                    <div class="crm-chart-box"><canvas id="crmChartDoughnut" aria-label="Кольцевая диаграмма документов по статусам"></canvas></div>
+                    <div class="crm-chart-box"><canvas id="crmChartDoughnut" aria-label="{{ __("Кольцевая диаграмма документов по статусам") }}"></canvas></div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'file-text', 'title' => 'Документов нет', 'text' => 'Документы появятся здесь, когда вы станете автором или подписантам.'])
+                    @include('partials.empty-state', ['icon' => 'file-text', 'title' => __('Документов нет'), 'text' => __('Документы появятся здесь, когда вы станете автором или подписантам.')])
                 @endif
             </div>
         </div>
@@ -680,16 +680,16 @@
         <div class="card crm-panel h-100">
             <div class="card-header">
                 <div>
-                    <div class="card-title mb-0">Приоритеты задач</div>
-                    <div class="crm-panel__sub">круговая диаграмма · всего {{ $prioTotal }}</div>
+                    <div class="card-title mb-0">{{ __('Приоритеты задач') }}</div>
+                    <div class="crm-panel__sub">{{ __('круговая диаграмма · всего') }} {{ $prioTotal }}</div>
                 </div>
                 <span class="crm-chip"><i class="ti ti-chart-pie me-1"></i>Pie</span>
             </div>
             <div class="card-body">
                 @if ($prioTotal > 0 && count($chartPrio['data']) > 0)
-                    <div class="crm-chart-box"><canvas id="crmChartPie" aria-label="Круговая диаграмма приоритетов задач"></canvas></div>
+                    <div class="crm-chart-box"><canvas id="crmChartPie" aria-label="{{ __("Круговая диаграмма приоритетов задач") }}"></canvas></div>
                 @else
-                    @include('partials.empty-state', ['icon' => 'flag', 'title' => 'Задач нет', 'text' => 'В вашей области доступа нет задач по назначенным сотрудникам.'])
+                    @include('partials.empty-state', ['icon' => 'flag', 'title' => __('Задач нет'), 'text' => __('В вашей области доступа нет задач по назначенным сотрудникам.')])
                 @endif
             </div>
         </div>
@@ -770,9 +770,9 @@
             data: {
                 labels: @json($chartTrendLabels),
                 datasets: [
-                    { label: 'На месте', data: @json($chartPresent), borderColor: cssColor('var(--crm-success)'), backgroundColor: 'rgba(47,179,68,.14)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
-                    { label: 'Опоздали', data: @json($chartLate), borderColor: cssColor('var(--crm-warning)'), backgroundColor: 'rgba(247,103,7,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
-                    { label: 'Удалённо', data: @json($chartRemote), borderColor: cssColor('var(--crm-info)'), backgroundColor: 'rgba(66,153,225,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 }
+                    { label: @json(__('На месте')), data: @json($chartPresent), borderColor: cssColor('var(--crm-success)'), backgroundColor: 'rgba(47,179,68,.14)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
+                    { label: @json(__('Опоздали')), data: @json($chartLate), borderColor: cssColor('var(--crm-warning)'), backgroundColor: 'rgba(247,103,7,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
+                    { label: @json(__('Удалённо')), data: @json($chartRemote), borderColor: cssColor('var(--crm-info)'), backgroundColor: 'rgba(66,153,225,.12)', fill: true, tension: .35, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 }
                 ]
             },
             options: baseCartesian()
@@ -787,7 +787,7 @@
             data: {
                 labels: @json($chartTasks['labels']),
                 datasets: [{
-                    label: 'Задач',
+                    label: @json(__('Задач')),
                     data: @json($chartTasks['data']),
                     backgroundColor: cssColors(@json($chartTasks['colors'])),
                     borderRadius: 6,

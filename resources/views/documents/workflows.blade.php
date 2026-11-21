@@ -1,24 +1,24 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'configuration')
 
-@section('title', 'Маршруты согласования')
+@section('title', __('Маршруты согласования'))
 
 @php
-    $actionLabels = ['approve' => 'Согласовать', 'review' => 'Проверить', 'sign' => 'Подписать'];
-    $actorLabels = ['role' => 'Роль', 'department' => 'Отдел', 'employee' => 'Сотрудник', 'author' => 'Автор документа', 'ceo' => 'Генеральный директор'];
+    $actionLabels = ['approve' => __('Согласовать'), 'review' => __('Проверить'), 'sign' => __('Подписать')];
+    $actorLabels = ['role' => __('Роль'), 'department' => __('Отдел'), 'employee' => __('Сотрудник'), 'author' => __('Автор документа'), 'ceo' => __('Генеральный директор')];
 @endphp
 
 @section('content')
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Документооборот</div>
-            <h1 class="page-title mt-1">Маршруты согласования</h1>
-            <div class="text-secondary mt-1">Линейные цепочки шагов, через которые проходят документы</div>
+            <div class="crm-eyebrow">{{ __('Документооборот') }}</div>
+            <h1 class="page-title mt-1">{{ __('Маршруты согласования') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Линейные цепочки шагов, через которые проходят документы') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('documents.index') }}"><i class="ti ti-arrow-left me-1"></i>Документы</a>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newWorkflow"><i class="ti ti-plus me-1"></i>Создать маршрут</button>
+            <a class="btn btn-ghost-secondary me-1" href="{{ route('documents.index') }}"><i class="ti ti-arrow-left me-1"></i>{{ __('Документы') }}</a>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newWorkflow"><i class="ti ti-plus me-1"></i>{{ __('Создать маршрут') }}</button>
         </div>
     </div>
 </div>
@@ -29,7 +29,7 @@
             <div class="crm-form__section h-100 wf-card">
                 <div class="d-flex align-items-start justify-content-between gap-2">
                     <h3 class="wf-card__title">{{ $workflow->name }}</h3>
-                    <span class="crm-chip crm-chip--cyan flex-shrink-0">{{ $inWorkflow[$workflow->id] ?? 0 }} док.</span>
+                    <span class="crm-chip crm-chip--cyan flex-shrink-0">{{ $inWorkflow[$workflow->id] ?? 0 }} {{ __('док') }}</span>
                 </div>
 
                 <div class="wf-card__cats">
@@ -38,7 +38,7 @@
                             <span class="crm-chip crm-chip--grey"><i class="ti ti-folder me-1"></i>{{ $category }}</span>
                         @endforeach
                     @else
-                        <span class="crm-chip crm-chip--grey"><i class="ti ti-world me-1"></i>Все категории</span>
+                        <span class="crm-chip crm-chip--grey"><i class="ti ti-world me-1"></i>{{ __('Все категории') }}</span>
                     @endif
                 </div>
 
@@ -51,10 +51,10 @@
                                 <div class="wf-steps__name">
                                     {{ $step->name }}
                                     @if ($step->is_signature_step)
-                                        <span class="crm-chip crm-chip--orange"><i class="ti ti-signature me-1"></i>подпись</span>
+                                        <span class="crm-chip crm-chip--orange"><i class="ti ti-signature me-1"></i>{{ __('подпись') }}</span>
                                     @endif
                                     @if ($step->is_terminal)
-                                        <span class="crm-chip crm-chip--green"><i class="ti ti-flag me-1"></i>финал</span>
+                                        <span class="crm-chip crm-chip--green"><i class="ti ti-flag me-1"></i>{{ __('финал') }}</span>
                                     @endif
                                 </div>
                                 <div class="wf-steps__meta">
@@ -68,7 +68,7 @@
                                         @if ($step->role)
                                             {{ $step->role->name }}
                                         @else
-                                            {{ ['role' => 'по роли', 'department' => 'отдел', 'employee' => 'сотрудник', 'author' => 'автор', 'ceo' => 'генеральный директор'][$step->actor_type->value] ?? $step->actor_type->value }}
+                                            {{ ['role' => __('по роли'), 'department' => __('отдел'), 'employee' => __('сотрудник'), 'author' => __('автор'), 'ceo' => __('генеральный директор')][$step->actor_type->value] ?? $step->actor_type->value }}
                                         @endif
                                     </span>
                                 </div>
@@ -80,7 +80,7 @@
         </div>
     @empty
         <div class="col-12">
-            @include('partials.empty-state', ['icon' => 'git-branch', 'title' => 'Маршрутов нет', 'text' => 'Создайте маршрут — цепочку согласования для документов.'])
+            @include('partials.empty-state', ['icon' => 'git-branch', 'title' => __('Маршрутов нет'), 'text' => __('Создайте маршрут — цепочку согласования для документов.')])
         </div>
     @endforelse
 </div>
@@ -91,59 +91,59 @@
         <form class="modal-content" method="post" action="{{ route('workflows.store') }}" data-submit-guard id="wf-wizard-form">
             @csrf
             <div class="modal-header">
-                <h5 class="modal-title">Новый маршрут согласования</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                <h5 class="modal-title">{{ __('Новый маршрут согласования') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __("Закрыть") }}"></button>
             </div>
 
             <div class="modal-body">
                 {{-- индикатор шагов --}}
                 <ul class="nav crm-steps mb-3" id="wf-steps-nav">
-                    <li class="nav-item"><span class="nav-link active" data-wf-step="1"><span class="crm-steps__num">1</span> Суть</span></li>
-                    <li class="nav-item"><span class="nav-link" data-wf-step="2"><span class="crm-steps__num">2</span> Шаги</span></li>
-                    <li class="nav-item"><span class="nav-link" data-wf-step="3"><span class="crm-steps__num">3</span> Проверка</span></li>
+                    <li class="nav-item"><span class="nav-link active" data-wf-step="1"><span class="crm-steps__num">1</span> {{ __('Суть') }}</span></li>
+                    <li class="nav-item"><span class="nav-link" data-wf-step="2"><span class="crm-steps__num">2</span> {{ __('Шаги') }}</span></li>
+                    <li class="nav-item"><span class="nav-link" data-wf-step="3"><span class="crm-steps__num">3</span> {{ __('Проверка') }}</span></li>
                 </ul>
 
                 {{-- Шаг 1: суть --}}
                 <section data-wf-pane="1">
                     <div class="crm-form__field">
-                        <label class="form-label" for="wf-name">Название<span class="req">*</span></label>
-                        <input type="text" id="wf-name" name="name" class="form-control" required maxlength="150" placeholder="Приказы — согласование руководством">
+                        <label class="form-label" for="wf-name">{{ __('Название') }}<span class="req">*</span></label>
+                        <input type="text" id="wf-name" name="name" class="form-control" required maxlength="150" placeholder="{{ __("Приказы — согласование руководством") }}">
                     </div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="wf-cats">Категории документов</label>
+                        <label class="form-label" for="wf-cats">{{ __('Категории документов') }}</label>
                         <input type="text" id="wf-cats" name="applicable_categories" class="form-control" maxlength="200"
-                               placeholder="hr, admin — пусто = все документы"
+                               placeholder="{{ __("hr, admin — пусто = все документы") }}"
                                autocomplete="off"
-                               data-crm-tags data-crm-tags-hint="Enter — добавить категорию">
+                               data-crm-tags data-crm-tags-hint="{{ __("Enter — добавить категорию") }}">
                     </div>
                 </section>
 
                 {{-- Шаг 2: динамические шаги маршрута --}}
                 <section data-wf-pane="2" hidden>
-                    <div class="crm-form__desc mt-0">Добавьте минимум один шаг. Максимум — {{ $maxSteps }}.</div>
+                    <div class="crm-form__desc mt-0">{{ __('Добавьте минимум один шаг. Максимум') }} {{ $maxSteps }}.</div>
                     <div id="wf-steps-list"></div>
                     <button type="button" class="btn btn-ghost-secondary mt-2" id="wf-step-add">
-                        <i class="ti ti-plus me-1"></i>Добавить шаг
+                        <i class="ti ti-plus me-1"></i>{{ __('Добавить шаг') }}
                     </button>
                     <template id="wf-step-tpl">
                         <div class="wf-step-card" data-wf-step-card>
                             <div class="wf-step-card__head">
                                 <span class="wf-step-card__badge" data-wf-badge>1</span>
-                                <strong data-wf-title>Шаг 1</strong>
+                                <strong data-wf-title>{{ __('Шаг 1') }}</strong>
                                 <label class="ms-auto small text-secondary d-flex align-items-center gap-1 mb-0">
-                                    <input type="checkbox" class="form-check-input" data-wf-sig> Шаг подписи
+                                    <input type="checkbox" class="form-check-input" data-wf-sig> {{ __('Шаг подписи') }}
                                 </label>
-                                <button type="button" class="btn btn-sm btn-ghost-danger" data-wf-step-del aria-label="Удалить шаг" title="Удалить шаг">
+                                <button type="button" class="btn btn-sm btn-ghost-danger" data-wf-step-del aria-label="{{ __("Удалить шаг") }}" title="{{ __("Удалить шаг") }}">
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>
                             <div class="crm-form__row">
                                 <div class="crm-form__field">
-                                    <label class="form-label">Название шага<span class="req">*</span></label>
-                                    <input type="text" class="form-control" data-wf-f="name" required maxlength="150" placeholder="Согласование руководителем">
+                                    <label class="form-label">{{ __('Название шага') }}<span class="req">*</span></label>
+                                    <input type="text" class="form-control" data-wf-f="name" required maxlength="150" placeholder="{{ __("Согласование руководителем") }}">
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label">Кто действует</label>
+                                    <label class="form-label">{{ __('Кто действует') }}</label>
                                     <select class="form-select" data-wf-f="actor_type">
                                         @foreach ($actorTypes as $actor)
                                             <option value="{{ $actor->value }}" @selected($actor->value === 'role')>{{ $actorLabels[$actor->value] ?? $actor->value }}</option>
@@ -153,7 +153,7 @@
                             </div>
                             <div class="crm-form__row mb-0">
                                 <div class="crm-form__field">
-                                    <label class="form-label">Роль (если «Роль»)</label>
+                                    <label class="form-label">{{ __('Роль (если «Роль»)') }}</label>
                                     <select class="form-select" data-wf-f="role_id">
                                         <option value="">—</option>
                                         @foreach ($roles as $role)
@@ -162,7 +162,7 @@
                                     </select>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label">Действие</label>
+                                    <label class="form-label">{{ __('Действие') }}</label>
                                     <select class="form-select" data-wf-f="required_action">
                                         @foreach ($actions as $action)
                                             <option value="{{ $action->value }}">{{ $actionLabels[$action->value] ?? $action->value }}</option>
@@ -176,12 +176,12 @@
 
                 {{-- Шаг 3: проверка --}}
                 <section data-wf-pane="3" hidden>
-                    <div class="crm-form__desc mt-0">Проверьте маршрут перед созданием.</div>
+                    <div class="crm-form__desc mt-0">{{ __('Проверьте маршрут перед созданием') }}</div>
                     <div class="wf-review">
-                        <div class="wf-review__row"><span>Название</span><strong data-wf-review="name">—</strong></div>
-                        <div class="wf-review__row"><span>Категории</span><strong data-wf-review="cats">— все —</strong></div>
+                        <div class="wf-review__row"><span>{{ __('Название') }}</span><strong data-wf-review="name">—</strong></div>
+                        <div class="wf-review__row"><span>{{ __('Категории') }}</span><strong data-wf-review="cats">{{ __('все') }}</strong></div>
                         <div class="wf-review__row wf-review__row--block">
-                            <span>Цепочка шагов</span>
+                            <span>{{ __('Цепочка шагов') }}</span>
                             <div class="d-flex flex-wrap align-items-center gap-1 mt-1" data-wf-review="chain"></div>
                         </div>
                     </div>
@@ -189,9 +189,9 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-ghost-secondary" id="wf-back" hidden><i class="ti ti-arrow-left me-1"></i>Назад</button>
-                <button type="button" class="btn btn-primary ms-auto" id="wf-next">Далее<i class="ti ti-arrow-right ms-1"></i></button>
-                <button type="submit" class="btn btn-primary" id="wf-submit" hidden><i class="ti ti-check me-1"></i>Создать маршрут</button>
+                <button type="button" class="btn btn-ghost-secondary" id="wf-back" hidden><i class="ti ti-arrow-left me-1"></i>{{ __('Назад') }}</button>
+                <button type="button" class="btn btn-primary ms-auto" id="wf-next">{{ __('Далее') }}<i class="ti ti-arrow-right ms-1"></i></button>
+                <button type="submit" class="btn btn-primary" id="wf-submit" hidden><i class="ti ti-check me-1"></i>{{ __('Создать маршрут') }}</button>
             </div>
         </form>
     </div>
@@ -325,11 +325,11 @@
             return copy.textContent.trim();
         }).filter(Boolean).join(', ');
         modal.querySelector('[data-wf-review="name"]').textContent = name;
-        modal.querySelector('[data-wf-review="cats"]').textContent = cats || '— все —';
+        modal.querySelector('[data-wf-review="cats"]').textContent = cats || __('— все —');
 
         var chain = modal.querySelector('[data-wf-review="chain"]');
         chain.innerHTML = '';
-        var labels = { approve: 'Согласовать', review: 'Проверить', sign: 'Подписать' };
+        var labels = { approve: __('Согласовать'), review: __('Проверить'), sign: __('Подписать') };
         stepCards().forEach(function (card, i) {
             if (i > 0) {
                 var arrow = document.createElement('i');

@@ -48,7 +48,7 @@ class PayrollController extends Controller
         \assert($me !== null);
 
         $scope = $this->permissions->can($request->user(), 'payroll.view');
-        \assert($scope !== false, 'маршрут уже проверяет право');
+        \assert($scope !== false, __('маршрут уже проверяет право'));
         $showAmounts = $scope === PermissionScope::Company;
 
         $periods = PayrollPeriod::query()
@@ -83,7 +83,7 @@ class PayrollController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['month' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['month' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -100,7 +100,7 @@ class PayrollController extends Controller
             ->exists();
 
         if ($overlap) {
-            return back()->withErrors(['month' => 'Ведомость за этот период уже существует'])->withInput();
+            return back()->withErrors(['month' => __('Ведомость за этот период уже существует')])->withInput();
         }
 
         $period = PayrollPeriod::query()->create([
@@ -128,7 +128,7 @@ class PayrollController extends Controller
         TenantGuard::ensure($period, $me);
 
         $scope = $this->permissions->can($request->user(), 'payroll.view');
-        \assert($scope !== false, 'маршрут уже проверяет право');
+        \assert($scope !== false, __('маршрут уже проверяет право'));
 
         $linesQuery = $period->lines()->with(['employee', 'component']);
         $linesQuery->whereIn('employee_id', $this->permissions->scopeEmployees(Employee::query(), $request->user(), 'payroll.view')->select('id'));
@@ -222,7 +222,7 @@ class PayrollController extends Controller
             'status' => PayrollPeriodStatus::Approved->value,
         ]);
 
-        return back()->with('status', 'Ведомость согласована');
+        return back()->with('status', __('Ведомость согласована'));
     }
 
     /** Выплата: approved → paid. */
@@ -245,14 +245,14 @@ class PayrollController extends Controller
             'net' => $period->net_amount,
         ]);
 
-        return back()->with('status', 'Выплата зафиксирована');
+        return back()->with('status', __('Выплата зафиксирована'));
     }
 
     /** Экспорт ведомости CSV (UTF-8 BOM, разделитель «;» — как в табеле). */
     public function export(Request $request, PayrollPeriod $period): StreamedResponse
     {
         $scope = $this->permissions->can($request->user(), 'payroll.view');
-        \assert($scope !== false, 'маршрут уже проверяет право');
+        \assert($scope !== false, __('маршрут уже проверяет право'));
 
         $me = $request->user()->employee;
         \assert($me !== null);
@@ -274,7 +274,7 @@ class PayrollController extends Controller
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM для Excel
 
-            fputcsv($out, ['Таб.№', 'Сотрудник', 'Компонент', 'Тип', 'Расчёт', 'Кол-во', 'Ставка', 'Сумма', 'Источник'], ';');
+            fputcsv($out, [__('Таб.№'), __('Сотрудник'), __('Компонент'), __('Тип'), __('Расчёт'), __('Кол-во'), __('Ставка'), __('Сумма'), __('Источник')], ';');
 
             foreach ($lines as $line) {
                 fputcsv($out, [
@@ -292,9 +292,9 @@ class PayrollController extends Controller
 
             $gross = (float) $lines->filter(fn ($line) => $line->component->kind === PayrollComponentKind::Earning)->sum('amount');
             $deductions = (float) $lines->filter(fn ($line) => $line->component->kind === PayrollComponentKind::Deduction)->sum('amount');
-            fputcsv($out, ['', 'ИТОГО начислено', '', '', '', '', '', number_format($gross, 2, '.', ''), ''], ';');
-            fputcsv($out, ['', 'ИТОГО удержано', '', '', '', '', '', number_format($deductions, 2, '.', ''), ''], ';');
-            fputcsv($out, ['', 'К выплате', '', '', '', '', '', number_format($gross - $deductions, 2, '.', ''), ''], ';');
+            fputcsv($out, ['', __('ИТОГО начислено'), '', '', '', '', '', number_format($gross, 2, '.', ''), ''], ';');
+            fputcsv($out, ['', __('ИТОГО удержано'), '', '', '', '', '', number_format($deductions, 2, '.', ''), ''], ';');
+            fputcsv($out, ['', __('К выплате'), '', '', '', '', '', number_format($gross - $deductions, 2, '.', ''), ''], ';');
 
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -307,7 +307,7 @@ class PayrollController extends Controller
         \assert($me !== null);
 
         $scope = $this->permissions->can($request->user(), 'payroll.view');
-        \assert($scope !== false, 'маршрут уже проверяет право');
+        \assert($scope !== false, __('маршрут уже проверяет право'));
 
         $employeesQuery = Employee::query()
             ->where('company_id', $me->company_id)
@@ -361,7 +361,7 @@ class PayrollController extends Controller
 
         $employee = Employee::query()->findOrFail((int) $validated['employee_id']);
         if ((int) $employee->company_id !== (int) $me->company_id) {
-            abort(403, 'Сотрудник из другой компании');
+            abort(403, __('Сотрудник из другой компании'));
         }
 
         DB::transaction(function () use ($validated, $employee): void {
@@ -432,7 +432,7 @@ class PayrollController extends Controller
             'calculation' => $component->calculation->value,
         ]);
 
-        return back()->with('status', 'Компонент «'.$component->name.'» добавлен');
+        return back()->with('status', __('Компонент «').$component->name.__('» добавлен'));
     }
 
     /** Включение/выключение компонента (история строк не переписывается). */
@@ -442,7 +442,7 @@ class PayrollController extends Controller
         \assert($me !== null);
 
         if ((int) $component->company_id !== (int) $me->company_id) {
-            abort(403, 'Компонент другой компании');
+            abort(403, __('Компонент другой компании'));
         }
 
         $component->update(['is_active' => ! $component->is_active]);
@@ -453,6 +453,6 @@ class PayrollController extends Controller
             'is_active' => $component->is_active,
         ]);
 
-        return back()->with('status', 'Компонент «'.$component->name.'» '.($component->is_active ? 'включён' : 'выключен'));
+        return back()->with('status', __('Компонент «').$component->name.'» '.($component->is_active ? __('включён') : __('выключен')));
     }
 }

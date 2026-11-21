@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'stream')
 
-@section('title', 'Посещаемость')
+@section('title', __('Посещаемость'))
 @section('body_class', 'bm-attendance-day')
 
 @php
@@ -21,9 +21,9 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Посещаемость</div>
-            <h1 class="page-title mt-1">Сегодня · {{ now()->format('d.m.Y') }}</h1>
-            <div class="text-secondary mt-1">Оперативный центр: отметки за день и поток событий</div>
+            <div class="crm-eyebrow">{{ __('Посещаемость') }}</div>
+            <h1 class="page-title mt-1">{{ __('Сегодня') }} {{ now()->format('d.m.Y') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Оперативный центр: отметки за день и поток событий') }}</div>
         </div>
     </div>
 </div>
@@ -34,13 +34,13 @@
         <div class="crm-metric">
             <div class="crm-metric__label"><i class="ti ti-{{ $statusIcons[$status] ?? 'circle-dot' }}"></i>{{ $crm_label('attendance_status', $status) }}</div>
             <div class="crm-metric__value" data-count="{{ (int) $count }}">{{ (int) $count }}</div>
-            <div class="crm-metric__hint">из {{ $records->count() }} отметок</div>
+            <div class="crm-metric__hint">{{ __('из') }} {{ $records->count() }} {{ __('отметок') }}</div>
         </div>
     @empty
         <div class="crm-metric">
-            <div class="crm-metric__label"><i class="ti ti-calendar-time"></i>Отметок сегодня</div>
+            <div class="crm-metric__label"><i class="ti ti-calendar-time"></i>{{ __('Отметок сегодня') }}</div>
             <div class="crm-metric__value">0</div>
-            <div class="crm-metric__hint">по текущему scope</div>
+            <div class="crm-metric__hint">{{ __('по текущему scope') }}</div>
         </div>
     @endforelse
 </div>
@@ -49,13 +49,13 @@
     <div class="col-xl-7">
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title bm-section-title">Табель за сегодня</h2>
-                <span class="crm-chip ms-auto">{{ $records->count() }} записей</span>
+                <h2 class="card-title bm-section-title">{{ __('Табель за сегодня') }}</h2>
+                <span class="crm-chip ms-auto">{{ $records->count() }} {{ __('записей') }}</span>
             </div>
             <div class="table-responsive">
                 <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                     <thead>
-                        <tr><th scope="col">Сотрудник</th><th scope="col">Вход</th><th scope="col">Выход</th><th scope="col">Статус</th><th scope="col" class="text-end">Отраб.</th><th scope="col" class="text-end">Поздно</th></tr>
+                        <tr><th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Вход') }}</th><th scope="col">{{ __('Выход') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col" class="text-end">{{ __('Отраб') }}</th><th scope="col" class="text-end">{{ __('Поздно') }}</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($records as $record)
@@ -80,17 +80,17 @@
                                     @endphp
                                     <span class="crm-chip {{ $stChip }}">{{ $crm_label('attendance_status', $st) }}</span>
                                 </td>
-                                <td class="text-end crm-table-num">{{ $record->worked_minutes }} мин.</td>
+                                <td class="text-end crm-table-num">{{ $record->worked_minutes }} {{ __('мин') }}</td>
                                 <td class="text-end">
                                     @if ($record->late_minutes > 0)
-                                        <span class="crm-chip crm-chip--red">{{ $record->late_minutes }} мин.</span>
+                                        <span class="crm-chip crm-chip--red">{{ $record->late_minutes }} {{ __('мин') }}</span>
                                     @else
                                         <span class="text-secondary">—</span>
                                     @endif
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6">@include('partials.empty-state', ['icon' => 'clock-exclamation', 'title' => 'Отметок нет', 'text' => 'Сегодня по вашему scope ещё нет отметок о приходе.'])</td></tr>
+                            <tr><td colspan="6">@include('partials.empty-state', ['icon' => 'clock-exclamation', 'title' => __('Отметок нет'), 'text' => __('Сегодня по вашему scope ещё нет отметок о приходе.')])</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -101,22 +101,22 @@
     <div class="col-xl-5">
         <div class="card">
             <div class="card-header">
-                <span class="d-flex align-items-center gap-2"><span class="crm-live-dot"></span><strong>Live: поток событий</strong></span>
-                <span class="crm-chip ms-auto" id="live-counter">обновляется каждые 10 с</span>
+                <span class="d-flex align-items-center gap-2"><span class="crm-live-dot"></span><strong>{{ __('Live: поток событий') }}</strong></span>
+                <span class="crm-chip ms-auto" id="live-counter">{{ __('обновляется каждые 10 с') }}</span>
             </div>
             <div class="card-body py-2">
                 <div class="crm-timeline" id="live-events">
                     @forelse ($events as $event)
                         <div class="crm-timeline__item">
-                            <div class="crm-timeline__time">{{ $event->occurred_at->format('H:i:s') }} · {{ $event->device?->name ?? 'устройство' }}</div>
+                            <div class="crm-timeline__time">{{ $event->occurred_at->format('H:i:s') }} · {{ $event->device?->name ?? __('устройство') }}</div>
                             <div class="crm-timeline__title">
-                                {{ $event->employee?->last_name ?? 'НЕ ОПОЗНАН' }}
+                                {{ $event->employee?->last_name ?? __('НЕ ОПОЗНАН') }}
                                 <span class="crm-chip {{ $event->direction === 'in' ? 'crm-chip--green' : 'crm-chip--grey' }} ms-1">{{ $event->direction }}</span>
                             </div>
                         </div>
                     @empty
                         <div class="crm-timeline__item">
-                            <div class="crm-timeline__text">Событий за сегодня нет</div>
+                            <div class="crm-timeline__text">{{ __('Событий за сегодня нет') }}</div>
                         </div>
                     @endforelse
                 </div>

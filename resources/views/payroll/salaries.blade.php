@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'ledger')
 
-@section('title', 'Зарплата — Оклады и компоненты')
+@section('title', __('Зарплата — Оклады и компоненты'))
 
 @php
     $salaryPct = $totals['employees'] > 0 ? (int) round($totals['withSalary'] / $totals['employees'] * 100) : 0;
@@ -15,15 +15,15 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Зарплата</div>
-            <h1 class="page-title mt-1">Оклады и компоненты</h1>
-            <div class="text-secondary mt-1" id="pay-lede">Базовая сумма каждого сотрудника.</div>
+            <div class="crm-eyebrow">{{ __('Зарплата') }}</div>
+            <h1 class="page-title mt-1">{{ __('Оклады и компоненты') }}</h1>
+            <div class="text-secondary mt-1" id="pay-lede">{{ __('Базовая сумма каждого сотрудника') }}</div>
         </div>
     </div>
 </div>
 
 {{-- ===== Переключатель экранов ===== --}}
-<nav class="pay-stepper mb-3" aria-label="Экраны раздела">
+<nav class="pay-stepper mb-3" aria-label="{{ __("Экраны раздела") }}">
     <ol class="pay-stepper__list">
         <li class="pay-step">
             <button type="button" class="pay-stepper__btn is-active" data-goto="1" aria-current="step" aria-controls="pay-screen-1">
@@ -31,7 +31,7 @@
                     <span class="pay-stepper__num">1</span>
                     <i class="ti ti-check pay-stepper__check" aria-hidden="true"></i>
                 </span>
-                <span class="pay-stepper__label">Оклады</span>
+                <span class="pay-stepper__label">{{ __('Оклады') }}</span>
             </button>
         </li>
         <li class="pay-step">
@@ -40,7 +40,7 @@
                     <span class="pay-stepper__num">2</span>
                     <i class="ti ti-check pay-stepper__check" aria-hidden="true"></i>
                 </span>
-                <span class="pay-stepper__label">Правила расчёта</span>
+                <span class="pay-stepper__label">{{ __('Правила расчёта') }}</span>
             </button>
         </li>
         <li class="pay-step">
@@ -49,51 +49,51 @@
                     <span class="pay-stepper__num">3</span>
                     <i class="ti ti-check pay-stepper__check" aria-hidden="true"></i>
                 </span>
-                <span class="pay-stepper__label">Расчёт ведомости</span>
+                <span class="pay-stepper__label">{{ __('Расчёт ведомости') }}</span>
             </button>
         </li>
     </ol>
 </nav>
 
 {{-- ===== Экран 1: Оклады ===== --}}
-<section class="pay-screen" id="pay-screen-1" data-step="1" data-lede="Базовая сумма каждого сотрудника." aria-label="Оклады">
+<section class="pay-screen" id="pay-screen-1" data-step="1" data-lede="{{ __("Базовая сумма каждого сотрудника.") }}" aria-label="{{ __("Оклады") }}">
     @if ($canManage)
         <div class="pay-screen__bar">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSalary"><i class="ti ti-plus me-1"></i>Назначить оклад</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSalary"><i class="ti ti-plus me-1"></i>{{ __('Назначить оклад') }}</button>
         </div>
     @endif
 
     <div class="crm-metrics">
         <div class="crm-metric">
-            <div class="crm-metric__label"><i class="ti ti-users"></i>С окладом</div>
+            <div class="crm-metric__label"><i class="ti ti-users"></i>{{ __('С окладом') }}</div>
             <div class="crm-metric__value">{{ $totals['withSalary'] }}<small> / {{ $totals['employees'] }}</small></div>
-            <div class="progress progress-sm mt-2" role="progressbar" aria-valuenow="{{ $salaryPct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Покрытие окладами">
+            <div class="progress progress-sm mt-2" role="progressbar" aria-valuenow="{{ $salaryPct }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ __("Покрытие окладами") }}">
                 <div class="progress-bar" style="width: {{ $salaryPct }}%"></div>
             </div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-coins"></i>Средний оклад</div>
+            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-coins"></i>{{ __('Средний оклад') }}</div>
             <div class="crm-metric__value">{{ number_format($totals['avg'], 2, ',', ' ') }}</div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label"><i class="ti ti-components"></i>Правил</div>
+            <div class="crm-metric__label"><i class="ti ti-components"></i>{{ __('Правил') }}</div>
             <div class="crm-metric__value">{{ $totals['components'] }}</div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-toggle-right"></i>Активных</div>
+            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-toggle-right"></i>{{ __('Активных') }}</div>
             <div class="crm-metric__value">{{ $totals['active'] }}</div>
         </div>
     </div>
 
     <div class="card mb-3">
         <div class="card-header">
-            <h2 class="card-title bm-section-title">Оклады сотрудников</h2>
-            <span class="crm-chip ms-auto" id="salaries-count">{{ $salaries->count() }} назначено</span>
+            <h2 class="card-title bm-section-title">{{ __('Оклады сотрудников') }}</h2>
+            <span class="crm-chip ms-auto" id="salaries-count">{{ $salaries->count() }} {{ __('назначено') }}</span>
         </div>
         <div class="card-body pb-0 d-print-none">
             <div class="input-icon">
-                <input type="search" class="form-control crm-search-input" placeholder="Поиск: сотрудник, отдел, должность…"
-                       aria-label="Поиск по окладам" data-crm-filter="#salaries-tbody tr" data-crm-filter-count="#salaries-count">
+                <input type="search" class="form-control crm-search-input" placeholder="{{ __("Поиск: сотрудник, отдел, должность…") }}"
+                       aria-label="{{ __("Поиск по окладам") }}" data-crm-filter="#salaries-tbody tr" data-crm-filter-count="#salaries-count">
                 <span class="input-icon-addon"><i class="ti ti-search"></i></span>
             </div>
         </div>
@@ -101,8 +101,8 @@
             <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th scope="col">Сотрудник</th><th scope="col">Отдел / должность</th>
-                        <th scope="col" class="text-end">Базовая сумма</th><th scope="col">Валюта</th><th scope="col">С какой даты</th>
+                        <th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Отдел / должность') }}</th>
+                        <th scope="col" class="text-end">{{ __('Базовая сумма') }}</th><th scope="col">{{ __('Валюта') }}</th><th scope="col">{{ __('С какой даты') }}</th>
                     </tr>
                 </thead>
                 <tbody id="salaries-tbody">
@@ -124,9 +124,9 @@
                             <td colspan="5">
                                 @include('partials.empty-state', array_merge([
                                     'icon' => 'coins',
-                                    'title' => 'Оклады не назначены',
-                                    'text' => 'Без оклада сотрудник не попадёт в расчёт ведомости.',
-                                ], $canManage ? ['actionUrl' => '#newSalary', 'actionLabel' => 'Добавить оклад'] : []))
+                                    'title' => __('Оклады не назначены'),
+                                    'text' => __('Без оклада сотрудник не попадёт в расчёт ведомости.'),
+                                ], $canManage ? ['actionUrl' => '#newSalary', 'actionLabel' => __('Добавить оклад')] : []))
                             </td>
                         </tr>
                     @endforelse
@@ -136,41 +136,41 @@
     </div>
 
     <div class="pay-nav pay-nav--end">
-        <button type="button" class="btn btn-secondary" data-goto="2">Далее: правила расчёта<i class="ti ti-arrow-right ms-1"></i></button>
+        <button type="button" class="btn btn-secondary" data-goto="2">{{ __('Далее: правила расчёта') }}<i class="ti ti-arrow-right ms-1"></i></button>
     </div>
 </section>
 
 {{-- ===== Экран 2: Правила расчёта ===== --}}
-<section class="pay-screen" id="pay-screen-2" data-step="2" data-lede="Начисления и удержания — участвуют, когда включены." aria-label="Правила расчёта" hidden>
+<section class="pay-screen" id="pay-screen-2" data-step="2" data-lede="{{ __("Начисления и удержания — участвуют, когда включены.") }}" aria-label="{{ __("Правила расчёта") }}" hidden>
     @if ($canManage)
         <div class="pay-screen__bar">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newComponent"><i class="ti ti-plus me-1"></i>Добавить правило</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newComponent"><i class="ti ti-plus me-1"></i>{{ __('Добавить правило') }}</button>
         </div>
     @endif
 
     <div class="card mb-3">
         <div class="card-header">
-            <h2 class="card-title bm-section-title">Общие правила расчёта</h2>
-            <span class="crm-chip ms-auto" id="components-count">{{ $components->count() }} правил</span>
+            <h2 class="card-title bm-section-title">{{ __('Общие правила расчёта') }}</h2>
+            <span class="crm-chip ms-auto" id="components-count">{{ $components->count() }} {{ __('правил') }}</span>
         </div>
         <div class="card-body pb-0 d-print-none">
             <div class="d-flex gap-2 flex-wrap align-items-center">
                 <div class="input-icon flex-fill" style="max-width: 24rem;">
-                    <input type="search" class="form-control crm-search-input" placeholder="Поиск: код, название…"
-                           aria-label="Поиск по компонентам" data-crm-filter="#components-tbody tr" data-crm-filter-count="#components-count">
+                    <input type="search" class="form-control crm-search-input" placeholder="{{ __("Поиск: код, название…") }}"
+                           aria-label="{{ __("Поиск по компонентам") }}" data-crm-filter="#components-tbody tr" data-crm-filter-count="#components-count">
                     <span class="input-icon-addon"><i class="ti ti-search"></i></span>
                 </div>
-                <span class="crm-chip crm-chip--green"><i class="ti ti-plus me-1"></i>Начисление</span>
-                <span class="crm-chip crm-chip--red"><i class="ti ti-minus me-1"></i>Удержание</span>
+                <span class="crm-chip crm-chip--green"><i class="ti ti-plus me-1"></i>{{ __('Начисление') }}</span>
+                <span class="crm-chip crm-chip--red"><i class="ti ti-minus me-1"></i>{{ __('Удержание') }}</span>
             </div>
         </div>
         <div class="table-responsive">
             <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th scope="col">Код</th><th scope="col">Правило</th><th scope="col">Влияние</th><th scope="col">Как считается</th>
-                        <th scope="col" class="text-end">Значение</th><th scope="col">В расчёте</th>
-                        @if ($canManage)<th scope="col" class="text-end">Действие</th>@endif
+                        <th scope="col">{{ __('Код') }}</th><th scope="col">{{ __('Правило') }}</th><th scope="col">{{ __('Влияние') }}</th><th scope="col">{{ __('Как считается') }}</th>
+                        <th scope="col" class="text-end">{{ __('Значение') }}</th><th scope="col">{{ __('В расчёте') }}</th>
+                        @if ($canManage)<th scope="col" class="text-end">{{ __('Действие') }}</th>@endif
                     </tr>
                 </thead>
                 <tbody id="components-tbody">
@@ -187,14 +187,14 @@
                             <td class="text-end crm-table-num">{{ number_format((float) $component->rate, 2, ',', ' ') }}</td>
                             <td>
                                 <span class="crm-chip {{ $component->is_active ? 'crm-chip--green' : 'crm-chip--grey' }}">
-                                    {{ $component->is_active ? 'Активен' : 'Выключен' }}
+                                    {{ $component->is_active ? __('Активен') : __('Выключен') }}
                                 </span>
                             </td>
                             @if ($canManage)
                                 <td class="text-end">
                                     <form method="post" action="{{ route('payroll.components.toggle', $component) }}" class="d-inline" data-submit-guard>
                                         @csrf
-                                        <button class="btn btn-sm btn-ghost-secondary" title="{{ $component->is_active ? 'Выключить' : 'Включить' }}">
+                                        <button class="btn btn-sm btn-ghost-secondary" title="{{ $component->is_active ? __('Выключить') : __('Включить') }}">
                                             <i class="ti ti-{{ $component->is_active ? 'toggle-left' : 'toggle-right' }}"></i>
                                         </button>
                                     </form>
@@ -206,9 +206,8 @@
                             <td colspan="{{ $canManage ? 7 : 6 }}">
                                 @include('partials.empty-state', array_merge([
                                     'icon' => 'components',
-                                    'title' => 'Компонентов нет',
-                                    'text' => 'Добавьте правила начислений — оклад, авансы, налоги, премии.',
-                                ], $canManage ? ['actionUrl' => '#newComponent', 'actionLabel' => 'Новый компонент'] : []))
+                                    'text' => __('Добавьте правила начислений — оклад, авансы, налоги, премии.'),
+                                ], $canManage ? ['actionUrl' => '#newComponent', 'actionLabel' => __('Новый компонент')] : []))
                             </td>
                         </tr>
                     @endforelse
@@ -218,20 +217,20 @@
     </div>
 
     <div class="pay-nav">
-        <button type="button" class="btn btn-ghost-secondary" data-goto="1"><i class="ti ti-arrow-left me-1"></i>Назад</button>
-        <button type="button" class="btn btn-secondary" data-goto="3">Далее: расчёт ведомости<i class="ti ti-arrow-right ms-1"></i></button>
+        <button type="button" class="btn btn-ghost-secondary" data-goto="1"><i class="ti ti-arrow-left me-1"></i>{{ __('Назад') }}</button>
+        <button type="button" class="btn btn-secondary" data-goto="3">{{ __('Далее: расчёт ведомости') }}<i class="ti ti-arrow-right ms-1"></i></button>
     </div>
 </section>
 
 {{-- ===== Экран 3: Расчёт ведомости ===== --}}
-<section class="pay-screen" id="pay-screen-3" data-step="3" data-lede="Когда оклады и правила готовы — считаем ведомость." aria-label="Расчёт ведомости" hidden>
+<section class="pay-screen" id="pay-screen-3" data-step="3" data-lede="{{ __("Когда оклады и правила готовы — считаем ведомость.") }}" aria-label="{{ __("Расчёт ведомости") }}" hidden>
     <div class="crm-metrics">
         <div class="crm-metric">
-            <div class="crm-metric__label"><i class="ti ti-users"></i>Окладов назначено</div>
+            <div class="crm-metric__label"><i class="ti ti-users"></i>{{ __('Окладов назначено') }}</div>
             <div class="crm-metric__value">{{ $totals['withSalary'] }}<small> / {{ $totals['employees'] }}</small></div>
         </div>
         <div class="crm-metric">
-            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-toggle-right"></i>Правил активно</div>
+            <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-toggle-right"></i>{{ __('Правил активно') }}</div>
             <div class="crm-metric__value">{{ $totals['active'] }}<small> / {{ $totals['components'] }}</small></div>
         </div>
     </div>
@@ -239,15 +238,15 @@
     <a class="pay-cta mb-3" href="{{ route('payroll.index') }}">
         <span class="pay-cta__icon"><i class="ti ti-calculator"></i></span>
         <span class="pay-cta__body">
-            <span class="pay-cta__title">Перейти к расчёту ведомости</span>
-            <span class="pay-cta__text">Оклады и включённые правила участвуют в расчёте автоматически.</span>
+            <span class="pay-cta__title">{{ __('Перейти к расчёту ведомости') }}</span>
+            <span class="pay-cta__text">{{ __('Оклады и включённые правила участвуют в расчёте автоматически') }}</span>
         </span>
         <i class="ti ti-arrow-right pay-cta__arrow" aria-hidden="true"></i>
     </a>
 
     <div class="pay-nav">
-        <button type="button" class="btn btn-ghost-secondary" data-goto="2"><i class="ti ti-arrow-left me-1"></i>Назад</button>
-        <a class="btn btn-primary" href="{{ route('payroll.index') }}">К расчёту ведомости<i class="ti ti-arrow-right ms-1"></i></a>
+        <button type="button" class="btn btn-ghost-secondary" data-goto="2"><i class="ti ti-arrow-left me-1"></i>{{ __('Назад') }}</button>
+        <a class="btn btn-primary" href="{{ route('payroll.index') }}">{{ __('К расчёту ведомости') }}<i class="ti ti-arrow-right ms-1"></i></a>
     </div>
 </section>
 
@@ -258,15 +257,15 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('payroll.salaries.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Назначить оклад</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Назначить оклад') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Сотрудник</h3>
-                    <div class="crm-form__desc">Предыдущий действующий оклад закроется днём раньше новой даты — история сохраняется.</div>
+                    <h3>{{ __('Сотрудник') }}</h3>
+                    <div class="crm-form__desc">{{ __('Предыдущий действующий оклад закроется днём раньше новой даты — история сохраняется') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="ns-employee">Сотрудник<span class="req">*</span></label>
+                        <label class="form-label" for="ns-employee">{{ __('Сотрудник') }}<span class="req">*</span></label>
                         <select id="ns-employee" name="employee_id" class="form-select" required>
-                            <option value="">Начните вводить фамилию…</option>
+                            <option value="">{{ __('Начните вводить фамилию…') }}</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}">{{ $employee->last_name }} {{ $employee->first_name }} · {{ $employee->employee_no }}</option>
                             @endforeach
@@ -274,30 +273,29 @@
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Условия</h3>
+                    <h3>{{ __('Условия') }}</h3>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="ns-amount">Оклад<span class="req">*</span></label>
+                            <label class="form-label" for="ns-amount">{{ __('Оклад') }}<span class="req">*</span></label>
                             <input type="number" id="ns-amount" name="base_amount" class="form-control" required min="0" step="0.01" placeholder="5000.00" inputmode="decimal">
-                            <div class="form-text">Только число, без пробелов.</div>
+                            <div class="form-text">{{ __('Только число, без пробелов') }}</div>
                         </div>
                         @include('partials.currency-select', [
                             'id' => 'ns-currency',
+                            'label' => __('Валюта'), 'required' => true,
                             'name' => 'currency',
                             'value' => old('currency', 'TJS'),
-                            'label' => 'Валюта',
-                            'required' => true,
                         ])
                         <div class="crm-form__field">
-                            <label class="form-label" for="ns-from">Действует с<span class="req">*</span></label>
+                            <label class="form-label" for="ns-from">{{ __('Действует с') }}<span class="req">*</span></label>
                             <input type="date" id="ns-from" name="effective_from" class="form-control" required value="{{ now()->toDateString() }}">
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary"><i class="ti ti-check me-1"></i>Сохранить</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-check me-1"></i>{{ __('Сохранить') }}</button>
             </div>
         </form>
     </div>
@@ -308,56 +306,56 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('payroll.components.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новый компонент</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Новый компонент') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Название и тип</h3>
-                    <div class="crm-form__desc">Что это и в пользу сотрудника или удержание.</div>
+                    <h3>{{ __('Название и тип') }}</h3>
+                    <div class="crm-form__desc">{{ __('Что это и в пользу сотрудника или удержание') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nc-name">Название<span class="req">*</span></label>
-                        <input type="text" id="nc-name" name="name" class="form-control" required maxlength="120" placeholder="Сверхурочные">
+                        <label class="form-label" for="nc-name">{{ __('Название') }}<span class="req">*</span></label>
+                        <input type="text" id="nc-name" name="name" class="form-control" required maxlength="120" placeholder="{{ __("Сверхурочные") }}">
                     </div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-code">Код<span class="req">*</span></label>
+                            <label class="form-label" for="nc-code">{{ __('Код') }}<span class="req">*</span></label>
                             <input type="text" id="nc-code" name="code" class="form-control" required maxlength="32" placeholder="OVERTIME" pattern="[A-Za-z0-9_.\-]+">
-                            <div class="form-text">Латиница, цифры, «_ - .»</div>
+                            <div class="form-text">{{ __('Латиница, цифры, «_') }}</div>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-kind">Тип<span class="req">*</span></label>
+                            <label class="form-label" for="nc-kind">{{ __('Тип') }}<span class="req">*</span></label>
                             <select id="nc-kind" name="kind" class="form-select" required>
-                                <option value="earning">Начисление (+ в пользу)</option>
-                                <option value="deduction">Удержание (− вычитается)</option>
+                                <option value="earning">{{ __('Начисление (+ в пользу)') }}</option>
+                                <option value="deduction">{{ __('Удержание (− вычитается)') }}</option>
                             </select>
                         </div>
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Как считается</h3>
-                    <div class="crm-form__desc">Алгоритм применяется при расчёте ведомости.</div>
+                    <h3>{{ __('Как считается') }}</h3>
+                    <div class="crm-form__desc">{{ __('Алгоритм применяется при расчёте ведомости') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-calc">Алгоритм<span class="req">*</span></label>
+                            <label class="form-label" for="nc-calc">{{ __('Алгоритм') }}<span class="req">*</span></label>
                             <select id="nc-calc" name="calculation" class="form-select" required>
-                                <option value="fixed">Фиксированная сумма</option>
-                                <option value="hourly">Почасовая: часы × ставка</option>
-                                <option value="overtime">Сверхурочные: часы × ставка</option>
-                                <option value="percent">Процент от оклада</option>
-                                <option value="manual">Ручная сумма из ставки</option>
+                                <option value="fixed">{{ __('Фиксированная сумма') }}</option>
+                                <option value="hourly">{{ __('Почасовая: часы × ставка') }}</option>
+                                <option value="overtime">{{ __('Сверхурочные: часы × ставка') }}</option>
+                                <option value="percent">{{ __('Процент от оклада') }}</option>
+                                <option value="manual">{{ __('Ручная сумма из ставки') }}</option>
                             </select>
-                            <div class="form-text" id="nc-calc-hint">Ставка используется как есть.</div>
+                            <div class="form-text" id="nc-calc-hint">{{ __('Ставка используется как есть') }}</div>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-rate">Ставка<span class="req">*</span></label>
+                            <label class="form-label" for="nc-rate">{{ __('Ставка') }}<span class="req">*</span></label>
                             <input type="number" id="nc-rate" name="rate" class="form-control" required min="0" step="0.0001" value="0" inputmode="decimal">
-                            <div class="form-text" id="nc-rate-hint">Сумма или процент — зависит от алгоритма.</div>
+                            <div class="form-text" id="nc-rate-hint">{{ __('Сумма или процент — зависит от алгоритма') }}</div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i>Добавить</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i>{{ __('Добавить') }}</button>
             </div>
         </form>
     </div>
@@ -638,11 +636,11 @@
         var calcHint = document.getElementById('nc-calc-hint');
         var rateHint = document.getElementById('nc-rate-hint');
         var texts = {
-            fixed: ['Ставка — фиксированная сумма компонента.', 'Например: 5000 — премия 5000.'],
-            hourly: ['Ставка — цена одного часа.', 'Например: 15 — за каждый отработанный час.'],
-            overtime: ['Ставка — цена часа сверхурочно.', 'Например: 22.5 — множится на часы переработки.'],
-            percent: ['Ставка — процент от оклада.', 'Например: 10 — премия 10% оклада.'],
-            manual: ['Сумма вводится вручную при расчёте.', 'Ставка — значение по умолчанию.']
+            fixed: [__('Ставка — фиксированная сумма компонента.'), __('Например: 5000 — премия 5000.')],
+            hourly: [__('Ставка — цена одного часа.'), __('Например: 15 — за каждый отработанный час.')],
+            overtime: [__('Ставка — цена часа сверхурочно.'), __('Например: 22.5 — множится на часы переработки.')],
+            percent: [__('Ставка — процент от оклада.'), __('Например: 10 — премия 10% оклада.')],
+            manual: [__('Сумма вводится вручную при расчёте.'), __('Ставка — значение по умолчанию.')]
         };
         function sync() {
             var t = texts[calc.value] || texts.fixed;

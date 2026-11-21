@@ -91,7 +91,7 @@ class PurchaseController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['number' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['number' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -105,7 +105,7 @@ class PurchaseController extends Controller
             'items.*.product_id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
-        ], [], ['number' => 'номер', 'items' => 'позиции']);
+        ], [], ['number' => __('номер'), 'items' => __('позиции')]);
 
         TenantGuard::ensureReference('suppliers', (int) $validated['supplier_id'], $me);
         TenantGuard::ensureReference('warehouses', (int) $validated['warehouse_id'], $me);
@@ -120,7 +120,7 @@ class PurchaseController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['number' => 'Заказ с таким номером уже существует'])->withInput();
+            return back()->withErrors(['number' => __('Заказ с таким номером уже существует')])->withInput();
         }
 
         $order = DB::transaction(function () use ($validated, $me): PurchaseOrder {
@@ -168,7 +168,7 @@ class PurchaseController extends Controller
             TenantGuard::ensure($order, $me);
 
             if ($order->status !== PurchaseOrderStatus::Draft) {
-                return back()->withErrors(['status' => 'Разместить можно только черновик']);
+                return back()->withErrors(['status' => __('Разместить можно только черновик')]);
             }
 
             $order->status = PurchaseOrderStatus::Ordered;
@@ -213,7 +213,7 @@ class PurchaseController extends Controller
             TenantGuard::ensure($order, $me);
 
             if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
-                return back()->withErrors(['status' => 'Отменить можно только черновик или размещённый заказ']);
+                return back()->withErrors(['status' => __('Отменить можно только черновик или размещённый заказ')]);
             }
 
             $order->status = PurchaseOrderStatus::Cancelled;
@@ -235,14 +235,14 @@ class PurchaseController extends Controller
         TenantGuard::ensure($order, $me);
 
         if ($order->status !== PurchaseOrderStatus::Draft) {
-            return back()->withErrors(['status' => 'Позиции можно менять только в черновике']);
+            return back()->withErrors(['status' => __('Позиции можно менять только в черновике')]);
         }
 
         $validated = $request->validate([
             'product_id' => ['required', 'integer'],
             'quantity' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'unit_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
-        ], [], ['product_id' => 'товар', 'quantity' => 'количество']);
+        ], [], ['product_id' => __('товар'), 'quantity' => __('количество')]);
 
         TenantGuard::ensureReference('products', (int) $validated['product_id'], $me);
 
@@ -270,19 +270,19 @@ class PurchaseController extends Controller
             TenantGuard::ensure($order, $me);
 
             if ($order->status !== PurchaseOrderStatus::Draft) {
-                return back()->withErrors(['status' => 'Позиции можно менять только в черновике']);
+                return back()->withErrors(['status' => __('Позиции можно менять только в черновике')]);
             }
 
             $line = $order->items()->whereKey($item)->first();
 
             if ($line === null) {
-                return back()->withErrors(['status' => 'Позиция не найдена']);
+                return back()->withErrors(['status' => __('Позиция не найдена')]);
             }
 
             $line->delete();
             $this->inventory->recalcTotal($order);
 
-            return back()->with('status', 'Позиция удалена');
+            return back()->with('status', __('Позиция удалена'));
         });
     }
 }

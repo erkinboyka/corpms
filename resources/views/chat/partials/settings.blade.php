@@ -4,10 +4,10 @@
             <div class="modal-header bm-chat-settings__header">
                 <span class="bm-chat-settings__icon" aria-hidden="true"><i class="ti ti-adjustments-horizontal"></i></span>
                 <div class="min-w-0 flex-grow-1">
-                    <h2 class="modal-title" id="chat-settings-title">Настройки диалога</h2>
+                    <h2 class="modal-title" id="chat-settings-title">{{ __('Настройки диалога') }}</h2>
                     <p class="bm-chat-settings__subtitle">{{ $active->titleFor($me->id) }} · {{ $active->type->label() }}</p>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __("Закрыть") }}"></button>
             </div>
             <div class="modal-body bm-chat-settings__body">
                 @if ($canManageChat)
@@ -17,13 +17,13 @@
                         <div class="bm-chat-settings__section-head">
                             <span class="bm-chat-settings__icon" aria-hidden="true"><i class="ti ti-id"></i></span>
                             <div>
-                                <h3>Название и фото</h3>
-                                <p>Изменения увидят все участники</p>
+                                <h3>{{ __('Название и фото') }}</h3>
+                                <p>{{ __('Изменения увидят все участники') }}</p>
                             </div>
                         </div>
-                        <label class="form-label mb-0" for="chat-settings-name">Название</label>
+                        <label class="form-label mb-0" for="chat-settings-name">{{ __('Название') }}</label>
                         <input id="chat-settings-name" name="title" class="form-control" value="{{ $active->title }}" maxlength="120" required>
-                        <label class="form-label mb-0" for="chat-settings-description">Описание</label>
+                        <label class="form-label mb-0" for="chat-settings-description">{{ __('Описание') }}</label>
                         <textarea id="chat-settings-description" name="description" class="form-control" rows="2" maxlength="500">{{ $active->description }}</textarea>
                         <div class="bm-chat-settings__upload">
                             <span class="bm-chat-settings__avatar" aria-hidden="true">
@@ -32,7 +32,7 @@
                                      @if ($active->avatar_path) src="{{ route('chat.image', [$active, 'avatar']) }}" @else hidden @endif>
                             </span>
                             <div class="min-w-0">
-                                <label class="form-label mb-1" for="chat-settings-avatar">Фото диалога</label>
+                                <label class="form-label mb-1" for="chat-settings-avatar">{{ __('Фото диалога') }}</label>
                                 <input id="chat-settings-avatar" type="file" name="avatar" class="form-control" accept="image/jpeg,image/png,image/webp"
                                        data-chat-image-preview="chat-settings-avatar-image">
                             </div>
@@ -40,10 +40,10 @@
                         @if ($active->avatar_path)
                             <label class="form-check mb-0">
                                 <input class="form-check-input" type="checkbox" name="reset_avatar" value="1">
-                                <span class="form-check-label">Убрать текущее фото</span>
+                                <span class="form-check-label">{{ __('Убрать текущее фото') }}</span>
                             </label>
                         @endif
-                        <div class="bm-chat-settings__actions"><button class="btn btn-primary" type="submit">Сохранить настройки</button></div>
+                        <div class="bm-chat-settings__actions"><button class="btn btn-primary" type="submit">{{ __('Сохранить настройки') }}</button></div>
                     </form>
                 @endif
 
@@ -53,24 +53,24 @@
                     <div class="bm-chat-settings__section-head">
                         <span class="bm-chat-settings__icon" aria-hidden="true"><i class="ti ti-photo"></i></span>
                         <div>
-                            <h3>Обои чата</h3>
-                            <p>Фон виден только вам</p>
+                            <h3>{{ __('Обои чата') }}</h3>
+                            <p>{{ __('Фон виден только вам') }}</p>
                         </div>
                     </div>
-                    <div class="bm-chat-settings__preview" aria-label="Пример оформления переписки" role="img">
+                    <div class="bm-chat-settings__preview" aria-label="{{ __("Пример оформления переписки") }}" role="img">
                         <img id="chat-settings-wallpaper-image" alt=""
                              @if ($hasWallpaper) src="{{ route('chat.image', [$active, 'wallpaper']) }}" @else hidden @endif>
-                        <span class="bm-chat-settings__preview-label" aria-hidden="true">Предпросмотр</span>
-                        <span class="bm-chat-settings__bubble" aria-hidden="true">Привет!</span>
-                        <span class="bm-chat-settings__bubble bm-chat-settings__bubble--mine" aria-hidden="true">На связи <i class="ti ti-checks"></i></span>
+                        <span class="bm-chat-settings__preview-label" aria-hidden="true">{{ __('Предпросмотр') }}</span>
+                        <span class="bm-chat-settings__bubble" aria-hidden="true">{{ __('Привет!') }}</span>
+                        <span class="bm-chat-settings__bubble bm-chat-settings__bubble--mine" aria-hidden="true">{{ __('На связи') }} <i class="ti ti-checks"></i></span>
                     </div>
-                    <label class="form-label mb-0" for="chat-settings-wallpaper">Изображение для фона</label>
+                    <label class="form-label mb-0" for="chat-settings-wallpaper">{{ __('Изображение для фона') }}</label>
                     <input id="chat-settings-wallpaper" type="file" name="wallpaper" class="form-control" accept="image/jpeg,image/png,image/webp"
                            data-chat-image-preview="chat-settings-wallpaper-image">
                     <div class="bm-chat-settings__actions">
-                        <button class="btn btn-primary" type="submit">Установить обои</button>
+                        <button class="btn btn-primary" type="submit">{{ __('Установить обои') }}</button>
                         @if ($hasWallpaper)
-                            <button class="btn btn-ghost-secondary" type="submit" name="reset_wallpaper" value="1">Сбросить</button>
+                            <button class="btn btn-ghost-secondary" type="submit" name="reset_wallpaper" value="1">{{ __('Сбросить') }}</button>
                         @endif
                     </div>
                 </form>
@@ -78,19 +78,19 @@
                 @if ($canManageChat && ! $active->isCompanyWide())
                     <button type="button" class="bm-chat-settings__card bm-chat-settings__link" data-bs-toggle="modal" data-bs-target="#chat-members-dialog">
                         <span class="bm-chat-settings__icon" aria-hidden="true"><i class="ti ti-user-plus"></i></span>
-                        <span class="flex-grow-1">Добавить участников</span>
+                        <span class="flex-grow-1">{{ __('Добавить участников') }}</span>
                         <i class="ti ti-chevron-right" aria-hidden="true"></i>
                     </button>
                 @endif
 
                 @if ($active->isDirect() || $chatOwner)
                     <form class="bm-chat-settings__danger" method="post" action="{{ route('chat.conversations.destroy', $active) }}"
-                          data-chat-confirm="{{ $active->isDirect() ? 'Убрать этот диалог из вашего списка?' : 'Удалить диалог и закрыть доступ к нему для всех участников?' }}">
+                          data-chat-confirm="{{ $active->isDirect() ? __('Убрать этот диалог из вашего списка?') : __('Удалить диалог и закрыть доступ к нему для всех участников?') }}">
                         @csrf
                         @method('DELETE')
                         <button class="btn btn-ghost-danger" type="submit">
                             <i class="ti {{ $active->isDirect() ? 'ti-eye-off' : 'ti-trash' }}" aria-hidden="true"></i>
-                            {{ $active->isDirect() ? 'Скрыть диалог у себя' : 'Удалить диалог' }}
+                            {{ $active->isDirect() ? __('Скрыть диалог у себя') : __('Удалить диалог') }}
                         </button>
                     </form>
                 @endif
@@ -105,17 +105,17 @@
             <form class="modal-content" method="post" action="{{ route('chat.members.store', $active) }}">
                 @csrf
                 <div class="modal-header">
-                    <h2 class="modal-title" id="chat-members-title">Добавить участников</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                    <h2 class="modal-title" id="chat-members-title">{{ __('Добавить участников') }}</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __("Закрыть") }}"></button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label" for="chat-invite-members">Сотрудники</label>
+                    <label class="form-label" for="chat-invite-members">{{ __('Сотрудники') }}</label>
                     <select class="form-select" id="chat-invite-members" name="member_ids[]" multiple required
                             data-chat-employee-select="{{ route('chat.employees', ['conversation' => $active->id]) }}"
-                            data-placeholder="Найдите и выберите сотрудников"></select>
+                            data-placeholder="{{ __("Найдите и выберите сотрудников") }}"></select>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" type="submit">Добавить</button>
+                    <button class="btn btn-primary" type="submit">{{ __('Добавить') }}</button>
                 </div>
             </form>
         </div>

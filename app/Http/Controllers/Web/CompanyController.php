@@ -55,14 +55,14 @@ class CompanyController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
         ], [
-            'inn.regex' => 'ИНН — 10 цифр (компания) или 12 цифр (ИП).',
-            'phone.regex' => 'Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).',
-            'timezone.timezone' => 'Выберите часовой пояс из списка.',
+            'inn.regex' => __('ИНН — 10 цифр (компания) или 12 цифр (ИП).'),
+            'phone.regex' => __('Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).'),
+            'timezone.timezone' => __('Выберите часовой пояс из списка.'),
         ]);
 
         $company = Company::create($validated);
 
-        return back()->with('status', 'Компания создана');
+        return back()->with('status', __('Компания создана'));
     }
 
     /* ---------------- должности ---------------- */
@@ -98,7 +98,7 @@ class CompanyController extends Controller
 
         Position::create($validated);
 
-        return back()->with('status', 'Должность добавлена');
+        return back()->with('status', __('Должность добавлена'));
     }
 
     /* ---------------- управление ---------------- */
@@ -117,9 +117,9 @@ class CompanyController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
         ], [
-            'inn.regex' => 'ИНН — 10 цифр (компания) или 12 цифр (ИП).',
-            'phone.regex' => 'Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).',
-            'timezone.timezone' => 'Выберите часовой пояс из списка.',
+            'inn.regex' => __('ИНН — 10 цифр (компания) или 12 цифр (ИП).'),
+            'phone.regex' => __('Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).'),
+            'timezone.timezone' => __('Выберите часовой пояс из списка.'),
         ]);
 
         $keys = ['name', 'code', 'legal_name', 'address', 'inn', 'region', 'timezone', 'phone', 'email', 'is_active'];
@@ -129,14 +129,14 @@ class CompanyController extends Controller
 
         $this->audit->log($request->user(), 'company.updated', 'company', $company->id, $old, $validated);
 
-        return back()->with('status', 'Компания обновлена');
+        return back()->with('status', __('Компания обновлена'));
     }
 
     /** Удаление допускается только для пустой компании — без отделов и сотрудников. */
     public function destroy(Request $request, Company $company): RedirectResponse
     {
         if ($company->departments()->exists() || $company->employees()->exists()) {
-            abort(403, 'Нельзя удалить компанию: в ней есть отделы или сотрудники');
+            abort(403, __('Нельзя удалить компанию: в ней есть отделы или сотрудники'));
         }
 
         $old = $company->only(['name', 'code']);
@@ -145,7 +145,7 @@ class CompanyController extends Controller
 
         $this->audit->log($request->user(), 'company.deleted', 'company', $company->id, $old, null);
 
-        return back()->with('status', 'Компания удалена');
+        return back()->with('status', __('Компания удалена'));
     }
 
     public function positionsUpdate(Request $request, Position $position): RedirectResponse
@@ -164,14 +164,14 @@ class CompanyController extends Controller
 
         $this->audit->log($request->user(), 'position.updated', 'position', $position->id, $old, $validated);
 
-        return back()->with('status', 'Должность обновлена');
+        return back()->with('status', __('Должность обновлена'));
     }
 
     /** Должность с закреплёнными сотрудниками удалить нельзя (см. ссылочную целостность HR-карточек). */
     public function positionsDestroy(Request $request, Position $position): RedirectResponse
     {
         if ($position->employees()->exists()) {
-            abort(403, 'Нельзя удалить должность: за ней закреплены сотрудники');
+            abort(403, __('Нельзя удалить должность: за ней закреплены сотрудники'));
         }
 
         $old = $position->only(['name', 'code']);
@@ -180,6 +180,6 @@ class CompanyController extends Controller
 
         $this->audit->log($request->user(), 'position.deleted', 'position', $position->id, $old, null);
 
-        return back()->with('status', 'Должность удалена');
+        return back()->with('status', __('Должность удалена'));
     }
 }

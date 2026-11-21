@@ -22,9 +22,9 @@ enum MessageKind: string
     public function label(): string
     {
         return match ($this) {
-            self::Text => 'Текст',
-            self::File => 'Файл',
-            self::System => 'Служебное',
+            self::Text => __('Текст'),
+            self::File => __('Файл'),
+            self::System => __('Служебное'),
         };
     }
 }

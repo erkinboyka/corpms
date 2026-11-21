@@ -59,7 +59,7 @@ class AttendanceCorrectionService
             ->exists();
 
         if ($openExists) {
-            throw new LogicException('По этой отметке уже есть заявка на рассмотрении');
+            throw new LogicException(__('По этой отметке уже есть заявка на рассмотрении'));
         }
 
         $correction = AttendanceCorrection::create([
@@ -92,7 +92,7 @@ class AttendanceCorrectionService
         ?string $comment = null,
     ): AttendanceCorrection {
         if ($correction->status !== CorrectionStatus::Pending) {
-            throw new LogicException('Заявка уже рассмотрена');
+            throw new LogicException(__('Заявка уже рассмотрена'));
         }
 
         return DB::transaction(function () use ($decider, $correction, $approve, $comment) {
@@ -133,7 +133,7 @@ class AttendanceCorrectionService
                 $this->notifications->notify(
                     $correction->requestedBy,
                     'attendance.correction.decided',
-                    $approve ? 'Корректировка согласована' : 'Корректировка отклонена',
+                    $approve ? __('Корректировка согласована') : __('Корректировка отклонена'),
                     sprintf('%s: %s (%s)', trim($correction->employee->last_name.' '.$correction->employee->first_name), $correction->field, $comment ?? '—'),
                     $correction,
                 );

@@ -86,11 +86,11 @@ class InventoryService
         $product = Product::query()->where('company_id', $companyId)->find($productId);
 
         if ($product === null) {
-            throw new LogicException('Товар не найден в компании');
+            throw new LogicException(__('Товар не найден в компании'));
         }
 
         if ($product->isService()) {
-            throw new LogicException('Услуга не хранится на складе — движения недоступны');
+            throw new LogicException(__('Услуга не хранится на складе — движения недоступны'));
         }
 
         $signed = match ($type) {
@@ -101,7 +101,7 @@ class InventoryService
         };
 
         if ($signed === 0.0) {
-            throw new LogicException('Количество должно быть больше нуля');
+            throw new LogicException(__('Количество должно быть больше нуля'));
         }
 
         return DB::transaction(function () use ($data, $type, $signed, $warehouseId, $productId, $companyId): StockMovement {
@@ -109,7 +109,7 @@ class InventoryService
             // Every writer locks the warehouse before reading its balance.
             $warehouse = Warehouse::query()->where('company_id', $companyId)->whereKey($warehouseId)->lockForUpdate()->first();
             if ($warehouse === null) {
-                throw new LogicException('Склад не найден в компании');
+                throw new LogicException(__('Склад не найден в компании'));
             }
             if ($signed < 0) {
                 $current = $this->stock($companyId, $warehouseId, $productId);
@@ -148,13 +148,13 @@ class InventoryService
         return DB::transaction(function () use ($order, $actorId): PurchaseOrder {
             $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
-                throw new LogicException('Приём возможен только для заказа в статусе черновика или размещённого');
+                throw new LogicException(__('Приём возможен только для заказа в статусе черновика или размещённого'));
             }
 
             $order->loadMissing('items.product');
 
             if ($order->items->isEmpty()) {
-                throw new LogicException('В заказе нет позиций');
+                throw new LogicException(__('В заказе нет позиций'));
             }
 
             Warehouse::query()->whereKey($order->warehouse_id)->where('company_id', $order->company_id)->lockForUpdate()->firstOrFail();
@@ -208,10 +208,10 @@ class InventoryService
         return DB::transaction(function () use ($order, $data): PurchaseOrderItem {
             $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             if ($order->status !== PurchaseOrderStatus::Draft) {
-                throw new LogicException('Позиции можно менять только в черновике');
+                throw new LogicException(__('Позиции можно менять только в черновике'));
             }
             if (! Product::query()->where('company_id', $order->company_id)->whereKey($data['product_id'])->exists()) {
-                throw new LogicException('Товар не найден в компании');
+                throw new LogicException(__('Товар не найден в компании'));
             }
             $item = $order->items()->create([
                 'product_id' => (int) $data['product_id'],

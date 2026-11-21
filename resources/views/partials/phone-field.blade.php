@@ -22,7 +22,7 @@
 @php
     $id = $id ?? ('phone-' . preg_replace('/\W+/', '-', (string) $name));
     $value = $value ?? old($name);
-    $label = $label ?? 'Телефон';
+    $label = $label ?? __('Телефон');
     $hint = $hint ?? null;
     $required = $required ?? false;
     $timezone = $timezone ?? null;
@@ -36,7 +36,7 @@
     <label class="form-label" for="{{ $id }}">{{ $label }}@if ($required)<span class="req">*</span>@endif</label>
     <div class="input-group" data-crm-phone-group data-crm-tz-map='@json($tzMap)'>
         <div class="crm-cc">
-            <select class="form-select" data-crm-phone-country aria-label="Код страны">
+            <select class="form-select" data-crm-phone-country aria-label="{{ __("Код страны") }}">
                 @foreach ($countries as $country)
                     @if ($country['group'] !== '' && ($loop->first || $countries[$loop->index - 1]['group'] !== $country['group']))
                         <optgroup label="{{ $country['group'] }}">

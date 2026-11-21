@@ -27,7 +27,7 @@ class TelegramService
 
     /* -------------------- привязка -------------------- */
 
-    /** Генерация кода привязки для сотрудника (UI "Настройки → Telegram"). */
+    /** Генерация кода привязки для сотрудника (UI __("Настройки → Telegram")). */
     public function issueLinkCode(Employee $employee): string
     {
         $code = strtoupper(Str::random(8));
@@ -53,7 +53,7 @@ class TelegramService
         $expiresAt = $employee->telegram_link_expires_at;
 
         if ($expiresAt !== null && now()->gt($expiresAt)) {
-            return 'Код привязки истёк. Запросите новый в личном кабинете.';
+            return __('Код привязки истёк. Запросите новый в личном кабинете.');
         }
 
         // не занимать chat_id под двумя сотрудниками
@@ -103,7 +103,7 @@ class TelegramService
             $employee = Employee::query()->where('telegram_link_code', mb_strtoupper($m[1]))->first();
 
             if ($employee === null) {
-                return 'Код не найден. Проверьте и повторите.';
+                return __('Код не найден. Проверьте и повторите.');
             }
 
             return $this->handleStart($employee, $chatId);
@@ -140,7 +140,7 @@ class TelegramService
             $lines[] = 'Выход: '.($today->clock_out_at?->format('H:i') ?? '—');
             $lines[] = 'Отработано: '.$today->worked_minutes.' мин.';
         } else {
-            $lines[] = 'Записей нет.';
+            $lines[] = __('Записей нет.');
         }
 
         $openTasks = Task::query()

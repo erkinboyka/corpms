@@ -57,6 +57,6 @@ class RetryAiAnswer implements ShouldQueue
         }
 
         // временный сбой (LLM недоступен) — job уйдёт в повтор с backoff
-        throw new RuntimeException('LLM не ответил повторно, диалог #'.$this->conversationId);
+        throw new RuntimeException(__('LLM не ответил повторно, диалог #').$this->conversationId);
     }
 }

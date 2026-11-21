@@ -96,7 +96,7 @@ class InventoryController extends Controller
             'products' => $products,
             'search' => $search,
             'canManage' => $this->permissions->check($request->user(), 'inventory.manage'),
-            'units' => ['шт', 'кг', 'л', 'м', 'м2', 'м3', 'упак', 'компл'],
+            'units' => [__('шт'), __('кг'), 'л', 'м', __('м2'), __('м3'), __('упак'), __('компл')],
             'kinds' => ProductKind::cases(),
         ]);
     }
@@ -108,7 +108,7 @@ class InventoryController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -119,7 +119,7 @@ class InventoryController extends Controller
             'unit' => ['required', 'string', 'max:16'],
             'price' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'min_stock' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
-        ], [], ['sku' => 'артикул', 'kind' => 'вид номенклатуры']);
+        ], [], ['sku' => __('артикул'), 'kind' => __('вид номенклатуры')]);
 
         $exists = Product::query()
             ->where('company_id', $me->company_id)
@@ -127,7 +127,7 @@ class InventoryController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['sku' => 'Товар с таким артикулом уже существует'])->withInput();
+            return back()->withErrors(['sku' => __('Товар с таким артикулом уже существует')])->withInput();
         }
 
         $product = Product::query()->create([
@@ -147,7 +147,7 @@ class InventoryController extends Controller
             'name' => $product->name,
         ]);
 
-        return redirect()->route('inventory.products')->with('status', 'Товар «'.$product->name.'» создан');
+        return redirect()->route('inventory.products')->with('status', __('Товар «').$product->name.__('» создан'));
     }
 
     /** Изменение карточки товара (артикул и вид номенклатуры неизменны). */
@@ -163,7 +163,7 @@ class InventoryController extends Controller
             'unit' => ['required', 'string', 'max:16'],
             'price' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'min_stock' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
-        ], [], ['name' => 'название']);
+        ], [], ['name' => __('название')]);
 
         $before = [
             'name' => $product->name,
@@ -187,7 +187,7 @@ class InventoryController extends Controller
             'min_stock' => (string) $product->min_stock,
         ]);
 
-        return redirect()->route('inventory.products')->with('status', 'Товар «'.$product->name.'» обновлён');
+        return redirect()->route('inventory.products')->with('status', __('Товар «').$product->name.__('» обновлён'));
     }
 
     /** Включение/выключение товара (без удаления — история движений сохраняется). */
@@ -204,7 +204,7 @@ class InventoryController extends Controller
             'is_active' => $product->is_active,
         ]);
 
-        return back()->with('status', 'Товар «'.$product->name.'» '.($product->is_active ? 'включён' : 'выключен'));
+        return back()->with('status', __('Товар «').$product->name.'» '.($product->is_active ? __('включён') : __('выключен')));
     }
 
     /** Склады компании. */
@@ -236,14 +236,14 @@ class InventoryController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:32'],
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
-        ], [], ['code' => 'код']);
+        ], [], ['code' => __('код')]);
 
         $exists = Warehouse::query()
             ->where('company_id', $me->company_id)
@@ -251,7 +251,7 @@ class InventoryController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['code' => 'Склад с таким кодом уже существует'])->withInput();
+            return back()->withErrors(['code' => __('Склад с таким кодом уже существует')])->withInput();
         }
 
         $warehouse = Warehouse::query()->create([
@@ -267,7 +267,7 @@ class InventoryController extends Controller
             'name' => $warehouse->name,
         ]);
 
-        return redirect()->route('inventory.warehouses')->with('status', 'Склад «'.$warehouse->name.'» создан');
+        return redirect()->route('inventory.warehouses')->with('status', __('Склад «').$warehouse->name.__('» создан'));
     }
 
     /** Включение/выключение склада. */
@@ -284,7 +284,7 @@ class InventoryController extends Controller
             'is_active' => $warehouse->is_active,
         ]);
 
-        return back()->with('status', 'Склад «'.$warehouse->name.'» '.($warehouse->is_active ? 'включён' : 'выключен'));
+        return back()->with('status', __('Склад «').$warehouse->name.'» '.($warehouse->is_active ? __('включён') : __('выключен')));
     }
 
     /** Поставщики компании. */
@@ -313,7 +313,7 @@ class InventoryController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -324,7 +324,7 @@ class InventoryController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['name' => 'название']);
+        ], [], ['name' => __('название')]);
 
         $exists = Supplier::query()
             ->where('company_id', $me->company_id)
@@ -332,7 +332,7 @@ class InventoryController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['name' => 'Поставщик с таким названием уже существует'])->withInput();
+            return back()->withErrors(['name' => __('Поставщик с таким названием уже существует')])->withInput();
         }
 
         $supplier = Supplier::query()->create([
@@ -345,7 +345,7 @@ class InventoryController extends Controller
             'name' => $supplier->name,
         ]);
 
-        return redirect()->route('inventory.suppliers')->with('status', 'Поставщик «'.$supplier->name.'» создан');
+        return redirect()->route('inventory.suppliers')->with('status', __('Поставщик «').$supplier->name.__('» создан'));
     }
 
     /** Включение/выключение поставщика. */
@@ -362,7 +362,7 @@ class InventoryController extends Controller
             'is_active' => $supplier->is_active,
         ]);
 
-        return back()->with('status', 'Поставщик «'.$supplier->name.'» '.($supplier->is_active ? 'включён' : 'выключен'));
+        return back()->with('status', __('Поставщик «').$supplier->name.'» '.($supplier->is_active ? __('включён') : __('выключен')));
     }
 
     /** Журнал движений склада. */
@@ -397,7 +397,7 @@ class InventoryController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['quantity' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['quantity' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -422,7 +422,7 @@ class InventoryController extends Controller
         } elseif ($type === StockMovementType::Out || $type === StockMovementType::WriteOff) {
             $quantity = -abs($quantity);
         } elseif ($quantity < 0) {
-            return back()->withErrors(['quantity' => 'Корректировка списания должна быть отрицательной, прихода — положительной'])->withInput();
+            return back()->withErrors(['quantity' => __('Корректировка списания должна быть отрицательной, прихода — положительной')])->withInput();
         }
 
         try {
@@ -446,6 +446,6 @@ class InventoryController extends Controller
             'quantity' => (string) $movement->quantity,
         ]);
 
-        return redirect()->route('inventory.movements')->with('status', 'Движение записано');
+        return redirect()->route('inventory.movements')->with('status', __('Движение записано'));
     }
 }

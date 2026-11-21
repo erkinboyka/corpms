@@ -211,7 +211,7 @@ class AttendanceService
         foreach ($records as $record) {
             AttendanceAnomaly::updateOrCreate(
                 ['employee_id' => $record->employee_id, 'date' => $day->toDateString(), 'type' => AnomalyType::MissingCheckout],
-                ['description' => 'Не зафиксирован выход', 'status' => 'open']
+                ['description' => __('Не зафиксирован выход'), 'status' => 'open']
             );
         }
 

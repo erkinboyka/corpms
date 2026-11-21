@@ -68,7 +68,7 @@ class FinBudgetController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['planned_amount' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['planned_amount' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -77,7 +77,7 @@ class FinBudgetController extends Controller
             'category_id' => ['nullable', 'integer'],
             'planned_amount' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['planned_amount' => 'план', 'direction' => 'направление']);
+        ], [], ['planned_amount' => __('план'), 'direction' => __('направление')]);
 
         $categoryId = $validated['category_id'] ?? null;
 
@@ -87,7 +87,7 @@ class FinBudgetController extends Controller
             $category = FinCategory::query()->find((int) $categoryId);
 
             if ($category !== null && $category->direction->value !== $validated['direction']) {
-                return back()->withErrors(['category_id' => 'Статья относится к другому направлению'])->withInput();
+                return back()->withErrors(['category_id' => __('Статья относится к другому направлению')])->withInput();
             }
         }
 

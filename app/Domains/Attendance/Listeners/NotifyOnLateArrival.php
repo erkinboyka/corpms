@@ -34,7 +34,7 @@ class NotifyOnLateArrival
         $this->notifications->notify(
             $employee,
             'attendance.late',
-            'Опоздание зафиксировано',
+            __('Опоздание зафиксировано'),
             "Вход {$when}, опоздание {$minutes} мин. Корректировка — по согласованию с руководителем.",
             $record,
         );

@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'planning')
 
-@section('title', 'Мой график')
+@section('title', __('Мой график'))
 
 @php
     $kindTones = [
@@ -15,12 +15,12 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Планирование</div>
-            <h1 class="page-title mt-1">Мой график</h1>
-            <div class="text-secondary mt-1">Рабочее время, история назначений и производственный календарь</div>
+            <div class="crm-eyebrow">{{ __('Планирование') }}</div>
+            <h1 class="page-title mt-1">{{ __('Мой график') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Рабочее время, история назначений и производственный календарь') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary" href="{{ route('schedules.index') }}"><i class="ti ti-clock me-1"></i>Графики работы</a>
+            <a class="btn btn-ghost-secondary" href="{{ route('schedules.index') }}"><i class="ti ti-clock me-1"></i>{{ __('Графики работы') }}</a>
         </div>
     </div>
 </div>
@@ -33,10 +33,10 @@
             <div class="flex-grow-1 min-w-0">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="crm-chip crm-chip--cyan">{{ $crm_label('schedule_type', $schedule->type->value) }}</span>
-                    <span class="crm-chip crm-chip--grey">допуск {{ $schedule->grace_minutes ?? 10 }} мин</span>
-                    <span class="crm-chip crm-chip--grey">отдых ≥ {{ $schedule->min_rest_hours ?? 8 }} ч</span>
+                    <span class="crm-chip crm-chip--grey">{{ __('допуск') }} {{ $schedule->grace_minutes ?? 10 }} {{ __('мин') }}</span>
+                    <span class="crm-chip crm-chip--grey">{{ __('отдых ≥') }} {{ $schedule->min_rest_hours ?? 8 }} {{ __('ч') }}</span>
                 </div>
-                <div class="crm-eyebrow mt-2">Текущий график</div>
+                <div class="crm-eyebrow mt-2">{{ __('Текущий график') }}</div>
                 <h2 class="page-title mt-1 mb-1">{{ $schedule->name }}</h2>
                 <div class="d-flex align-items-baseline gap-2 flex-wrap" style="font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums;">
                     {{ \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
@@ -45,9 +45,9 @@
                 </div>
                 <div class="text-secondary mt-1">
                     @if ($schedule->break_start !== null)
-                        <i class="ti ti-coffee me-1"></i>обед {{ \Carbon\Carbon::parse($schedule->break_start)->format('H:i') }}–{{ \Carbon\Carbon::parse($schedule->break_end)->format('H:i') }}
+                        <i class="ti ti-coffee me-1"></i>{{ __('обед') }} {{ \Carbon\Carbon::parse($schedule->break_start)->format('H:i') }}–{{ \Carbon\Carbon::parse($schedule->break_end)->format('H:i') }}
                     @else
-                        <i class="ti ti-coffee me-1"></i>без обеденного перерыва
+                        <i class="ti ti-coffee me-1"></i>{{ __('без обеденного перерыва') }}
                     @endif
                 </div>
             </div>
@@ -57,7 +57,7 @@
 @else
     <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
         <i class="ti ti-alert-triangle"></i>
-        <div>График не назначен — обратитесь к HR.</div>
+        <div>{{ __('График не назначен — обратитесь к HR') }}</div>
     </div>
 @endif
 
@@ -65,18 +65,18 @@
     {{-- ===== История назначений ===== --}}
     <div class="col-lg-7">
         <div class="crm-form__section">
-            <h3>История назначений <span class="text-secondary fw-normal">({{ $assignments->count() }})</span></h3>
-            <div class="crm-form__desc">Какие графики действовали и когда.</div>
+            <h3>{{ __('История назначений') }} <span class="text-secondary fw-normal">({{ $assignments->count() }})</span></h3>
+            <div class="crm-form__desc">{{ __('Какие графики действовали и когда') }}</div>
             <div class="crm-timeline">
                 @forelse ($assignments as $assignment)
                     <div class="crm-timeline__item">
                         <div class="crm-timeline__time">
-                            {{ $assignment->effective_from->format('d.m.Y') }} — {{ $assignment->effective_to?->format('d.m.Y') ?? 'действует' }}
+                            {{ $assignment->effective_from->format('d.m.Y') }} — {{ $assignment->effective_to?->format('d.m.Y') ?? __('действует') }}
                         </div>
                         <div class="crm-timeline__title">
                             <strong>{{ $assignment->workSchedule?->name ?? '—' }}</strong>
                             @if ($assignment->effective_to === null)
-                                <span class="crm-chip crm-chip--green ms-1">текущий</span>
+                                <span class="crm-chip crm-chip--green ms-1">{{ __('текущий') }}</span>
                             @endif
                         </div>
                         @if ($assignment->workSchedule)
@@ -88,7 +88,7 @@
                         @endif
                     </div>
                 @empty
-                    <div class="crm-timeline__text">Назначений пока нет.</div>
+                    <div class="crm-timeline__text">{{ __('Назначений пока нет') }}</div>
                 @endforelse
             </div>
         </div>
@@ -97,8 +97,8 @@
     {{-- ===== Праздники ===== --}}
     <div class="col-lg-5">
         <div class="crm-form__section">
-            <h3>Праздники {{ now()->year }}</h3>
-            <div class="crm-form__desc">Производственный календарь на текущий год.</div>
+            <h3>{{ __('Праздники') }} {{ now()->year }}</h3>
+            <div class="crm-form__desc">{{ __('Производственный календарь на текущий год') }}</div>
             <div class="crm-queue">
                 @forelse ($holidays as $holiday)
                     <div class="crm-queue__item" style="--c: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};">
@@ -115,8 +115,8 @@
                 @empty
                     <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                         <div class="crm-queue__body">
-                            <div class="crm-queue__title">Праздников нет</div>
-                            <div class="crm-queue__sub">Производственный календарь на год пуст.</div>
+                            <div class="crm-queue__title">{{ __('Праздников нет') }}</div>
+                            <div class="crm-queue__sub">{{ __('Производственный календарь на год пуст') }}</div>
                         </div>
                     </div>
                 @endforelse

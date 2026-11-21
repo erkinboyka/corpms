@@ -122,7 +122,7 @@ class BiDashboardController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-        ], [], ['name' => 'название']);
+        ], [], ['name' => __('название')]);
 
         $dashboard = BiDashboard::query()->create([
             'company_id' => $me->company_id,
@@ -135,7 +135,7 @@ class BiDashboardController extends Controller
             'name' => $dashboard->name,
         ]);
 
-        return redirect()->route('bi.dashboards.show', $dashboard)->with('status', 'Дашборд «'.$dashboard->name.'» создан');
+        return redirect()->route('bi.dashboards.show', $dashboard)->with('status', __('Дашборд «').$dashboard->name.__('» создан'));
     }
 
     /** Добавление виджета на дашборд. */
@@ -149,7 +149,7 @@ class BiDashboardController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'kind' => ['required', Rule::enum(BiWidgetKind::class)],
             'metric_code' => ['required', 'string', Rule::in(array_keys($this->bi->catalog()))],
-        ], [], ['title' => 'название', 'metric_code' => 'метрика']);
+        ], [], ['title' => __('название'), 'metric_code' => __('метрика')]);
 
         $widget = $dashboard->widgets()->create([
             'title' => $validated['title'],
@@ -163,7 +163,7 @@ class BiDashboardController extends Controller
             'metric_code' => $widget->metric_code,
         ]);
 
-        return back()->with('status', 'Виджет «'.$widget->title.'» добавлен');
+        return back()->with('status', __('Виджет «').$widget->title.__('» добавлен'));
     }
 
     /** Удаление виджета. */
@@ -174,7 +174,7 @@ class BiDashboardController extends Controller
         TenantGuard::ensure($dashboard, $me);
 
         if ((int) $widget->dashboard_id !== (int) $dashboard->id) {
-            abort(404, 'Виджет не относится к дашборду');
+            abort(404, __('Виджет не относится к дашборду'));
         }
 
         $widget->delete();
@@ -183,7 +183,7 @@ class BiDashboardController extends Controller
             'widget_id' => $widget->id,
         ]);
 
-        return back()->with('status', 'Виджет удалён');
+        return back()->with('status', __('Виджет удалён'));
     }
 
     /** Пересборка витрины за месяц. */

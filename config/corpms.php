@@ -52,6 +52,7 @@ return [
         'base_url' => env('AI_BASE_URL', ''),
         'api_key' => env('AI_API_KEY', ''),
         'model' => env('AI_MODEL', 'gpt-4o-mini'),
+        'image_model' => env('AI_IMAGE_MODEL', ''),
         'timeout' => env('AI_TIMEOUT', 30),
         // D3: потолок синхронного ожидания LLM, сек — запрос не блокируется
         // дольше этого времени (деградация на локальный ответ + повтор в очереди);

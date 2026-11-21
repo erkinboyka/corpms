@@ -20,9 +20,9 @@ enum ConversationRole: string
     public function label(): string
     {
         return match ($this) {
-            self::Member => 'Участник',
-            self::Admin => 'Администратор',
-            self::Owner => 'Создатель',
+            self::Member => __('Участник'),
+            self::Admin => __('Администратор'),
+            self::Owner => __('Создатель'),
         };
     }
 

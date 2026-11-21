@@ -25,14 +25,14 @@ enum ChatEventType: string
     public function label(): string
     {
         return match ($this) {
-            self::Created => 'Сообщение отправлено',
-            self::Updated => 'Сообщение отредактировано',
-            self::Deleted => 'Сообщение удалено',
-            self::Read => 'Прочитано',
-            self::Reaction => 'Реакция',
-            self::MemberJoined => 'Участник добавлен',
-            self::MemberLeft => 'Участник вышел',
-            self::Pinned => 'Закреплено',
+            self::Created => __('Сообщение отправлено'),
+            self::Updated => __('Сообщение отредактировано'),
+            self::Deleted => __('Сообщение удалено'),
+            self::Read => __('Прочитано'),
+            self::Reaction => __('Реакция'),
+            self::MemberJoined => __('Участник добавлен'),
+            self::MemberLeft => __('Участник вышел'),
+            self::Pinned => __('Закреплено'),
         };
     }
 }

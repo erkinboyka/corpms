@@ -83,7 +83,7 @@ class ChatService
         $this->assertCanView($me, $conversation);
 
         if (! $this->permissions->check($me->user, 'chat.send')) {
-            abort(403, 'Недостаточно прав на отправку сообщений');
+            abort(403, __('Недостаточно прав на отправку сообщений'));
         }
 
         $member = $this->memberRow($me, $conversation);
@@ -101,7 +101,7 @@ class ChatService
         // остальные — если канал разрешает писать всем.
         if ($conversation->post_permission === 'admins') {
             if ($member === null || ! $member->isActive() || ! $member->isAdmin()) {
-                abort(403, 'В этом канале писать могут только администраторы');
+                abort(403, __('В этом канале писать могут только администраторы'));
             }
         }
     }
@@ -261,7 +261,7 @@ class ChatService
     {
         if ($peer->id === $me->id) {
             throw ValidationException::withMessages([
-                'employee_id' => 'Нельзя создать диалог с самим собой',
+                'employee_id' => __('Нельзя создать диалог с самим собой'),
             ]);
         }
 
@@ -269,7 +269,7 @@ class ChatService
 
         if ($peer->trashed() || $peer->status !== \App\Shared\Enums\EmployeeStatus::Active) {
             throw ValidationException::withMessages([
-                'employee_id' => 'Сотрудник недоступен',
+                'employee_id' => __('Сотрудник недоступен'),
             ]);
         }
 
@@ -310,7 +310,7 @@ class ChatService
     public function createGroup(Employee $me, string $title, array $employeeIds, ?string $description = null): Conversation
     {
         if (! $this->permissions->check($me->user, 'chat.groups.create')) {
-            abort(403, 'Недостаточно прав на создание групп');
+            abort(403, __('Недостаточно прав на создание групп'));
         }
 
         $employeeIds = array_values(array_unique(array_map('intval', $employeeIds)));
@@ -326,7 +326,7 @@ class ChatService
 
         if (count($members) < 2) {
             throw ValidationException::withMessages([
-                'members' => 'Добавьте хотя бы одного другого сотрудника',
+                'members' => __('Добавьте хотя бы одного другого сотрудника'),
             ]);
         }
 
@@ -368,7 +368,7 @@ class ChatService
     public function createChannel(Employee $me, array $data): Conversation
     {
         if (! $this->permissions->check($me->user, 'chat.channels.create')) {
-            abort(403, 'Недостаточно прав на создание каналов');
+            abort(403, __('Недостаточно прав на создание каналов'));
         }
 
         $visibility = ConversationVisibility::from($data['visibility'] ?? 'company');
@@ -462,7 +462,7 @@ class ChatService
         $eligible = Employee::query()->where('company_id', $me->company_id)
             ->where('status', EmployeeStatus::Active)->whereIn('id', $ids)->pluck('id');
         if ($eligible->count() !== count($ids)) {
-            throw ValidationException::withMessages(['member_ids' => 'Некоторые сотрудники недоступны для добавления.']);
+            throw ValidationException::withMessages(['member_ids' => __('Некоторые сотрудники недоступны для добавления.')]);
         }
 
         DB::transaction(function () use ($me, $conversation, $eligible): void {
@@ -519,7 +519,7 @@ class ChatService
             return null;
         }
         $path = $image->store("chat/{$conversation->id}/{$folder}", 'local');
-        abort_unless($path !== false, 500, 'Не удалось сохранить изображение.');
+        abort_unless($path !== false, 500, __('Не удалось сохранить изображение.'));
 
         return $path;
     }
@@ -572,11 +572,11 @@ class ChatService
         $clientId = isset($data['client_id']) ? substr((string) $data['client_id'], 0, 64) : null;
 
         if ($body === '' && empty($data['attachments'])) {
-            throw ValidationException::withMessages(['body' => 'Сообщение пустое']);
+            throw ValidationException::withMessages(['body' => __('Сообщение пустое')]);
         }
 
         if (mb_strlen($body) > 8000) {
-            throw ValidationException::withMessages(['body' => 'Сообщение слишком длинное']);
+            throw ValidationException::withMessages(['body' => __('Сообщение слишком длинное')]);
         }
 
         // Идемпотентность: повтор того же client_id возвращает уже
@@ -600,7 +600,7 @@ class ChatService
                 ->first();
 
             if ($replyTo === null) {
-                throw ValidationException::withMessages(['reply_to_id' => 'Сообщение для ответа не найдено']);
+                throw ValidationException::withMessages(['reply_to_id' => __('Сообщение для ответа не найдено')]);
             }
         }
 
@@ -642,7 +642,7 @@ class ChatService
         $this->assertCanView($me, $conversation);
 
         if ($message->employee_id !== $me->id) {
-            abort(403, 'Редактировать можно только свои сообщения');
+            abort(403, __('Редактировать можно только свои сообщения'));
         }
 
         if ($message->kind === MessageKind::System) {
@@ -650,16 +650,16 @@ class ChatService
         }
 
         if ($message->isDeleted()) {
-            throw ValidationException::withMessages(['body' => 'Сообщение удалено']);
+            throw ValidationException::withMessages(['body' => __('Сообщение удалено')]);
         }
 
         $body = trim($body);
         if ($body === '') {
-            throw ValidationException::withMessages(['body' => 'Сообщение пустое']);
+            throw ValidationException::withMessages(['body' => __('Сообщение пустое')]);
         }
 
         if (mb_strlen($body) > 8000) {
-            throw ValidationException::withMessages(['body' => 'Сообщение слишком длинное']);
+            throw ValidationException::withMessages(['body' => __('Сообщение слишком длинное')]);
         }
 
         $old = $message->body;
@@ -689,7 +689,7 @@ class ChatService
         $isManager = $member !== null && $member->isAdmin();
 
         if ($message->employee_id !== $me->id && ! $isManager) {
-            abort(403, 'Удалять можно только свои сообщения');
+            abort(403, __('Удалять можно только свои сообщения'));
         }
 
         if ($message->kind === MessageKind::System) {
@@ -720,11 +720,11 @@ class ChatService
 
         $emoji = mb_substr(trim($emoji), 0, 16);
         if ($emoji === '') {
-            throw ValidationException::withMessages(['emoji' => 'Укажите реакцию']);
+            throw ValidationException::withMessages(['emoji' => __('Укажите реакцию')]);
         }
 
         if ($message->isDeleted()) {
-            throw ValidationException::withMessages(['message' => 'Сообщение удалено']);
+            throw ValidationException::withMessages(['message' => __('Сообщение удалено')]);
         }
 
         // announce() должен выполняться после коммита транзакции, но до
@@ -807,7 +807,7 @@ class ChatService
         $this->assertCanView($me, $conversation);
 
         if (! $conversation->isChannel() && ! $conversation->isCompanyWide()) {
-            abort(403, 'Подписка доступна только для каналов');
+            abort(403, __('Подписка доступна только для каналов'));
         }
 
         $member = $this->memberRow($me, $conversation)

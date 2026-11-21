@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'planning')
 
-@section('title', 'Праздники ' . $year)
+@section('title', __('Праздники') . ' ' . $year)
 
 @php
     $kindChips = [
@@ -24,9 +24,9 @@
     $byKind = $holidays->countBy(fn ($h) => $h->kind->value);
 
     $months = [
-        1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель',
-        5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август',
-        9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь',
+        1 => __('Январь'), 2 => __('Февраль'), 3 => __('Март'), 4 => __('Апрель'),
+        5 => __('Май'), 6 => __('Июнь'), 7 => __('Июль'), 8 => __('Август'),
+        9 => __('Сентябрь'), 10 => __('Октябрь'), 11 => __('Ноябрь'), 12 => __('Декабрь'),
     ];
 @endphp
 
@@ -34,24 +34,24 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Календарь</div>
-            <h1 class="page-title mt-1">Праздники {{ $year }}</h1>
-            <div class="text-secondary mt-1">Производственный календарь · {{ $holidays->count() }} дн. в году</div>
+            <div class="crm-eyebrow">{{ __('Календарь') }}</div>
+            <h1 class="page-title mt-1">{{ __('Праздники') }} {{ $year }}</h1>
+            <div class="text-secondary mt-1">{{ __('Производственный календарь') }} {{ $holidays->count() }} {{ __('дн. в году') }}</div>
         </div>
         <div class="col-auto d-print-none">
             <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
                 <div class="d-flex gap-1 align-items-center">
-                    <a class="btn btn-ghost-secondary" href="{{ route('schedules.holidays', ['year' => $year - 1]) }}" title="Предыдущий год"><i class="ti ti-chevron-left"></i></a>
+                    <a class="btn btn-ghost-secondary" href="{{ route('schedules.holidays', ['year' => $year - 1]) }}" title="{{ __("Предыдущий год") }}"><i class="ti ti-chevron-left"></i></a>
                     <form method="get" class="d-flex gap-1 align-items-center">
-                        <input class="form-control" type="number" name="year" value="{{ $year }}" style="width: 6.5rem" aria-label="Год">
-                        <button class="btn btn-ghost-secondary">Показать</button>
+                        <input class="form-control" type="number" name="year" value="{{ $year }}" style="width: 6.5rem" aria-label="{{ __("Год") }}">
+                        <button class="btn btn-ghost-secondary">{{ __('Показать') }}</button>
                     </form>
-                    <a class="btn btn-ghost-secondary" href="{{ route('schedules.holidays', ['year' => $year + 1]) }}" title="Следующий год"><i class="ti ti-chevron-right"></i></a>
+                    <a class="btn btn-ghost-secondary" href="{{ route('schedules.holidays', ['year' => $year + 1]) }}" title="{{ __("Следующий год") }}"><i class="ti ti-chevron-right"></i></a>
                 </div>
-                <a class="btn btn-outline-secondary" href="{{ route('schedules.holidays', ['year' => now()->year]) }}#month-{{ now()->month }}">Текущий месяц</a>
+                <a class="btn btn-outline-secondary" href="{{ route('schedules.holidays', ['year' => now()->year]) }}#month-{{ now()->month }}">{{ __('Текущий месяц') }}</a>
                 @if ($canManage)
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newHoliday">
-                        <i class="ti ti-plus me-1"></i>Добавить праздник
+                        <i class="ti ti-plus me-1"></i>{{ __('Добавить праздник') }}
                     </button>
                 @endif
             </div>
@@ -61,19 +61,19 @@
 
 <div class="crm-metrics mb-3">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-flag"></i>Праздничных дней</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-flag"></i>{{ __('Праздничных дней') }}</div>
         <div class="crm-metric__value">{{ $byKind['public'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-briefcase"></i>Рабочие по календарю</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-briefcase"></i>{{ __('Рабочие по календарю') }}</div>
         <div class="crm-metric__value">{{ $byKind['operating'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-clock-hour-4"></i>Сокращённые дни</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-clock-hour-4"></i>{{ __('Сокращённые дни') }}</div>
         <div class="crm-metric__value">{{ $byKind['shortened'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-calendar-stats"></i>Всего отметок</div>
+        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-calendar-stats"></i>{{ __('Всего отметок') }}</div>
         <div class="crm-metric__value">{{ $holidays->count() }}</div>
     </div>
 </div>
@@ -90,10 +90,10 @@
         @endphp
         <div class="col-12 col-sm-6 col-md-4 col-xl-3">
             <div class="crm-form__section h-100">
-                <h2 id="month-{{ $m }}" tabindex="-1" class="h5">{{ $monthName }} @if ($isCurrentMonth)<span class="crm-chip crm-chip--green ms-1">сейчас</span>@endif</h2>
+                <h2 id="month-{{ $m }}" tabindex="-1" class="h5">{{ $monthName }} @if ($isCurrentMonth)<span class="crm-chip crm-chip--green ms-1">{{ __('сейчас') }}</span>@endif</h2>
                 <div class="crm-cal crm-cal--sm mt-2">
                     <div class="crm-cal__head">
-                        @foreach (['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as $dow)
+                        @foreach ([__('Пн'), __('Вт'), __('Ср'), __('Чт'), __('Пт'), __('Сб'), __('Вс')] as $dow)
                             <div>{{ $dow }}</div>
                         @endforeach
                     </div>
@@ -129,8 +129,8 @@
 
 {{-- ===== Список праздников ===== --}}
 <div class="crm-form__section">
-    <h3>Праздники и особые дни <span class="text-secondary fw-normal">({{ $holidays->count() }})</span></h3>
-    <div class="crm-form__desc">Красные — выходные, синие — рабочие по календарю, оранжевые — сокращённые.</div>
+    <h3>{{ __('Праздники и особые дни') }} <span class="text-secondary fw-normal">({{ $holidays->count() }})</span></h3>
+    <div class="crm-form__desc">{{ __('Красные — выходные, синие — рабочие по календарю, оранжевые — сокращённые') }}</div>
     <div class="crm-queue">
         @forelse ($holidays as $holiday)
             <div class="crm-queue__item" style="--c: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};">
@@ -141,22 +141,22 @@
                     <div class="crm-queue__title">{{ $holiday->name }}</div>
                     <div class="crm-queue__sub">
                         {{ $holiday->date->format('d.m.Y') }} · {{ $holiday->date->translatedFormat('l') }}
-                        @if ($holiday->transferred_from) · перенесён с {{ \Carbon\Carbon::parse($holiday->transferred_from)->format('d.m') }}@endif
+                        @if ($holiday->transferred_from) · {{ __('перенесён с') }} {{ \Carbon\Carbon::parse($holiday->transferred_from)->format('d.m') }}@endif
                     </div>
                 </div>
                 <span class="crm-chip {{ $kindChips[$holiday->kind->value] ?? 'crm-chip--grey' }}">{{ $crm_label('holiday_kind', $holiday->kind->value) }}</span>
                 @if ($canManage)
-                    <form method="post" action="{{ route('holidays.destroy', $holiday) }}" onsubmit="return confirm('Удалить праздник «{{ $holiday->name }}»?')" data-submit-guard>
+                    <form method="post" action="{{ route('holidays.destroy', $holiday) }}" onsubmit="return confirm('{{ __('Удалить праздник') }} «{{ $holiday->name }}»?')" data-submit-guard>
                         @csrf @method('DELETE')
-                        <button class="btn btn-sm btn-ghost-danger" title="Удалить праздник"><i class="ti ti-trash"></i></button>
+                        <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить праздник") }}"><i class="ti ti-trash"></i></button>
                     </form>
                 @endif
             </div>
         @empty
             <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                 <div class="crm-queue__body">
-                    <div class="crm-queue__title">Праздников в году нет</div>
-                    <div class="crm-queue__sub">Добавьте первый — календарь подсветит его автоматически.</div>
+                    <div class="crm-queue__title">{{ __('Праздников в году нет') }}</div>
+                    <div class="crm-queue__sub">{{ __('Добавьте первый — календарь подсветит его автоматически') }}</div>
                 </div>
             </div>
         @endforelse
@@ -169,25 +169,25 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('holidays.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Добавить праздник</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Добавить праздник') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>День</h3>
-                    <div class="crm-form__desc">Название и дата — календарь подсветит его в нужном месяце.</div>
+                    <h3>{{ __('День') }}</h3>
+                    <div class="crm-form__desc">{{ __('Название и дата — календарь подсветит его в нужном месяце') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nh-name">Название<span class="req">*</span></label>
-                        <input type="text" id="nh-name" name="name" class="form-control" placeholder="День народного единства" required>
+                        <label class="form-label" for="nh-name">{{ __('Название') }}<span class="req">*</span></label>
+                        <input type="text" id="nh-name" name="name" class="form-control" placeholder="{{ __("День народного единства") }}" required>
                     </div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="nh-date">Дата<span class="req">*</span></label>
+                        <label class="form-label" for="nh-date">{{ __('Дата') }}<span class="req">*</span></label>
                         <input type="date" id="nh-date" name="date" class="form-control" value="{{ $year }}-01-01" required>
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Тип дня</h3>
-                    <div class="crm-form__desc">Определяет, выходной это день или рабочий по календарю.</div>
+                    <h3>{{ __('Тип дня') }}</h3>
+                    <div class="crm-form__desc">{{ __('Определяет, выходной это день или рабочий по календарю') }}</div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="nh-kind">Тип</label>
+                        <label class="form-label" for="nh-kind">{{ __('Тип') }}</label>
                         <select id="nh-kind" class="form-select" name="kind">
                             @foreach (['public', 'operating', 'shortened'] as $kind)
                                 <option value="{{ $kind }}">{{ $crm_label('holiday_kind', $kind) }}</option>
@@ -197,8 +197,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary">Добавить</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('Добавить') }}</button>
             </div>
         </form>
     </div>

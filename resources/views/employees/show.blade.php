@@ -39,15 +39,15 @@
                 <span class="crm-chip {{ $statusClass }}"><i class="ti ti-{{ $statusIcon }} me-1"></i>{{ $crm_label('employee_status', $employee->status->value) }}</span>
             </div>
             <div class="text-secondary mt-1">
-                {{ $employee->position?->name ?? 'должность не назначена' }}
-                · {{ $employee->department?->name ?? 'отдел не назначен' }}
+                {{ $employee->position?->name ?? __('должность не назначена') }}
+                · {{ $employee->department?->name ?? __('отдел не назначен') }}
             </div>
         </div>
         <div class="d-flex gap-2 d-print-none">
-            <a class="btn btn-ghost-secondary" href="{{ route('employees.index') }}"><i class="ti ti-arrow-left me-1"></i>К списку</a>
+            <a class="btn btn-ghost-secondary" href="{{ route('employees.index') }}"><i class="ti ti-arrow-left me-1"></i>{{ __('К списку') }}</a>
             @if ($canManage)
-                <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#employee-editor" aria-expanded="false" aria-controls="employee-editor"><i class="ti ti-pencil me-1"></i>Редактировать</button>
-                <button type="button" class="btn btn-outline-primary" data-crm-tab="#tab-roles-btn"><i class="ti ti-key me-1"></i>Роли</button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#employee-editor" aria-expanded="false" aria-controls="employee-editor"><i class="ti ti-pencil me-1"></i>{{ __('Редактировать') }}</button>
+                <button type="button" class="btn btn-outline-primary" data-crm-tab="#tab-roles-btn"><i class="ti ti-key me-1"></i>{{ __('Роли') }}</button>
             @endif
         </div>
     </div>
@@ -56,11 +56,11 @@
 {{-- ===== Вкладки ===== --}}
 <ul class="nav crm-tabs d-print-none" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-profile-btn" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button" role="tab" aria-controls="tab-profile" aria-selected="true">Профиль</button>
+        <button class="nav-link active" id="tab-profile-btn" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button" role="tab" aria-controls="tab-profile" aria-selected="true">{{ __('Профиль') }}</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="tab-roles-btn" data-bs-toggle="tab" data-bs-target="#tab-roles" type="button" role="tab" aria-controls="tab-roles" aria-selected="false">
-            Роли <span class="badge bg-secondary-lt ms-1">{{ $employee->roles->count() }}</span>
+            {{ __('Роли') }} <span class="badge bg-secondary-lt ms-1">{{ $employee->roles->count() }}</span>
         </button>
     </li>
 </ul>
@@ -72,14 +72,14 @@
             <div class="col-lg-8">
                 {{-- Карточка фактов: всё главное — одним взглядом, без чтения строк dl --}}
                 <div class="crm-form__section mb-3">
-                    <h3>Карточка сотрудника</h3>
-                    <div class="crm-form__desc">Контакты и трудоустройство. Нажмите на e-mail или телефон, чтобы написать/позвонить.</div>
+                    <h3>{{ __('Карточка сотрудника') }}</h3>
+                    <div class="crm-form__desc">{{ __('Контакты и трудоустройство. Нажмите на e-mail или телефон, чтобы написать/позвонить') }}</div>
 
                     <div class="crm-facts">
                         <div class="crm-fact">
                             <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: var(--crm-info);"><i class="ti ti-hash"></i></span>
                             <div class="min-w-0">
-                                <div class="crm-fact__label">Табельный №</div>
+                                <div class="crm-fact__label">{{ __('Табельный №') }}</div>
                                 <div class="crm-fact__value">{{ $employee->employee_no }}</div>
                             </div>
                         </div>
@@ -87,7 +87,7 @@
                         <div class="crm-fact">
                             <span class="crm-fact__icon" style="background: rgba(47, 179, 68, .14); color: var(--crm-success);"><i class="ti ti-{{ $statusIcon }}"></i></span>
                             <div class="min-w-0">
-                                <div class="crm-fact__label">Статус</div>
+                                <div class="crm-fact__label">{{ __('Статус') }}</div>
                                 <div class="crm-fact__value">{{ $crm_label('employee_status', $employee->status->value) }}</div>
                             </div>
                         </div>
@@ -95,23 +95,23 @@
                         <div class="crm-fact">
                             <span class="crm-fact__icon" style="background: rgba(124, 92, 224, .14); color: var(--crm-purple);"><i class="ti ti-building-community"></i></span>
                             <div class="min-w-0">
-                                <div class="crm-fact__label">Подразделение</div>
-                                <div class="crm-fact__value">{{ $employee->department?->name ?? 'не назначен' }}</div>
+                                <div class="crm-fact__label">{{ __('Подразделение') }}</div>
+                                <div class="crm-fact__value">{{ $employee->department?->name ?? __('не назначен') }}</div>
                             </div>
                         </div>
 
                         <div class="crm-fact">
                             <span class="crm-fact__icon" style="background: rgba(247, 103, 7, .14); color: var(--crm-warning);"><i class="ti ti-briefcase"></i></span>
                             <div class="min-w-0">
-                                <div class="crm-fact__label">Должность</div>
-                                <div class="crm-fact__value">{{ $employee->position?->name ?? 'не назначена' }}</div>
+                                <div class="crm-fact__label">{{ __('Должность') }}</div>
+                                <div class="crm-fact__value">{{ $employee->position?->name ?? __('не назначена') }}</div>
                             </div>
                         </div>
 
                         <div class="crm-fact">
                             <span class="crm-fact__icon" style="background: rgba(151, 163, 182, .16); color: var(--crm-text-secondary);"><i class="ti ti-clock-hour-4"></i></span>
                             <div class="min-w-0">
-                                <div class="crm-fact__label">График</div>
+                                <div class="crm-fact__label">{{ __('График') }}</div>
                                 <div class="crm-fact__value">{{ $employee->workSchedule?->name ?? '—' }}</div>
                             </div>
                         </div>
@@ -119,7 +119,7 @@
                         <div class="crm-fact">
                             <span class="crm-fact__icon" style="background: rgba(11, 155, 114, .14); color: var(--crm-success);"><i class="ti ti-calendar-event"></i></span>
                             <div class="min-w-0">
-                                <div class="crm-fact__label">Приём на работу</div>
+                                <div class="crm-fact__label">{{ __('Приём на работу') }}</div>
                                 <div class="crm-fact__value">{{ $employee->hired_at?->format('d.m.Y') ?? '—' }}</div>
                             </div>
                         </div>
@@ -128,12 +128,12 @@
                             <div class="crm-fact">
                                 <span class="crm-fact__icon" style="background: rgba(66, 153, 225, .14); color: var(--crm-info);"><i class="ti ti-mail"></i></span>
                                 <div class="min-w-0">
-                                    <div class="crm-fact__label">Рабочий e-mail</div>
+                                    <div class="crm-fact__label">{{ __('Рабочий e-mail') }}</div>
                                     <div class="crm-fact__value">
                                         @if ($employee->email)
                                             <a href="mailto:{{ $employee->email }}">{{ $employee->email }}</a>
                                         @else
-                                            <span class="text-secondary">не указан</span>
+                                            <span class="text-secondary">{{ __('не указан') }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -142,12 +142,12 @@
                             <div class="crm-fact">
                                 <span class="crm-fact__icon" style="background: rgba(47, 179, 68, .14); color: var(--crm-success);"><i class="ti ti-phone"></i></span>
                                 <div class="min-w-0">
-                                    <div class="crm-fact__label">Телефон</div>
+                                    <div class="crm-fact__label">{{ __('Телефон') }}</div>
                                     <div class="crm-fact__value">
                                         @if ($employee->phone)
                                             <a href="tel:{{ preg_replace('/[^\d+]/', '', $employee->phone) }}">{{ $employee->phone }}</a>
                                         @else
-                                            <span class="text-secondary">не указан</span>
+                                            <span class="text-secondary">{{ __('не указан') }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -157,7 +157,7 @@
                             <div class="crm-fact">
                                 <span class="crm-fact__icon" style="background: rgba(247, 103, 7, .14); color: var(--crm-warning);"><i class="ti ti-cake"></i></span>
                                 <div class="min-w-0">
-                                    <div class="crm-fact__label">Дата рождения</div>
+                                    <div class="crm-fact__label">{{ __('Дата рождения') }}</div>
                                     <div class="crm-fact__value">
                                         {{ $employee->birth_date?->format('d.m.Y') ?? '—' }}
                                     </div>
@@ -167,12 +167,12 @@
                             <div class="crm-fact">
                                 <span class="crm-fact__icon" style="background: rgba(124, 92, 224, .14); color: var(--crm-purple);"><i class="ti ti-map-pin"></i></span>
                                 <div class="min-w-0">
-                                    <div class="crm-fact__label">Адрес</div>
+                                    <div class="crm-fact__label">{{ __('Адрес') }}</div>
                                     <div class="crm-fact__value">
                                         @if ($employee->address)
                                             {{ $employee->address }}
                                         @else
-                                            <span class="text-secondary">не указан</span>
+                                            <span class="text-secondary">{{ __('не указан') }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -186,7 +186,7 @@
                                         @if ($employee->telegram_chat_id)
                                             {{ $employee->telegram_chat_id }}
                                         @else
-                                            <span class="text-secondary">не указан</span>
+                                            <span class="text-secondary">{{ __('не указан') }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -195,8 +195,8 @@
                             <div class="crm-fact">
                                 <span class="crm-fact__icon" style="background: rgba(151, 163, 182, .16); color: var(--crm-text-secondary);"><i class="ti ti-lock"></i></span>
                                 <div class="min-w-0">
-                                    <div class="crm-fact__label">Контакты</div>
-                                    <div class="crm-fact__value text-secondary">Реквизиты скрыты</div>
+                                    <div class="crm-fact__label">{{ __('Контакты') }}</div>
+                                    <div class="crm-fact__value text-secondary">{{ __('Реквизиты скрыты') }}</div>
                                 </div>
                             </div>
                         @endif
@@ -210,27 +210,27 @@
                         @csrf @method('PATCH')
 
                         <div class="crm-form__section">
-                            <h3>Личные данные</h3>
-                            <div class="crm-form__desc">Как будет показано в документах и табеле.</div>
+                            <h3>{{ __('Личные данные') }}</h3>
+                            <div class="crm-form__desc">{{ __('Как будет показано в документах и табеле') }}</div>
                             <div class="crm-form__row crm-form__row--3">
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-last">Фамилия<span class="req">*</span></label>
+                                    <label class="form-label" for="ep-last">{{ __('Фамилия') }}<span class="req">*</span></label>
                                     <input type="text" id="ep-last" name="last_name" class="form-control" value="{{ $employee->last_name }}" autocomplete="family-name" required>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-first">Имя<span class="req">*</span></label>
+                                    <label class="form-label" for="ep-first">{{ __('Имя') }}<span class="req">*</span></label>
                                     <input type="text" id="ep-first" name="first_name" class="form-control" value="{{ $employee->first_name }}" autocomplete="given-name" required>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-middle">Отчество</label>
-                                    <input type="text" id="ep-middle" name="middle_name" class="form-control" value="{{ $employee->middle_name }}" autocomplete="additional-name" placeholder="если есть">
+                                    <label class="form-label" for="ep-middle">{{ __('Отчество') }}</label>
+                                    <input type="text" id="ep-middle" name="middle_name" class="form-control" value="{{ $employee->middle_name }}" autocomplete="additional-name" placeholder="{{ __("если есть") }}">
                                 </div>
                             </div>
                         </div>
 
                         <div class="crm-form__section">
-                            <h3>Контакты</h3>
-                            <div class="crm-form__desc">Для уведомлений и документов. Формат зависит от страны — страна выбирается автоматически по часовому поясу компании.</div>
+                            <h3>{{ __('Контакты') }}</h3>
+                            <div class="crm-form__desc">{{ __('Для уведомлений и документов. Формат зависит от страны — страна выбирается автоматически по часовому поясу компании') }}</div>
                             <div class="crm-form__row">
                                 <div class="crm-form__field">
                                     <label class="form-label" for="ep-email">E-mail</label>
@@ -240,52 +240,52 @@
                                     'id' => 'ep-phone',
                                     'name' => 'phone',
                                     'value' => $employee->phone,
-                                    'hint' => 'Формат зависит от страны — страна выбирается автоматически по часовому поясу компании.',
+                                    'hint' => __('Формат зависит от страны — страна выбирается автоматически по часовому поясу компании.'),
                                     'timezone' => $companyTimezone ?? null,
                                 ])                            </div>
                         </div>
 
                         <div class="crm-form__section">
-                            <h3>Трудоустройство</h3>
-                            <div class="crm-form__desc">Табельный номер, подразделение, должность, график и статус.</div>
+                            <h3>{{ __('Трудоустройство') }}</h3>
+                            <div class="crm-form__desc">{{ __('Табельный номер, подразделение, должность, график и статус') }}</div>
                             <div class="crm-form__row crm-form__row--3">
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-no">Табельный №<span class="req">*</span></label>
+                                    <label class="form-label" for="ep-no">{{ __('Табельный №') }}<span class="req">*</span></label>
                                     <input type="text" id="ep-no" name="employee_no" class="form-control" value="{{ $employee->employee_no }}" required>
-                                    <div class="form-text">Уникален внутри компании.</div>
+                                    <div class="form-text">{{ __('Уникален внутри компании') }}</div>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-status">Статус</label>
+                                    <label class="form-label" for="ep-status">{{ __('Статус') }}</label>
                                     <select id="ep-status" name="status" class="form-select">
                                         @foreach (['active', 'inactive', 'dismissed'] as $status)
                                             <option value="{{ $status }}" @selected($employee->status->value === $status)>{{ $crm_label('employee_status', $status) }}</option>
                                         @endforeach
                                     </select>
-                                    <label class="form-label mt-2" for="ep-fired-at">Дата увольнения</label>
+                                    <label class="form-label mt-2" for="ep-fired-at">{{ __('Дата увольнения') }}</label>
                                     <input id="ep-fired-at" class="form-control" type="date" name="fired_at" value="{{ old('fired_at', $employee->fired_at?->format('Y-m-d')) }}" max="{{ today()->format('Y-m-d') }}">
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-schedule">График работы</label>
+                                    <label class="form-label" for="ep-schedule">{{ __('График работы') }}</label>
                                     <select id="ep-schedule" name="work_schedule_id" class="form-select">
-                                        <option value="">— не назначен —</option>
+                                        <option value="">{{ __('не назначен') }}</option>
                                         @foreach ($schedules as $schedule)
                                             <option value="{{ $schedule->id }}" @selected($employee->work_schedule_id === $schedule->id)>{{ $schedule->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-dept">Подразделение</label>
+                                    <label class="form-label" for="ep-dept">{{ __('Подразделение') }}</label>
                                     <select id="ep-dept" name="department_id" class="form-select">
-                                        <option value="">— не назначен —</option>
+                                        <option value="">{{ __('не назначен') }}</option>
                                         @foreach ($departments as $department)
                                             <option value="{{ $department->id }}" @selected($employee->department_id === $department->id)>{{ $department->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="ep-pos">Должность</label>
+                                    <label class="form-label" for="ep-pos">{{ __('Должность') }}</label>
                                     <select id="ep-pos" name="position_id" class="form-select">
-                                        <option value="">— не назначена —</option>
+                                        <option value="">{{ __('не назначена') }}</option>
                                         @foreach ($positions as $position)
                                             <option value="{{ $position->id }}" @selected($employee->position_id === $position->id)>{{ $position->name }}</option>
                                         @endforeach
@@ -295,9 +295,9 @@
                         </div>
 
                         <div class="crm-form__footer crm-form__footer--card">
-                            <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i>Сохранить изменения</button>
-                            <button type="button" class="btn btn-ghost-secondary" data-bs-toggle="collapse" data-bs-target="#employee-editor">Отмена</button>
-                            <span class="text-secondary ms-auto small d-none d-md-inline">Есть несохранённые правки — уход со страницы будет перехвачен</span>
+                            <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i>{{ __('Сохранить изменения') }}</button>
+                            <button type="button" class="btn btn-ghost-secondary" data-bs-toggle="collapse" data-bs-target="#employee-editor">{{ __('Отмена') }}</button>
+                            <span class="text-secondary ms-auto small d-none d-md-inline">{{ __('Есть несохранённые правки — уход со страницы будет перехвачен') }}</span>
                         </div>
                     </form>
                     </div>
@@ -307,32 +307,32 @@
             {{-- Боковая колонка: доступ и быстрые действия --}}
             <div class="col-lg-4">
                 <div class="crm-form__section mb-3">
-                    <h3>Доступ в системе</h3>
-                    <div class="crm-form__desc">Роли определяют, какие модули доступны.</div>
+                    <h3>{{ __('Доступ в системе') }}</h3>
+                    <div class="crm-form__desc">{{ __('Роли определяют, какие модули доступны') }}</div>
                     <div class="d-flex flex-wrap gap-2">
                         @forelse ($employee->roles as $role)
                             <span class="crm-chip">{{ $role->name }}</span>
                         @empty
-                            <span class="text-secondary">Роли не назначены</span>
+                            <span class="text-secondary">{{ __('Роли не назначены') }}</span>
                         @endforelse
                     </div>
                     <button type="button" class="btn btn-ghost-secondary w-100 justify-content-center mt-3 d-print-none" data-crm-tab="#tab-roles-btn">
-                        <i class="ti ti-key me-1"></i>Управление ролями
+                        <i class="ti ti-key me-1"></i>{{ __('Управление ролями') }}
                     </button>
                 </div>
 
                 <div class="crm-form__section">
-                    <h3>Быстрые действия</h3>
+                    <h3>{{ __('Быстрые действия') }}</h3>
                     <div class="d-flex flex-column gap-2">
                         <a class="btn btn-ghost-secondary w-100 justify-content-start" href="{{ route('employees.subordinates', $employee) }}">
-                            <i class="ti ti-sitemap me-2"></i>Прямые подчинённые
+                            <i class="ti ti-sitemap me-2"></i>{{ __('Прямые подчинённые') }}
                         </a>
                         <a class="btn btn-ghost-secondary w-100 justify-content-start" href="{{ route('employees.index') }}">
-                            <i class="ti ti-users me-2"></i>Все сотрудники
+                            <i class="ti ti-users me-2"></i>{{ __('Все сотрудники') }}
                         </a>
                         @if ($canManage)
                             <button type="button" class="btn btn-primary w-100 justify-content-start" data-bs-toggle="collapse" data-bs-target="#employee-editor">
-                                <i class="ti ti-pencil me-2"></i>Редактировать карточку
+                                <i class="ti ti-pencil me-2"></i>{{ __('Редактировать карточку') }}
                             </button>
                         @endif
                     </div>
@@ -346,8 +346,8 @@
         <div class="row g-3">
             <div class="col-lg-8">
                 <div class="crm-form__section">
-                    <h3>Роли и доступ</h3>
-                    <div class="crm-form__desc">Отметьте роли и нажмите «Обновить». Новые права применяются сразу после сохранения.</div>
+                    <h3>{{ __('Роли и доступ') }}</h3>
+                    <div class="crm-form__desc">{{ __('Отметьте роли и нажмите «Обновить». Новые права применяются сразу после сохранения') }}</div>
                     @if ($canManage)
                         <form method="post" action="{{ route('employees.roles', $employee) }}" data-submit-guard>
                             @csrf @method('PUT')
@@ -366,7 +366,7 @@
                                 @endforeach
                             </div>
                             <div class="crm-form__footer mt-3">
-                                <button class="btn btn-primary"><i class="ti ti-key me-1"></i>Обновить роли</button>
+                                <button class="btn btn-primary"><i class="ti ti-key me-1"></i>{{ __('Обновить роли') }}</button>
                             </div>
                         </form>
                     @else
@@ -374,7 +374,7 @@
                             @forelse ($employee->roles as $role)
                                 <span class="crm-chip">{{ $role->name }}</span>
                             @empty
-                                <span class="text-secondary">Роли не назначены</span>
+                                <span class="text-secondary">{{ __('Роли не назначены') }}</span>
                             @endforelse
                         </div>
                     @endif
@@ -382,13 +382,13 @@
             </div>
             <div class="col-lg-4">
                 <div class="crm-form__section">
-                    <h3>Назначено сейчас</h3>
-                    <div class="crm-form__desc">Актуальный набор ролей.</div>
+                    <h3>{{ __('Назначено сейчас') }}</h3>
+                    <div class="crm-form__desc">{{ __('Актуальный набор ролей') }}</div>
                     <div class="d-flex flex-wrap gap-2" id="roles">
                         @forelse ($employee->roles as $role)
                             <span class="crm-chip">{{ $role->name }}</span>
                         @empty
-                            <span class="text-secondary">Роли не назначены</span>
+                            <span class="text-secondary">{{ __('Роли не назначены') }}</span>
                         @endforelse
                     </div>
                 </div>

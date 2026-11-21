@@ -3,7 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="description" content="@yield('meta_description', 'BM Systems — единая бизнес-платформа: сотрудники, задачи, CRM, финансы, документы и аналитика в одном интерфейсе.')">
+    <meta name="description" content="@yield('meta_description', __('BM Systems — единая бизнес-платформа: сотрудники, задачи, CRM, финансы, документы и аналитика в одном интерфейсе.'))">
+    <meta name="robots" content="@yield('meta_robots', 'index,follow')">
+    <link rel="canonical" href="{{ url()->current() }}">
+    <meta property="og:title" content="@yield('title', 'BM Systems') — BM Systems">
+    <meta property="og:description" content="@yield('meta_description', __('BM Systems — единая бизнес-платформа.'))">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @if (config('broadcasting.default') === 'reverb' && config('broadcasting.connections.reverb.key'))
         {{-- параметры realtime-канала для Echo (см. assets/js/bm-realtime.js) --}}
@@ -47,24 +53,33 @@
     <link rel="preload" href="/assets/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/vendor/tabler-icons.min.css">
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
-    <link rel="stylesheet" href="/assets/css/effects.css?v53">
+    <link rel="stylesheet" href="/assets/css/effects.css?v60">
     <link rel="stylesheet" href="/assets/css/corpms.css?v7">
     <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
-    <link rel="stylesheet" href="/assets/css/ai-panel.css?v15">
-    <link rel="stylesheet" href="/assets/css/motion.css?v4">
+    <link rel="stylesheet" href="/assets/css/ai-panel.css?v16">
+    <link rel="stylesheet" href="/assets/css/motion.css?v7">
     <script src="/assets/vendor/tabler.min.js" defer></script>
     <script src="/assets/js/corpms.js?v48" defer></script>
     <script src="/assets/js/bm-ui.js?v4" defer></script>
-    <script src="/assets/js/ai-panel.js?v13" defer></script>
+    <script src="/assets/js/crm-select.js?v1" defer></script>
+    <script src="/assets/js/lms.js?v1" defer></script>
+    <script src="/assets/js/lms-whiteboard.js?v1" defer></script>
+    <script src="/assets/js/lms-meeting.js?v1" defer></script>
+    <script src="/assets/js/lms-pulse.js?v1" defer></script>
+    <script src="/assets/js/ai-panel.js?v15" defer></script>
     <script src="/assets/vendor/echo/pusher.min.js" defer></script>
     <script src="/assets/vendor/echo/echo.iife.js" defer></script>
     <script src="/assets/js/bm-realtime.js?v1" defer></script>
     <link rel="icon" type="image/svg+xml" href="/assets/bm-mark.svg">
-    <link rel="stylesheet" href="/assets/css/workspace.css?v29">
+    <link rel="stylesheet" href="/assets/css/workspace.css?v31">
+    <link rel="stylesheet" href="/assets/css/bumi-tools.css?v2">
+    <link rel="stylesheet" href="/assets/css/legal.css?v3">
+    <link rel="stylesheet" href="/assets/css/crm-select.css?v1">
+    <link rel="stylesheet" href="/assets/css/lms.css?v1">
     @stack('styles')
 </head>
 <body class="crm-app @yield('body_class')">
-<a class="bm-skip-link visually-hidden-focusable" href="#main-content">Перейти к содержанию</a>
+<a class="bm-skip-link visually-hidden-focusable" href="#main-content">{{ __('Перейти к содержанию') }}</a>
 <div class="page">
 
     @auth
@@ -146,7 +161,7 @@
                                 <div><i class="ti ti-{{ $flashClass === 'danger' ? 'alert-triangle' : 'check' }} icon alert-icon"></i></div>
                                 <div>{{ session($flashKey) }}</div>
                             </div>
-                            <a class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></a>
+                            <a class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></a>
                         </div>
                     @endif
                 @endforeach
@@ -170,7 +185,7 @@
                                 @endif
                             </div>
                         </div>
-                        <a class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></a>
+                        <a class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></a>
                     </div>
                 @endif
 
@@ -209,7 +224,11 @@
         <footer class="footer">
             <div class="container-xl">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-secondary">BM Systems — единая бизнес-платформа</span>
+                    <span class="text-secondary">
+                        <a href="{{ route('privacy') }}" class="text-secondary">{{ __('Конфиденциальность') }}</a> ·
+                        <a href="{{ route('terms') }}" class="text-secondary">{{ __('Условия') }}</a> ·
+                        <a href="{{ route('cookies') }}" class="text-secondary">Cookie</a>
+                    </span>
                     <span class="text-secondary">© {{ date('Y') }}</span>
                 </div>
             </div>
@@ -223,18 +242,18 @@
         <div class="offcanvas-header crm-cz__header">
             <div class="crm-cz__badge"><i class="ti ti-palette"></i></div>
             <div class="flex-grow-1">
-                <h5 class="offcanvas-title" id="crm-settings-title">Оформление</h5>
-                <div class="crm-cz__sub">Тема, цвет и секции экрана — сохраняется в этом браузере</div>
+                <h5 class="offcanvas-title" id="crm-settings-title">{{ __('Оформление') }}</h5>
+                <div class="crm-cz__sub">{{ __('Тема, цвет и секции экрана — сохраняется в этом браузере') }}</div>
             </div>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Закрыть"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="{{ __("Закрыть") }}"></button>
         </div>
 
         <div class="offcanvas-body p-0">
             <div class="crm-cz__body">
                 {{-- Тема: карточки-превью --}}
                 <div class="crm-cz__section">
-                    <div class="crm-cz__label"><i class="ti ti-layout me-1"></i>Тема</div>
-                    <div class="crm-cz__themes" role="group" aria-label="Тема оформления">
+                    <div class="crm-cz__label"><i class="ti ti-layout me-1"></i>{{ __('Тема') }}</div>
+                    <div class="crm-cz__themes" role="group" aria-label="{{ __("Тема оформления") }}">
                         <label class="crm-cz__theme" for="crm-c-theme-light">
                             <input type="radio" class="crm-cz__input" name="crm-c-theme" id="crm-c-theme-light" value="light" autocomplete="off">
                             <span class="crm-cz__preview crm-cz__preview--light" aria-hidden="true">
@@ -242,7 +261,7 @@
                                 <span class="crm-cz__pv-side"></span>
                                 <span class="crm-cz__pv-lines"><i></i><i></i><i></i></span>
                             </span>
-                            <span class="crm-cz__theme-name"><i class="ti ti-sun"></i>Светлая</span>
+                            <span class="crm-cz__theme-name"><i class="ti ti-sun"></i>{{ __('Светлая') }}</span>
                             <span class="crm-cz__check"><i class="ti ti-check"></i></span>
                         </label>
                         <label class="crm-cz__theme" for="crm-c-theme-dark">
@@ -252,7 +271,7 @@
                                 <span class="crm-cz__pv-side"></span>
                                 <span class="crm-cz__pv-lines"><i></i><i></i><i></i></span>
                             </span>
-                            <span class="crm-cz__theme-name"><i class="ti ti-moon"></i>Тёмная</span>
+                            <span class="crm-cz__theme-name"><i class="ti ti-moon"></i>{{ __('Тёмная') }}</span>
                             <span class="crm-cz__check"><i class="ti ti-check"></i></span>
                         </label>
                     </div>
@@ -260,49 +279,49 @@
 
                 {{-- Акцент --}}
                 <div class="crm-cz__section">
-                    <div class="crm-cz__label"><i class="ti ti-droplet me-1"></i>Акцентный цвет</div>
+                    <div class="crm-cz__label"><i class="ti ti-droplet me-1"></i>{{ __('Акцентный цвет') }}</div>
                     <div class="crm-cz__accents" id="crm-c-accents">
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="teal" aria-label="Бирюзовый" title="Бирюзовый" style="--sw:var(--crm-success)"><i class="ti ti-check"></i></button>
-                            <span>Бирюза</span>
+                            <button type="button" class="crm-swatch" data-crm-accent="teal" aria-label="{{ __("Бирюзовый") }}" title="{{ __("Бирюзовый") }}" style="--sw:var(--crm-success)"><i class="ti ti-check"></i></button>
+                            <span>{{ __('Бирюза') }}</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="blue" aria-label="Синий" title="Синий" style="--sw:var(--crm-accent)"><i class="ti ti-check"></i></button>
-                            <span>Синий</span>
+                            <button type="button" class="crm-swatch" data-crm-accent="blue" aria-label="{{ __("Синий") }}" title="{{ __("Синий") }}" style="--sw:var(--crm-accent)"><i class="ti ti-check"></i></button>
+                            <span>{{ __('Синий') }}</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="violet" aria-label="Фиолетовый" title="Фиолетовый" style="--sw:var(--crm-purple)"><i class="ti ti-check"></i></button>
-                            <span>Фиолетовый</span>
+                            <button type="button" class="crm-swatch" data-crm-accent="violet" aria-label="{{ __("Фиолетовый") }}" title="{{ __("Фиолетовый") }}" style="--sw:var(--crm-purple)"><i class="ti ti-check"></i></button>
+                            <span>{{ __('Фиолетовый') }}</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="rose" aria-label="Розовый" title="Розовый" style="--sw:var(--crm-danger)"><i class="ti ti-check"></i></button>
-                            <span>Розовый</span>
+                            <button type="button" class="crm-swatch" data-crm-accent="rose" aria-label="{{ __("Розовый") }}" title="{{ __("Розовый") }}" style="--sw:var(--crm-danger)"><i class="ti ti-check"></i></button>
+                            <span>{{ __('Розовый') }}</span>
                         </div>
                         <div class="crm-cz__accent">
-                            <button type="button" class="crm-swatch" data-crm-accent="amber" aria-label="Янтарный" title="Янтарный" style="--sw:var(--crm-warning)"><i class="ti ti-check"></i></button>
-                            <span>Янтарный</span>
+                            <button type="button" class="crm-swatch" data-crm-accent="amber" aria-label="{{ __("Янтарный") }}" title="{{ __("Янтарный") }}" style="--sw:var(--crm-warning)"><i class="ti ti-check"></i></button>
+                            <span>{{ __('Янтарный') }}</span>
                         </div>
                     </div>
                 </div>
 
                 {{-- Размер шрифта --}}
                 <div class="crm-cz__section mb-0">
-                    <div class="crm-cz__label"><i class="ti ti-font-size me-1"></i>Размер шрифта</div>
-                    <div class="crm-cz__scales" role="group" aria-label="Размер шрифта">
+                    <div class="crm-cz__label"><i class="ti ti-font-size me-1"></i>{{ __('Размер шрифта') }}</div>
+                    <div class="crm-cz__scales" role="group" aria-label="{{ __("Размер шрифта") }}">
                         <label class="crm-cz__scale" for="crm-c-scale-sm">
                             <input type="radio" class="crm-cz__input" name="crm-c-scale" id="crm-c-scale-sm" value="sm" autocomplete="off">
                             <span class="crm-cz__scale-a crm-cz__scale-a--sm">A</span>
-                            <span>Мелкий</span>
+                            <span>{{ __('Мелкий') }}</span>
                         </label>
                         <label class="crm-cz__scale" for="crm-c-scale-md">
                             <input type="radio" class="crm-cz__input" name="crm-c-scale" id="crm-c-scale-md" value="md" autocomplete="off">
                             <span class="crm-cz__scale-a">A</span>
-                            <span>Обычный</span>
+                            <span>{{ __('Обычный') }}</span>
                         </label>
                         <label class="crm-cz__scale" for="crm-c-scale-lg">
                             <input type="radio" class="crm-cz__input" name="crm-c-scale" id="crm-c-scale-lg" value="lg" autocomplete="off">
                             <span class="crm-cz__scale-a crm-cz__scale-a--lg">A</span>
-                            <span>Крупный</span>
+                            <span>{{ __('Крупный') }}</span>
                         </label>
                     </div>
                 </div>
@@ -310,22 +329,22 @@
 
             {{-- Секции экрана: список наполняет corpms.js; скрыто, пока на странице нет секций --}}
             <div class="crm-settings-block" id="crm-sec-block" hidden>
-                <div class="crm-cz__label px-3"><i class="ti ti-layout-column me-1"></i>Секции экрана</div>
+                <div class="crm-cz__label px-3"><i class="ti ti-layout-column me-1"></i>{{ __('Секции экрана') }}</div>
                 <ul class="list-group list-group-flush" id="crm-sec-list"></ul>
                 <div class="px-3 py-2 text-secondary small">
-                    Потяните разделители между секциями — ширина сохранится для этой страницы.
+                    {{ __('Потяните разделители между секциями — ширина сохранится для этой страницы') }}
                 </div>
                 <div class="px-3 pb-3">
                     <button type="button" class="btn btn-ghost-secondary w-100" data-crm-sec-reset>
-                        <i class="ti ti-restore me-1"></i>Сбросить настройки экрана
+                        <i class="ti ti-restore me-1"></i>{{ __('Сбросить настройки экрана') }}
                     </button>
                 </div>
             </div>
         </div>
 
         <div class="offcanvas-footer border-top d-flex gap-2 p-3">
-            <button type="button" class="btn btn-ghost-secondary flex-fill" id="crm-c-reset"><i class="ti ti-restore me-1"></i>Сбросить оформление</button>
-            <button type="button" class="btn btn-primary flex-fill" data-bs-dismiss="offcanvas">Готово</button>
+            <button type="button" class="btn btn-ghost-secondary flex-fill" id="crm-c-reset"><i class="ti ti-restore me-1"></i>{{ __('Сбросить оформление') }}</button>
+            <button type="button" class="btn btn-primary flex-fill" data-bs-dismiss="offcanvas">{{ __('Готово') }}</button>
         </div>
     </div>
 
@@ -338,21 +357,21 @@
          data-commands="{{ json_encode($paletteCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) }}"
          data-search-url="{{ $paletteSearchAllowed ? route('search.index') : '' }}">
         <div class="crm-palette__backdrop" data-crm-palette-close></div>
-        <div class="crm-palette__dialog" role="dialog" aria-modal="true" aria-label="Палитра команд">
+        <div class="crm-palette__dialog" role="dialog" aria-modal="true" aria-label="{{ __("Палитра команд") }}">
             <div class="crm-palette__input-row">
                 <i class="ti ti-search crm-palette__icon" aria-hidden="true"></i>
                 <input type="text" class="crm-palette__input" id="crm-palette-input"
-                       placeholder="Перейти к разделу или найти…"
+                       placeholder="{{ __("Перейти к разделу или найти…") }}"
                        autocomplete="off" spellcheck="false"
-                       aria-label="Поиск команд и разделов"
+                       aria-label="{{ __("Поиск команд и разделов") }}"
                        aria-controls="crm-palette-list" aria-expanded="true" />
                 <kbd class="crm-hint-key">Esc</kbd>
             </div>
-            <div class="crm-palette__list" id="crm-palette-list" role="listbox" aria-label="Команды"></div>
+            <div class="crm-palette__list" id="crm-palette-list" role="listbox" aria-label="{{ __("Команды") }}"></div>
             <div class="crm-palette__footer">
-                <span><span class="crm-hint-key">↑↓</span> выбор</span>
-                <span><span class="crm-hint-key">Enter</span> открыть</span>
-                <span><span class="crm-hint-key">Ctrl K</span> закрыть</span>
+                <span><span class="crm-hint-key">↑↓</span> {{ __('выбор') }}</span>
+                <span><span class="crm-hint-key">Enter</span> {{ __('открыть') }}</span>
+                <span><span class="crm-hint-key">Ctrl K</span> {{ __('закрыть') }}</span>
             </div>
         </div>
     </div>
@@ -412,6 +431,11 @@
             </script>
         @endif
 
+<script>
+    window.LMS_I18N = Object.assign(window.LMS_I18N || {}, {
+        pulseOpen: @json(__('Открыть курс'))
+    });
+</script>
 @stack('scripts')
 </body>
 </html>

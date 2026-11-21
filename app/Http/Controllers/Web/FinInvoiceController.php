@@ -117,7 +117,7 @@ class FinInvoiceController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['number' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['number' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -133,7 +133,7 @@ class FinInvoiceController extends Controller
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
             'vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['number' => 'номер', 'amount' => 'сумма', 'issue_date' => 'дата']);
+        ], [], ['number' => __('номер'), 'amount' => __('сумма'), 'issue_date' => __('дата')]);
 
         $clientId = $validated['client_id'] ?? null;
 
@@ -219,7 +219,7 @@ class FinInvoiceController extends Controller
             'method' => ['required', Rule::enum(FinPaymentMethod::class)],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
-        ], [], ['account_id' => 'счёт', 'amount' => 'сумма']);
+        ], [], ['account_id' => __('счёт'), 'amount' => __('сумма')]);
 
         TenantGuard::ensureReference('fin_accounts', (int) $validated['account_id'], $me);
 

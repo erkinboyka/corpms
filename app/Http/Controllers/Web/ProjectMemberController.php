@@ -37,7 +37,7 @@ class ProjectMemberController extends Controller
             'employee_id' => ['required', 'integer'],
             'role' => ['required', Rule::enum(ProjectMemberRole::class)],
             'allocation_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
-        ], [], ['employee_id' => 'сотрудник', 'role' => 'роль']);
+        ], [], ['employee_id' => __('сотрудник'), 'role' => __('роль')]);
 
         TenantGuard::ensureReference('employees', (int) $validated['employee_id'], $me);
 
@@ -53,7 +53,7 @@ class ProjectMemberController extends Controller
             'role' => $member->role->value,
         ]);
 
-        return back()->with('status', 'Участник добавлен в проект');
+        return back()->with('status', __('Участник добавлен в проект'));
     }
 
     /** Удаление участника проекта. */
@@ -74,6 +74,6 @@ class ProjectMemberController extends Controller
             'employee_id' => $member->employee_id,
         ]);
 
-        return back()->with('status', 'Участник удалён из проекта');
+        return back()->with('status', __('Участник удалён из проекта'));
     }
 }

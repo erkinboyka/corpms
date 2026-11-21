@@ -31,9 +31,9 @@ class SettingsController extends Controller
         $values = $this->settings->currentValues();
 
         $env = [
-            'telegram_bot' => config('corpms.telegram.bot_token') !== '' ? 'настроен' : 'не задан',
-            'telegram_webhook_secret' => config('corpms.telegram.webhook_secret') !== '' ? 'настроен' : 'не задан',
-            'ai_base_url' => config('corpms.ai.base_url') !== '' ? 'настроен' : 'не задан',
+            'telegram_bot' => config('corpms.telegram.bot_token') !== '' ? __('настроен') : __('не задан'),
+            'telegram_webhook_secret' => config('corpms.telegram.webhook_secret') !== '' ? __('настроен') : __('не задан'),
+            'ai_base_url' => config('corpms.ai.base_url') !== '' ? __('настроен') : __('не задан'),
         ];
 
         return view('settings.index', [
@@ -46,12 +46,12 @@ class SettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         if ($this->canManage() === false) {
-            abort(403, 'Только просмотр');
+            abort(403, __('Только просмотр'));
         }
 
         $input = $request->input('settings');
         if (! is_array($input)) {
-            return redirect()->route('settings.index')->with('status', 'Нечего сохранять');
+            return redirect()->route('settings.index')->with('status', __('Нечего сохранять'));
         }
 
         $old = [];
@@ -120,12 +120,12 @@ class SettingsController extends Controller
             }
 
             if ($new === []) {
-                return redirect()->route('settings.index')->with('status', 'Нечего сохранять');
+                return redirect()->route('settings.index')->with('status', __('Нечего сохранять'));
             }
 
             $this->audit->log($request->user(), 'settings.updated', 'setting', null, $old, $new);
 
-            return redirect()->route('settings.index')->with('status', 'Настройки сохранены');
+            return redirect()->route('settings.index')->with('status', __('Настройки сохранены'));
         });
     }
 

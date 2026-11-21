@@ -69,6 +69,7 @@ class RbacSeeder extends Seeder
             'company_director' => [
                 'chat.view' => 'company', 'chat.send' => 'company', 'chat.manage' => 'company',
                 'chat.groups.create' => 'company', 'chat.channels.create' => 'company',
+                'lms.view' => 'company', 'lms.manage' => 'company', 'lms.teach' => 'company', 'lms.join' => 'company',
                 'companies.view' => 'company', 'departments.view' => 'company',
                 'departments.manage' => 'company', 'positions.view' => 'company', 'positions.manage' => 'company',
                 'org_chart.view' => 'company', 'structure.manage' => 'company',
@@ -108,6 +109,7 @@ class RbacSeeder extends Seeder
             'deputy_director' => [
                 'chat.view' => 'company', 'chat.send' => 'company',
                 'chat.groups.create' => 'company', 'chat.channels.create' => 'company',
+                'lms.view' => 'company', 'lms.manage' => 'company', 'lms.teach' => 'company', 'lms.join' => 'company',
                 'companies.view' => 'company', 'departments.view' => 'company',
                 'org_chart.view' => 'company', 'employees.view' => 'company', 'employees.view_props' => 'company',
                 'schedules.view' => 'company', 'leaves.view' => 'company',
@@ -132,6 +134,7 @@ class RbacSeeder extends Seeder
             'department_director' => [
                 'chat.view' => 'department', 'chat.send' => 'department', 'chat.manage' => 'department',
                 'chat.groups.create' => 'department',
+                'lms.view' => 'department', 'lms.manage' => 'department', 'lms.teach' => 'department', 'lms.join' => 'department',
                 'departments.view' => 'department', 'org_chart.view' => 'company',
                 'employees.view' => 'department', 'employees.view_props' => 'department',
                 'schedules.view' => 'department', 'leaves.view' => 'department', 'leaves.approve' => 'department',
@@ -160,6 +163,7 @@ class RbacSeeder extends Seeder
             'hr_manager' => [
                 'chat.view' => 'company', 'chat.send' => 'company', 'chat.manage' => 'company',
                 'chat.groups.create' => 'company', 'chat.channels.create' => 'company',
+                'lms.view' => 'company', 'lms.manage' => 'company', 'lms.teach' => 'company', 'lms.join' => 'company',
                 'departments.view' => 'company', 'positions.view' => 'company',
                 'org_chart.view' => 'company',
                 'employees.view' => 'company', 'employees.view_props' => 'company',
@@ -192,10 +196,12 @@ class RbacSeeder extends Seeder
                 'workflows.view' => 'company', 'workflows.manage' => 'company',
                 'signatures.view' => 'company', 'signatures.request' => 'company', 'signatures.verify' => 'company',
                 'reports.view' => 'company', 'analytics.view' => 'company',
+                'lms.view' => 'company', 'lms.join' => 'company',
             ],
 
             'employee' => [
                 'chat.view' => 'own', 'chat.send' => 'own',
+                'lms.view' => 'own', 'lms.join' => 'own',
                 'tasks.view' => 'own', 'tasks.comment' => 'own', 'tasks.delegate' => 'own',
                 'attendance.view' => 'own', 'attendance.timesheet.view' => 'own',
                 'attendance.correct' => 'own', 'attendance.timesheet.export' => 'own',

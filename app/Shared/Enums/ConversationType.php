@@ -21,9 +21,9 @@ enum ConversationType: string
     public function label(): string
     {
         return match ($this) {
-            self::Direct => 'Личные',
-            self::Group => 'Группы',
-            self::Channel => 'Каналы',
+            self::Direct => __('Личные'),
+            self::Group => __('Группы'),
+            self::Channel => __('Каналы'),
         };
     }
 }

@@ -200,7 +200,7 @@ class ReportController extends Controller
     protected function csvHr(Collection $employees): void
     {
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['Подразделение', 'Руководитель', 'Численность'], ';');
+        fputcsv($out, [__('Подразделение'), __('Руководитель'), __('Численность')], ';');
         foreach ($this->analytics->hrByDepartment($employees) as $row) {
             fputcsv($out, [$row['name'], $row['director'] ?? '—', $row['headcount']], ';');
         }
@@ -210,7 +210,7 @@ class ReportController extends Controller
     protected function csvAttendance(Collection $employees, CarbonImmutable $from, CarbonImmutable $to): void
     {
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['Таб.№', 'ФИО', 'Дней отработано', 'Опоздания (мин)', 'Ранние уходы (мин)', 'Сверхурочные (мин)', 'Незакрытых смен'], ';');
+        fputcsv($out, [__('Таб.№'), __('ФИО'), __('Дней отработано'), __('Опоздания (мин)'), __('Ранние уходы (мин)'), __('Сверхурочные (мин)'), __('Незакрытых смен')], ';');
 
         // один агрегатный запрос на всех сотрудников (без N+1 по строкам экспорта)
         $ids = $employees->pluck('id')->all();
@@ -241,7 +241,7 @@ class ReportController extends Controller
     protected function csvTasks(Collection $employees, CarbonImmutable $from, CarbonImmutable $to): void
     {
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['Таб.№', 'ФИО', 'Всего', 'Завершено', 'В работе', 'Просрочено'], ';');
+        fputcsv($out, [__('Таб.№'), __('ФИО'), __('Всего'), __('Завершено'), __('В работе'), __('Просрочено')], ';');
 
         // вместо 4 count-запросов на каждого сотрудника — одна группировка
         $ids = $employees->pluck('id')->all();

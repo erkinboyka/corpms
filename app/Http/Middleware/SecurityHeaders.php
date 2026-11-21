@@ -22,7 +22,8 @@ class SecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        // LMS video calls need camera/microphone/screen capture on this origin only.
+        $response->headers->set('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self), geolocation=()');
 
         // Content-Security-Policy (P1-4 аудита): ресурсы — только со своих origin,
         // внешние скрипты/фреймы/объекты запрещены. 'unsafe-inline' для script/style

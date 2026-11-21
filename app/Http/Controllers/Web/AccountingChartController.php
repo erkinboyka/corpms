@@ -56,7 +56,7 @@ class AccountingChartController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['code' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['code' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -66,7 +66,7 @@ class AccountingChartController extends Controller
             ],
             'name' => ['required', 'string', 'max:255'],
             'kind' => ['required', Rule::enum(AccAccountKind::class)],
-        ], [], ['code' => 'код', 'name' => 'название', 'kind' => 'вид счёта']);
+        ], [], ['code' => __('код'), 'name' => __('название'), 'kind' => __('вид счёта')]);
 
         $account = AccAccount::query()->create([
             'company_id' => $me->company_id,
@@ -100,7 +100,7 @@ class AccountingChartController extends Controller
             'status',
             $created > 0
                 ? 'Типовой план счетов добавлен: '.$created.' счетов'
-                : 'Типовой план уже заполнен — недостающих счетов нет',
+                : __('Типовой план уже заполнен — недостающих счетов нет'),
         );
     }
 
@@ -118,6 +118,6 @@ class AccountingChartController extends Controller
             'is_active' => $account->is_active,
         ]);
 
-        return back()->with('status', 'Счёт '.$account->code.' '.($account->is_active ? 'включён' : 'выключен'));
+        return back()->with('status', 'Счёт '.$account->code.' '.($account->is_active ? __('включён') : __('выключен')));
     }
 }

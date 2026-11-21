@@ -7,5 +7,5 @@
         —
     @endforelse
 @else
-    <span class="fs-5 text-secondary">Валюта не указана</span>
+    <span class="fs-5 text-secondary">{{ __('Валюта не указана') }}</span>
 @endif

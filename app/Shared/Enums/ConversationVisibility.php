@@ -20,8 +20,8 @@ enum ConversationVisibility: string
     public function label(): string
     {
         return match ($this) {
-            self::Private => 'Только участники',
-            self::Company => 'Вся компания',
+            self::Private => __('Только участники'),
+            self::Company => __('Вся компания'),
         };
     }
 }

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domains\Ai\Services;
 
 use App\Models\AiConversation;
+use App\Models\AttendanceRecord;
 use App\Models\Document;
+use App\Models\DocumentCategory;
 use App\Models\Employee;
 use App\Models\Task;
 use App\Support\SettingsService;
@@ -99,7 +101,9 @@ class AiPanelService extends AiAssistantService
             $reply = $this->localAnalyst($facts, $question);
         }
 
-        if ($blocks === []) {
+        // Детерминированные команды (Bumi, память, инсайты) не получают
+        // общие подсказки: их ответ уже закончен, даже если блоков нет.
+        if ($blocks === [] && ! $localOnly) {
             $blocks = $this->hintActions($asker);
         }
 
@@ -146,6 +150,11 @@ class AiPanelService extends AiAssistantService
 
         foreach ([
             fn (): ?array => $this->intentMemory($asker, $question),
+            fn (): ?array => $this->intentBumi($asker, $question, $facts),
+            fn (): ?array => $this->intentLateAttendees($asker, $question),
+            fn (): ?array => $this->intentGuide($asker, $q),
+            fn (): ?array => $this->intentTemplateCatalog($asker, $q),
+            fn (): ?array => $this->intentTaskEvidence($asker, $q, $facts),
             fn (): ?array => $this->intentSearch($asker, $question, $q),
             fn (): ?array => $this->intentCreateEdit($asker, $q),
             fn (): ?array => $this->intentDocGenerator($asker, $q, $facts),
@@ -164,6 +173,144 @@ class AiPanelService extends AiAssistantService
         }
 
         return null;
+    }
+
+    /**
+     * Bumi: локальные команды над архивом (подписи, шаблоны, черновики, файлы).
+     * Ответ детерминированный — LLM и общие подсказки не нужны.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    protected function intentBumi(Employee $asker, string $question, array $facts): ?array
+    {
+        // Сводный отчёт — отдельный детерминированный intent с таблицей и
+        // ссылками на раздел отчётов, его не заменяем файловым экспортом.
+        if (preg_match('/(?:сводный|общий|полная|комплексный)\s+(?:отчёт|отчет|сводка)/iu', $question)) {
+            return null;
+        }
+
+        $result = app(BumiActions::class)->prepare(
+            $asker,
+            $question,
+            $facts,
+            fn (string $prompt): ?string => $this->writeText($asker, $prompt),
+        );
+
+        return $result === null ? null : $result + ['local_only' => true];
+    }
+
+    /** Кто опоздал сегодня: имена + ссылка на журнал (данные из БД, не LLМ). */
+    protected function intentLateAttendees(Employee $asker, string $question): ?array
+    {
+        if (! preg_match('/^кто\s+(?:сегодня\s+)?опозда/iu', trim($question))) {
+            return null;
+        }
+
+        $records = AttendanceRecord::query()
+            ->whereDate('date', today())
+            ->where('late_minutes', '>', 0)
+            ->whereHas('employee', fn ($q) => $q->where('company_id', $asker->company_id))
+            ->with('employee')
+            ->orderByDesc('late_minutes')
+            ->get();
+
+        $rows = $records->map(static function (AttendanceRecord $record): array {
+            $employee = $record->employee;
+
+            return [
+                trim(($employee?->last_name ?? '').' '.($employee?->first_name ?? '')),
+                (string) (int) $record->late_minutes,
+            ];
+        })->all();
+
+        $blocks = [['type' => 'table', 'title' => 'Опоздавшие сегодня', 'rows' => $rows]];
+        if ($asker->user !== null && $this->permissions->check($asker->user, 'attendance.view')) {
+            $blocks[] = ['type' => 'actions', 'items' => [
+                $this->action('Открыть посещаемость', route('attendance.index'), 'ti-calendar'),
+            ]];
+        }
+
+        return [
+            'reply' => $rows === []
+                ? 'Сегодня опоздавших нет.'
+                : sprintf('Сегодня опоздали %d сотрудника. Список и минуты — ниже.', count($rows)),
+            'blocks' => $blocks,
+            'local_only' => true,
+        ];
+    }
+
+    /** «Укажи, где находятся документы» — навигация-подсказка с пометкой guide. */
+    protected function intentGuide(Employee $asker, string $q): ?array
+    {
+        if (! preg_match('/(?:укажи|подскажи|где находятся|где найти|где искать)/iu', $q)) {
+            return null;
+        }
+        if (! $this->mentions($q, ['документ', 'задач', 'отпуск', 'посещаем'])) {
+            return null;
+        }
+
+        $items = [];
+        $map = [
+            ['документ', 'documents.view', 'documents.index', 'Документы', 'ti-file'],
+            ['задач', 'tasks.view', 'tasks.index', 'Задачи', 'ti-checkbox'],
+            ['отпуск', 'leaves.view', 'schedules.leaves', 'Отпуска', 'ti-plane'],
+            ['посещаем', 'attendance.view', 'attendance.index', 'Посещаемость', 'ti-calendar'],
+        ];
+        foreach ($map as [$keyword, $permission, $route, $label, $icon]) {
+            if (! $this->mentions($q, [$keyword])) {
+                continue;
+            }
+            if ($asker->user === null || ! $this->permissions->check($asker->user, $permission)) {
+                continue;
+            }
+            $items[] = $this->action($label, route($route), $icon);
+        }
+        if ($items === []) {
+            return null;
+        }
+
+        return [
+            'reply' => 'Нужен раздел системы — откройте его по ссылке ниже.',
+            'blocks' => [['type' => 'actions', 'title' => 'Раздел системы', 'guide' => true, 'items' => $items]],
+            'local_only' => true,
+        ];
+    }
+
+    /** Каталог шаблонов Bumi: отдельная команда, не конфликтует с экспортом. */
+    protected function intentTemplateCatalog(Employee $asker, string $q): ?array
+    {
+        if (! preg_match('/(?:покажи|покажите|выведи|открой|каталог)\s+(?:мне\s+)?(?:каталог\s+)?шаблон/iu', $q)) {
+            return null;
+        }
+
+        return [
+            'reply' => 'Каталог шаблонов: выберите вид материала, номер и укажите данные.',
+            'blocks' => [['type' => 'templates']],
+            'local_only' => true,
+        ];
+    }
+
+    /** Подтверждение источников для фактологических вопросов по задачам. */
+    protected function intentTaskEvidence(Employee $asker, string $q, array $facts): ?array
+    {
+        if (! preg_match('/^какие\s+задачи\s+просрочен/iu', $q)) {
+            return null;
+        }
+
+        $stats = is_array($facts['tasks'] ?? null) ? $facts['tasks'] : [];
+        $rows = [];
+        foreach (['overdue' => 'Просрочено', 'in_progress' => 'В работе', 'completed' => 'Выполнено'] as $status => $label) {
+            $rows[] = [$label, (string) (int) ($stats[$status] ?? 0)];
+        }
+
+        return [
+            'reply' => 'Просроченные задачи по данным системы; источник и цифры — ниже.',
+            'blocks' => [
+                BumiSources::snapshot($asker, ['tasks'], $facts),
+                ['type' => 'table', 'title' => 'Задачи', 'rows' => $rows],
+            ],
+            'local_only' => true,
+        ];
     }
 
     /**
@@ -257,6 +404,12 @@ class AiPanelService extends AiAssistantService
         }
 
         $needle = trim($m[1], " \t.,!?:;\"'«»");
+        // «найди задачу BM-142» → ищем по номеру BM-142, а не по всей фразе.
+        $needle = trim((string) preg_replace(
+            '/^(?:задач[уаыи]?|документ\w*|сотрудник\w*|человек\w*|заявк\w*|дело|№|#)\s*/iu',
+            '',
+            $needle,
+        )) ?: $needle;
         $display = trim($question, " \t.,!?:;\"'«»");
         if (mb_strlen($needle) < 2 || $asker->user === null) {
             return null;
@@ -909,6 +1062,28 @@ class AiPanelService extends AiAssistantService
         return [['type' => 'actions', 'title' => 'Попробуйте', 'items' => $items]];
     }
 
+    /** Текст для черновиков Bumi: только если LLM настроен, иначе null. */
+    protected function writeText(Employee $asker, string $prompt): ?string
+    {
+        if (! $this->llmEnabled()) {
+            return null;
+        }
+
+        $settings = app(SettingsService::class);
+        $baseUrl = rtrim((string) $settings->get('corpms.ai.base_url'), '/');
+        $apiKey = (string) $settings->get('corpms.ai.api_key');
+        $model = (string) ($settings->get('corpms.ai.model') ?? 'gpt-4o-mini');
+
+        $message = $this->postWithTools([
+            ['role' => 'system', 'content' => 'Ты Bumi. Верни только готовый текст без пояснений и разметки.'],
+            ['role' => 'user', 'content' => $prompt],
+        ], $baseUrl, $apiKey, $model, $this->syncTimeout((int) ($settings->get('corpms.ai.timeout') ?? 30)), $asker);
+
+        $content = $message['content'] ?? null;
+
+        return is_string($content) && trim($content) !== '' ? trim($content) : null;
+    }
+
     /* -------------------- LLM с блоками -------------------- */
 
     /**
@@ -957,12 +1132,38 @@ class AiPanelService extends AiAssistantService
         }
 
         $blocks = null;
+        $operation = null;
         if (preg_match('/```json\s*(.+?)\s*```/su', $content, $m)) {
             $decoded = json_decode($m[1], true);
-            if (is_array($decoded) && is_array($decoded['blocks'] ?? null)) {
-                $blocks = $this->sanitizeBlocks($decoded['blocks']);
+            if (is_array($decoded)) {
+                if (is_array($decoded['operation'] ?? null)) {
+                    $operation = $decoded['operation'];
+                }
+                if (is_array($decoded['blocks'] ?? null)) {
+                    $blocks = $this->sanitizeBlocks($decoded['blocks']);
+                }
             }
             $content = trim(preg_replace('/```json\s*.+?\s*```/su', '', $content) ?? $content);
+        }
+        if ($operation === null && is_array($message['operation'] ?? null)) {
+            $operation = $message['operation'];
+        }
+
+        // Свободная формулировка → модель предлагает операцию → тот же локальный
+        // разбор команд Bumi (никаких записей в БД без подтверждения формы).
+        if ($operation !== null && $asker !== null) {
+            $prepared = app(BumiActions::class)->fromOperation(
+                $asker,
+                $operation,
+                $question,
+                $facts,
+                fn (string $prompt): ?string => $this->writeText($asker, $prompt),
+            );
+            if (is_array($prepared) && ($prepared['blocks'] ?? []) !== []) {
+                $blocks = $prepared['blocks'];
+                $answerText = (string) ($prepared['reply'] ?? 'Готово.');
+                return true;
+            }
         }
 
         if (trim($content) === '' && $blocks === null) {

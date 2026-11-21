@@ -1,18 +1,18 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'stream')
 
-@section('title', 'Корректировки посещаемости')
+@section('title', __('Корректировки посещаемости'))
 
 @section('content')
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Посещаемость</div>
-            <h1 class="page-title mt-1">Корректировки</h1>
-            <div class="text-secondary mt-1">Заявки на исправление отметок: история изменений и согласование</div>
+            <div class="crm-eyebrow">{{ __('Посещаемость') }}</div>
+            <h1 class="page-title mt-1">{{ __('Корректировки') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Заявки на исправление отметок: история изменений и согласование') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCorrection"><i class="ti ti-plus me-1"></i>Подать заявку</button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCorrection"><i class="ti ti-plus me-1"></i>{{ __('Подать заявку') }}</button>
         </div>
     </div>
 </div>
@@ -25,44 +25,44 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-hourglass"></i>Ожидают решения</div>
+        <div class="crm-metric__label"><i class="ti ti-hourglass"></i>{{ __('Ожидают решения') }}</div>
         <div class="crm-metric__value">{{ $pendingCount }}</div>
-        <div class="crm-metric__hint">требуют согласования</div>
+        <div class="crm-metric__hint">{{ __('требуют согласования') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-circle-check"></i>Согласовано</div>
+        <div class="crm-metric__label"><i class="ti ti-circle-check"></i>{{ __('Согласовано') }}</div>
         <div class="crm-metric__value">{{ $approvedCount }}</div>
-        <div class="crm-metric__hint">исправления применены</div>
+        <div class="crm-metric__hint">{{ __('исправления применены') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-circle-x"></i>Отклонено</div>
+        <div class="crm-metric__label"><i class="ti ti-circle-x"></i>{{ __('Отклонено') }}</div>
         <div class="crm-metric__value">{{ $rejectedCount }}</div>
-        <div class="crm-metric__hint">остались без изменений</div>
+        <div class="crm-metric__hint">{{ __('остались без изменений') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-list"></i>Всего заявок</div>
+        <div class="crm-metric__label"><i class="ti ti-list"></i>{{ __('Всего заявок') }}</div>
         <div class="crm-metric__value">{{ $corrections->count() }}</div>
-        <div class="crm-metric__hint">за всё время</div>
+        <div class="crm-metric__hint">{{ __('за всё время') }}</div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h2 class="card-title bm-section-title">Заявки</h2>
-        <span class="crm-chip ms-auto">{{ $corrections->count() }} всего</span>
+        <h2 class="card-title bm-section-title">{{ __('Заявки') }}</h2>
+        <span class="crm-chip ms-auto">{{ $corrections->count() }} {{ __('всего') }}</span>
     </div>
     <div class="table-responsive">
         <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th scope="col">Заявка</th><th scope="col">Сотрудник</th><th scope="col">Дата</th><th scope="col">Поле</th><th scope="col">Было → станет</th><th scope="col">Причина</th><th scope="col">Статус</th>
-                    @if ($canDecide) <th scope="col" class="text-end">Решение</th> @endif
+                    <th scope="col">{{ __('Заявка') }}</th><th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Дата') }}</th><th scope="col">{{ __('Поле') }}</th><th scope="col">{{ __('Было → станет') }}</th><th scope="col">{{ __('Причина') }}</th><th scope="col">{{ __('Статус') }}</th>
+                    @if ($canDecide) <th scope="col" class="text-end">{{ __('Решение') }}</th> @endif
                 </tr>
             </thead>
             <tbody>
                 @forelse ($corrections as $c)
                     @php
-                        $fieldLabel = $c->field === 'clock_in_at' ? 'Приход' : 'Уход';
+                        $fieldLabel = $c->field === 'clock_in_at' ? __('Приход') : __('Уход');
                         $statusChip = match ($c->status->value) {
                             'approved' => 'crm-chip--green',
                             'rejected' => 'crm-chip--red',
@@ -96,12 +96,12 @@
                                     <div class="d-inline-flex gap-1 crm-row-actions">
                                         <form method="post" action="{{ route('attendance.corrections.approve', $c) }}" class="d-inline" data-submit-guard>
                                             @csrf
-                                            <button class="btn btn-sm btn-primary" title="Согласовать"><i class="ti ti-check"></i> Согласовать</button>
+                                            <button class="btn btn-sm btn-primary" title="{{ __("Согласовать") }}"><i class="ti ti-check"></i> {{ __('Согласовать') }}</button>
                                         </form>
                                         <form method="post" action="{{ route('attendance.corrections.reject', $c) }}" class="d-inline" data-submit-guard>
                                             @csrf
-                                            <input type="hidden" name="decision_comment" value="Отклонено по решению руководителя">
-                                            <button class="btn btn-sm btn-ghost-danger" title="Отклонить"><i class="ti ti-x"></i></button>
+                                            <input type="hidden" name="decision_comment" value="{{ __("Отклонено по решению руководителя") }}">
+                                            <button class="btn btn-sm btn-ghost-danger" title="{{ __("Отклонить") }}"><i class="ti ti-x"></i></button>
                                         </form>
                                     </div>
                                 @else
@@ -113,7 +113,7 @@
                 @empty
                     <tr>
                         <td colspan="{{ $canDecide ? 8 : 7 }}">
-                            @include('partials.empty-state', ['icon' => 'edit', 'title' => 'Заявок нет', 'text' => 'Если вы забыли отметить приход или уход — подайте заявку на корректировку.', 'actionUrl' => '#newCorrection', 'actionLabel' => 'Подать заявку'])
+                            @include('partials.empty-state', ['icon' => 'edit', 'title' => __('Заявок нет'), 'text' => __('Если вы забыли отметить приход или уход — подайте заявку на корректировку.'), 'actionUrl' => '#newCorrection', 'actionLabel' => __('Подать заявку')])
                         </td>
                     </tr>
                 @endforelse
@@ -127,51 +127,51 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('attendance.corrections.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Заявка на корректировку</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Заявка на корректировку') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Что исправить</h3>
-                    <div class="crm-form__desc">Дата и поле отметки, которую нужно поправить.</div>
+                    <h3>{{ __('Что исправить') }}</h3>
+                    <div class="crm-form__desc">{{ __('Дата и поле отметки, которую нужно поправить') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-date">Дата<span class="req">*</span></label>
+                            <label class="form-label" for="nc-date">{{ __('Дата') }}<span class="req">*</span></label>
                             <input type="date" id="nc-date" name="date" class="form-control" required value="{{ now()->toDateString() }}">
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-field">Поле<span class="req">*</span></label>
+                            <label class="form-label" for="nc-field">{{ __('Поле') }}<span class="req">*</span></label>
                             <select id="nc-field" name="field" class="form-select" required>
-                                <option value="clock_in_at">Приход</option>
-                                <option value="clock_out_at">Уход</option>
+                                <option value="clock_in_at">{{ __('Приход') }}</option>
+                                <option value="clock_out_at">{{ __('Уход') }}</option>
                             </select>
                         </div>
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Значения</h3>
-                    <div class="crm-form__desc">Было — по данным устройства, станет — корректные дата и время.</div>
+                    <h3>{{ __('Значения') }}</h3>
+                    <div class="crm-form__desc">{{ __('Было — по данным устройства, станет — корректные дата и время') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-old">Было</label>
+                            <label class="form-label" for="nc-old">{{ __('Было') }}</label>
                             <input type="datetime-local" id="nc-old" name="old_value" class="form-control">
-                            <div class="form-text">Дата берётся из поля «Дата», укажите время отметки.</div>
+                            <div class="form-text">{{ __('Дата берётся из поля «Дата», укажите время отметки') }}</div>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="nc-new">Стало (дата и время)<span class="req">*</span></label>
+                            <label class="form-label" for="nc-new">{{ __('Стало (дата и время)') }}<span class="req">*</span></label>
                             <input type="datetime-local" id="nc-new" name="new_value" class="form-control" required>
-                            <div class="form-text">Дата берётся из поля «Дата», укажите время отметки.</div>
+                            <div class="form-text">{{ __('Дата берётся из поля «Дата», укажите время отметки') }}</div>
                         </div>
                     </div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nc-reason">Причина<span class="req">*</span></label>
+                        <label class="form-label" for="nc-reason">{{ __('Причина') }}<span class="req">*</span></label>
                         <textarea data-crm-rich id="nc-reason" name="reason" class="form-control" rows="4" required maxlength="500"
-                                  data-crm-rich placeholder="Забыл отметить уход и т. п."></textarea>
-                        <div class="form-text">Причина видна согласующему и попадает в журнал аудита.</div>
+                                  data-crm-rich placeholder="{{ __("Забыл отметить уход и т. п.") }}"></textarea>
+                        <div class="form-text">{{ __('Причина видна согласующему и попадает в журнал аудита') }}</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary"><i class="ti ti-send me-1"></i>Отправить</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-send me-1"></i>{{ __('Отправить') }}</button>
             </div>
         </form>
     </div>

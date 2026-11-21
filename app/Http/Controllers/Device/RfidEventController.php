@@ -20,7 +20,7 @@ class RfidEventController extends Controller
 {
     public function __construct(protected RfidService $rfid) {}
 
-    /** POST /api/v1/biometric/device/rfid — "карта приложена". */
+    /** POST /api/v1/biometric/device/rfid — __("карта приложена"). */
     public function store(Request $request): JsonResponse
     {
         $device = $request->attributes->get('biometric_device');
@@ -44,7 +44,7 @@ class RfidEventController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return response()->json(['message' => 'Ошибка обработки RFID-события'], 500);
+            return response()->json(['message' => __('Ошибка обработки RFID-события')], 500);
         }
 
         $status = $result['status'];

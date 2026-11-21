@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'ledger')
 
-@section('title', 'Ведомость ' . $period->label())
+@section('title', __('Ведомость') . ' ' . $period->label())
 
 @php
     $statusChip = match ($period->status->value) {
@@ -16,32 +16,32 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Зарплата · ведомость</div>
+            <div class="crm-eyebrow">{{ __('Зарплата · ведомость') }}</div>
             <h1 class="page-title mt-1">{{ $period->label() }} <span class="crm-chip {{ $statusChip }} ms-2">{{ $crm_label('payroll_status', $period->status->value) }}</span></h1>
-            <div class="text-secondary mt-1">Период #{{ $period->id }} · {{ $period->company?->name ?? '' }}</div>
+            <div class="text-secondary mt-1">{{ __('Период #') }}{{ $period->id }} · {{ $period->company?->name ?? '' }}</div>
         </div>
         <div class="col-auto d-print-none">
             <div class="d-flex gap-1 flex-wrap justify-content-end">
-                <a class="btn btn-ghost-secondary" href="{{ route('payroll.index') }}"><i class="ti ti-arrow-left me-1"></i>К списку</a>
+                <a class="btn btn-ghost-secondary" href="{{ route('payroll.index') }}"><i class="ti ti-arrow-left me-1"></i>{{ __('К списку') }}</a>
                 <a class="btn btn-ghost-secondary" href="{{ route('payroll.export', $period) }}"><i class="ti ti-download me-1"></i>CSV</a>
                 @if ($canManage && in_array($period->status->value, ['draft', 'calculated'], true))
                     <form method="post" action="{{ route('payroll.calculate', $period) }}" class="d-inline" data-submit-guard>
                         @csrf
-                        <button class="btn btn-primary"><i class="ti ti-calculator me-1"></i>{{ $period->status->value === 'draft' ? 'Рассчитать' : 'Пересчитать' }}</button>
+                        <button class="btn btn-primary"><i class="ti ti-calculator me-1"></i>{{ $period->status->value === 'draft' ? __('Рассчитать') : __('Пересчитать') }}</button>
                     </form>
                 @endif
                 @if ($canApprove && $period->status->value === 'calculated')
                     <form method="post" action="{{ route('payroll.approve', $period) }}" class="d-inline" data-submit-guard
-                          onsubmit="return confirm('Согласовать ведомость {{ $period->label() }}? После согласования будет доступна выплата.')">
+                          onsubmit="return confirm('{{ __('Согласовать ведомость                       ? После согласования будет доступна выплата') }}.')">
                         @csrf
-                        <button class="btn btn-primary"><i class="ti ti-check me-1"></i>Согласовать</button>
+                        <button class="btn btn-primary"><i class="ti ti-check me-1"></i>{{ __('Согласовать') }}</button>
                     </form>
                 @endif
                 @if ($canApprove && $period->status->value === 'approved')
                     <form method="post" action="{{ route('payroll.pay', $period) }}" class="d-inline" data-submit-guard
-                          onsubmit="return confirm('Выплатить ведомость {{ $period->label() }} на сумму {{ number_format($totals['net'], 2, ',', ' ') }}? Действие необратимо.')">
+                          onsubmit="return confirm('{{ __('Выплатить ведомость                        на сумму                                                 ? Действие необратимо') }}.')">
                         @csrf
-                        <button class="btn btn-primary"><i class="ti ti-cash me-1"></i>Выплатить</button>
+                        <button class="btn btn-primary"><i class="ti ti-cash me-1"></i>{{ __('Выплатить') }}</button>
                     </form>
                 @endif
             </div>
@@ -51,24 +51,24 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-plus-circle"></i>Начислено</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-plus-circle"></i>{{ __('Начислено') }}</div>
         <div class="crm-metric__value">{{ number_format($totals['gross'], 2, ',', ' ') }}</div>
-        <div class="crm-metric__hint">все компоненты начислений</div>
+        <div class="crm-metric__hint">{{ __('все компоненты начислений') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-minus-circle"></i>Удержано</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-minus-circle"></i>{{ __('Удержано') }}</div>
         <div class="crm-metric__value">{{ number_format($totals['deductions'], 2, ',', ' ') }}</div>
-        <div class="crm-metric__hint">авансы, налоги, прочее</div>
+        <div class="crm-metric__hint">{{ __('авансы, налоги, прочее') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>К выплате</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>{{ __('К выплате') }}</div>
         <div class="crm-metric__value">{{ number_format($totals['net'], 2, ',', ' ') }}</div>
-        <div class="crm-metric__hint">начислено минус удержания</div>
+        <div class="crm-metric__hint">{{ __('начислено минус удержания') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-users"></i>Сотрудников</div>
+        <div class="crm-metric__label"><i class="ti ti-users"></i>{{ __('Сотрудников') }}</div>
         <div class="crm-metric__value">{{ $totals['employees'] }}</div>
-        <div class="crm-metric__hint">в расчёте · строк: {{ $lines->count() }}</div>
+        <div class="crm-metric__hint">{{ __('в расчёте · строк') }} {{ $lines->count() }}</div>
     </div>
 </div>
 
@@ -76,12 +76,12 @@
     <div class="card">
         <div class="crm-empty">
             <span class="crm-empty__icon"><i class="ti ti-calculator"></i></span>
-            <div class="crm-empty__title">Ведомость не рассчитана</div>
-            <div class="crm-empty__text">Расчёт соберёт строки из табеля (отработанные часы и переработки) и окладов сотрудников по активным компонентам компании.</div>
+            <div class="crm-empty__title">{{ __('Ведомость не рассчитана') }}</div>
+            <div class="crm-empty__text">{{ __('Расчёт соберёт строки из табеля (отработанные часы и переработки) и окладов сотрудников по активным компонентам компании') }}</div>
             @if ($canManage)
                 <form method="post" action="{{ route('payroll.calculate', $period) }}" data-submit-guard>
                     @csrf
-                    <button class="btn btn-primary btn-sm"><i class="ti ti-calculator me-1"></i>Рассчитать</button>
+                    <button class="btn btn-primary btn-sm"><i class="ti ti-calculator me-1"></i>{{ __('Рассчитать') }}</button>
                 </form>
             @endif
         </div>
@@ -89,15 +89,15 @@
 @else
     <div class="card mb-3">
         <div class="card-header">
-            <h2 class="card-title bm-section-title">Сводка по сотрудникам</h2>
-            <span class="crm-chip ms-auto">{{ $summary->count() }} чел.</span>
+            <h2 class="card-title bm-section-title">{{ __('Сводка по сотрудникам') }}</h2>
+            <span class="crm-chip ms-auto">{{ $summary->count() }} {{ __('чел') }}</span>
         </div>
         <div class="table-responsive">
             <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th scope="col">Сотрудник</th><th scope="col" class="text-end">Начислено</th><th scope="col" class="text-end">Удержано</th>
-                        <th scope="col" class="text-end">К выплате</th><th scope="col" class="text-end">Строк</th>
+                        <th scope="col">{{ __('Сотрудник') }}</th><th scope="col" class="text-end">{{ __('Начислено') }}</th><th scope="col" class="text-end">{{ __('Удержано') }}</th>
+                        <th scope="col" class="text-end">{{ __('К выплате') }}</th><th scope="col" class="text-end">{{ __('Строк') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -114,7 +114,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-secondary">Строки расчёта отсутствуют в пределах вашего области доступа.</td>
+                            <td colspan="5" class="text-secondary">{{ __('Строки расчёта отсутствуют в пределах вашего области доступа') }}</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -124,15 +124,15 @@
 
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title bm-section-title">Детализация начислений</h2>
-            <span class="crm-chip ms-auto">{{ $lines->count() }} строк</span>
+            <h2 class="card-title bm-section-title">{{ __('Детализация начислений') }}</h2>
+            <span class="crm-chip ms-auto">{{ $lines->count() }} {{ __('строк') }}</span>
         </div>
         <div class="table-responsive">
             <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
                 <thead>
                     <tr>
-                        <th scope="col">Сотрудник</th><th scope="col">Компонент</th><th scope="col">Тип</th><th scope="col">Расчёт</th>
-                        <th scope="col" class="text-end">Кол-во</th><th scope="col" class="text-end">Ставка</th><th scope="col" class="text-end">Сумма</th><th scope="col">Источник</th>
+                        <th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Компонент') }}</th><th scope="col">{{ __('Тип') }}</th><th scope="col">{{ __('Расчёт') }}</th>
+                        <th scope="col" class="text-end">{{ __('Кол-во') }}</th><th scope="col" class="text-end">{{ __('Ставка') }}</th><th scope="col" class="text-end">{{ __('Сумма') }}</th><th scope="col">{{ __('Источник') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,8 +159,8 @@
                             <td colspan="8">
                                 @include('partials.empty-state', [
                                     'icon' => 'calculator',
-                                    'title' => 'Строк пока нет',
-                                    'text' => 'Нажмите «Рассчитать» — строки соберутся из табеля и окладов.',
+                                    'title' => __('Строк пока нет'),
+                                    'text' => __('Нажмите «Рассчитать» — строки соберутся из табеля и окладов.'),
                                 ])
                             </td>
                         </tr>
@@ -172,27 +172,27 @@
 
     @if ($period->calculated_at || $period->approved_at || $period->paid_at)
         <div class="card mt-3">
-            <div class="card-header"><h2 class="card-title bm-section-title">История ведомости</h2></div>
+            <div class="card-header"><h2 class="card-title bm-section-title">{{ __('История ведомости') }}</h2></div>
             <div class="card-body">
                 <div class="crm-timeline">
                     @if ($period->calculated_at)
                         <div class="crm-timeline__item">
                             <div class="crm-timeline__time">{{ $period->calculated_at->format('d.m.Y H:i') }}</div>
-                            <div class="crm-timeline__title"><strong>Рассчитано</strong></div>
-                            <div class="crm-timeline__text">{{ $period->calculatedBy?->name ?? '—' }} · начислено {{ number_format($totals['gross'], 2, ',', ' ') }}</div>
+                            <div class="crm-timeline__title"><strong>{{ __('Рассчитано') }}</strong></div>
+                            <div class="crm-timeline__text">{{ $period->calculatedBy?->name ?? '—' }} {{ __('начислено') }} {{ number_format($totals['gross'], 2, ',', ' ') }}</div>
                         </div>
                     @endif
                     @if ($period->approved_at)
                         <div class="crm-timeline__item">
                             <div class="crm-timeline__time">{{ $period->approved_at->format('d.m.Y H:i') }}</div>
-                            <div class="crm-timeline__title"><strong>Согласовано</strong></div>
+                            <div class="crm-timeline__title"><strong>{{ __('Согласовано') }}</strong></div>
                             <div class="crm-timeline__text">{{ $period->approvedBy?->name ?? '—' }}</div>
                         </div>
                     @endif
                     @if ($period->paid_at)
                         <div class="crm-timeline__item">
                             <div class="crm-timeline__time">{{ $period->paid_at->format('d.m.Y H:i') }}</div>
-                            <div class="crm-timeline__title"><strong>Выплачено</strong></div>
+                            <div class="crm-timeline__title"><strong>{{ __('Выплачено') }}</strong></div>
                             <div class="crm-timeline__text">{{ $period->paidBy?->name ?? '—' }} · {{ number_format($totals['net'], 2, ',', ' ') }}</div>
                         </div>
                     @endif

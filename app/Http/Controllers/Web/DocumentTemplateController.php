@@ -71,7 +71,7 @@ class DocumentTemplateController extends Controller
             'code' => $validated['code'],
         ]);
 
-        return redirect()->route('documents.templates')->with('status', 'Категория «'.$category->name.'» создана');
+        return redirect()->route('documents.templates')->with('status', __('Категория «').$category->name.__('» создана'));
     }
 
     public function storeTemplate(Request $request): RedirectResponse
@@ -113,7 +113,7 @@ class DocumentTemplateController extends Controller
             'variables' => $variables,
         ]);
 
-        return redirect()->route('documents.templates')->with('status', 'Шаблон «'.$template->name.'» создан');
+        return redirect()->route('documents.templates')->with('status', __('Шаблон «').$template->name.__('» создан'));
     }
 
     /** Генерация документа из шаблона с подстановкой переменных. */
@@ -123,7 +123,7 @@ class DocumentTemplateController extends Controller
         \assert($me !== null);
 
         if ($me->company_id !== null && (int) $template->company_id !== (int) $me->company_id) {
-            abort(403, 'Шаблон другой компании');
+            abort(403, __('Шаблон другой компании'));
         }
 
         $validated = $request->validate([

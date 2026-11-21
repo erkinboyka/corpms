@@ -38,7 +38,7 @@ class RfidService
     {
         $exists = RfidCard::query()->where('card_uid', $cardUid)->exists();
         if ($exists) {
-            throw new LogicException('Карта с таким UID уже выдана');
+            throw new LogicException(__('Карта с таким UID уже выдана'));
         }
 
         return RfidCard::create([

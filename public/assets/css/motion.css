@@ -240,6 +240,19 @@
     animation: bm-content-in var(--crm-motion-content) var(--crm-ease-out) both;
 }
 
+/* Строки заказа на /purchases: плавное добавление и удаление */
+[data-po-item] {
+    transition:
+        opacity var(--crm-motion-surface) var(--crm-ease-standard),
+        transform var(--crm-motion-surface) var(--crm-ease-standard);
+}
+[data-po-item].bm-enter { animation: bm-content-in var(--crm-motion-surface) var(--crm-ease-out) both; }
+[data-po-item].is-leaving {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--crm-shift-1)));
+    pointer-events: none;
+}
+
 /* ----------------------------------------------------------------------------
    6. Skeleton — без скачков layout
    Скелет обязан занимать ровно столько же места, сколько займёт контент.
@@ -369,6 +382,17 @@
     }
 }
 
+/* Первый кадр документа тоже появляется плавно — даже если браузер не
+   поддерживает cross-document View Transitions. Только opacity: transform
+   на body ломал бы position: sticky внутри лендинга. */
+@keyframes bm-page-enter {
+    from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    body { animation: bm-page-enter var(--crm-motion-page) var(--crm-ease-out) both; }
+}
+
 /* Если браузер не поддерживает View Transitions — ничего не ломается:
    правила выше просто не применяются. */
 
@@ -391,8 +415,26 @@
     }
 }
 
+@keyframes bm-scale-out {
+    to {
+        opacity: 0;
+        transform: scale(.96);
+    }
+}
+@keyframes bm-msg-out {
+    to {
+        opacity: 0;
+        transform: translateY(calc(-1 * var(--crm-shift-1))) scale(var(--crm-scale-out, .96));
+    }
+}
+.bm-chat__msg.is-leaving { animation: bm-msg-out var(--crm-motion-control) var(--crm-ease-in) both; pointer-events: none; }
+.bm-chat__emoji-menu.is-closing { animation: bm-scale-out var(--crm-motion-control) var(--crm-ease-in) both; pointer-events: none; }
+
 @media (prefers-reduced-motion: reduce) {
     .bm-chat__msg,
+    .bm-chat__msg.is-leaving,
+    .bm-chat__emoji-menu.is-closing,
+    .bm-chat__reaction.is-new,
     .bm-chat__emoji-menu,
     .bm-chat__suggest {
         animation: none;

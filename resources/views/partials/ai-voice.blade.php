@@ -1,4 +1,4 @@
-<button type="button" class="ai-panel__icon ai-panel__mic" data-ai-voice aria-label="Диктовать сообщение" aria-pressed="false" title="Диктовать сообщение">
+<button type="button" class="ai-panel__icon ai-panel__mic" data-ai-voice aria-label="{{ __("Диктовать сообщение") }}" aria-pressed="false" title="{{ __("Диктовать сообщение") }}">
     @if ($showWave ?? false)
         @include('partials.ai-wave')
     @else

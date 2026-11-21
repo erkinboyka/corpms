@@ -141,9 +141,10 @@
         if (isError) { window.console && console.warn(text); }
     }
 
-    function scrollToBottom() {
+    function scrollToBottom(behavior) {
         if (!messagesEl) { return; }
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+        if (behavior) { messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: behavior }); }
+        else { messagesEl.scrollTop = messagesEl.scrollHeight; }
     }
 
     function isNearBottom() {
@@ -151,14 +152,18 @@
         return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 120;
     }
 
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var latestButton = document.getElementById('chat-latest');
     if (latestButton && messagesEl) {
+        // Держим кнопку в потоке: visibility вместо hidden убирает дёрганье шапки.
+        latestButton.hidden = false;
+        latestButton.classList.add('is-hidden');
         messagesEl.addEventListener('scroll', function () {
-            latestButton.hidden = isNearBottom();
+            latestButton.classList.toggle('is-hidden', isNearBottom());
         }, { passive: true });
         latestButton.addEventListener('click', function () {
             messagesEl.focus({ preventScroll: true });
-            scrollToBottom();
+            scrollToBottom(reduceMotion ? 'auto' : 'smooth');
         });
     }
 
@@ -181,9 +186,12 @@
             var mine = grouped[emoji].some(function (r) {
                 return myEmployeeId !== null && Number(r.employee_id) === myEmployeeId;
             });
+            var title = mine
+                ? (messagesEl && messagesEl.getAttribute('data-react-remove') || 'Снять реакцию')
+                : (messagesEl && messagesEl.getAttribute('data-react-add') || 'Поставить реакцию');
             html += '<button type="button" class="bm-chat__reaction' + (mine ? ' is-mine' : '') + '"' +
                 ' data-emoji="' + escapeHtml(emoji) + '" data-toggle-reaction' +
-                ' title="' + (mine ? 'Снять реакцию' : 'Поставить реакцию') + '">' +
+                ' title="' + escapeHtml(title) + '">' +
                 '<span>' + escapeHtml(emoji) + '</span>' +
                 '<span class="bm-chat__reaction-count">' + grouped[emoji].length + '</span>' +
                 '</button>';
@@ -270,6 +278,12 @@
         return article;
     }
 
+    function enter(node) {
+        if (!node || !node.classList || reduceMotion) { return; }
+        node.classList.add('bm-enter');
+        node.addEventListener('animationend', function () { node.classList.remove('bm-enter'); }, { once: true });
+    }
+
     /** Вставка сообщения с дедупликацией по id и по client_id. */
     function appendMessage(message, options) {
         if (!messagesEl || !message) { return null; }
@@ -285,6 +299,7 @@
         }
 
         var node = buildMessage(message);
+        enter(node);
         var placeholder = messagesEl.querySelector('.bm-chat__placeholder--inline');
         if (placeholder) { placeholder.remove(); }
 
@@ -304,19 +319,47 @@
 
     function removeMessage(id) {
         var node = messagesEl && messagesEl.querySelector('[data-message-id="' + id + '"]');
-        if (node && node.parentNode) { node.parentNode.removeChild(node); }
         delete renderedIds[id];
+        if (!node || !node.parentNode) { return; }
+        if (reduceMotion || node.classList.contains('is-leaving')) {
+            node.parentNode.removeChild(node);
+            return;
+        }
+        node.classList.add('is-leaving');
+        var done = false;
+        var finish = function () {
+            if (done) { return; }
+            done = true;
+            if (node.parentNode) { node.parentNode.removeChild(node); }
+        };
+        node.addEventListener('animationend', finish, { once: true });
+        setTimeout(finish, 320);
     }
 
-    function updateMessage(message) {
-        if (!messagesEl || !message) { return; }
+    /** Подменяем только содержимое пузыря: редактирование и polling не дёргают скролл. */
+    function patchMessage(message) {
         var old = messagesEl.querySelector('[data-message-id="' + message.id + '"]');
         if (!old) { appendMessage(message); return; }
 
-        var fresh = buildMessage(message);
-        old.parentNode.replaceChild(fresh, old);
+        var body = old.querySelector('.bm-chat__msg-body');
+        if (body) { body.innerHTML = formatBody(message.body || ''); }
+        if (message.edited_at) {
+            old.setAttribute('data-edited', '1');
+            if (!old.querySelector('.bm-chat__msg-flag')) {
+                var meta = old.querySelector('.bm-chat__msg-meta');
+                if (meta) {
+                    var flag = document.createElement('span');
+                    flag.className = 'bm-chat__msg-flag';
+                    flag.textContent = 'изменено';
+                    meta.appendChild(flag);
+                }
+            }
+        }
+        if (message.reactions) { renderReactions(old, message.reactions); }
         renderedIds[message.id] = true;
     }
+
+    function updateMessage(message) { patchMessage(message); }
 
     /* ================================================================
        Непрочитанные
@@ -524,6 +567,7 @@
         var placeholder = messagesEl.querySelector('.bm-chat__placeholder--inline');
         if (placeholder) { placeholder.remove(); }
 
+        enter(node);
         messagesEl.appendChild(node);
         pendingClientIds[clientId] = node;
         scrollToBottom();
@@ -728,13 +772,27 @@
 
     var QUICK_EMOJI = ['👍', '❤️', '😄', '🎉', '🙏', '👀'];
 
-    function closeEmojiMenu() {
-        if (emojiMenu && emojiMenu.parentNode) { emojiMenu.parentNode.removeChild(emojiMenu); }
+    function closeEmojiMenu(immediate) {
+        if (!emojiMenu) { return; }
+        var menu = emojiMenu;
         emojiMenu = null;
+        if (immediate || reduceMotion) {
+            if (menu.parentNode) { menu.parentNode.removeChild(menu); }
+            return;
+        }
+        menu.classList.add('is-closing');
+        var done = false;
+        var finish = function () {
+            if (done) { return; }
+            done = true;
+            if (menu.parentNode) { menu.parentNode.removeChild(menu); }
+        };
+        menu.addEventListener('animationend', finish, { once: true });
+        setTimeout(finish, 220);
     }
 
     function openEmojiMenu(anchor, messageId) {
-        closeEmojiMenu();
+        closeEmojiMenu(true);
 
         var message = null;
         var node = findMessageData(messageId);
@@ -775,23 +833,78 @@
         }
     });
 
+    function cssEscape(value) {
+        return String(value).replace(/["\\]/g, '\\$&');
+    }
+
+    /** Мгновенный отклик на клик — серверный ответ только уточняет счётчики. */
+    function applyOptimisticReaction(node, emoji, on) {
+        var main = node.querySelector('.bm-chat__msg-main');
+        if (!main) { return; }
+        var holder = node.querySelector('.bm-chat__msg-reactions');
+        if (!holder) {
+            holder = document.createElement('div');
+            holder.className = 'bm-chat__msg-reactions';
+            main.appendChild(holder);
+        }
+
+        var chip = holder.querySelector('[data-emoji="' + cssEscape(emoji) + '"]');
+        if (chip) {
+            var counter = chip.querySelector('.bm-chat__reaction-count');
+            var count = parseInt(counter && counter.textContent || '0', 10) || 0;
+            var mine = chip.classList.contains('is-mine');
+            if (on === mine) { return; }
+            count = Math.max(0, count + (on ? 1 : -1));
+            if (!count) { chip.remove(); }
+            else {
+                chip.classList.toggle('is-mine', on);
+                chip.classList.add('is-new');
+                chip.setAttribute('title', on
+                    ? (messagesEl && messagesEl.getAttribute('data-react-remove') || 'Снять реакцию')
+                    : (messagesEl && messagesEl.getAttribute('data-react-add') || 'Поставить реакцию'));
+                if (counter) { counter.textContent = count; }
+            }
+        } else if (on) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'bm-chat__reaction is-mine is-new';
+            btn.setAttribute('data-emoji', emoji);
+            btn.setAttribute('data-toggle-reaction', '');
+            btn.setAttribute('title', messagesEl && messagesEl.getAttribute('data-react-remove') || 'Снять реакцию');
+            btn.innerHTML = '<span>' + escapeHtml(emoji) + '</span><span class="bm-chat__reaction-count">1</span>';
+            holder.appendChild(btn);
+        }
+        if (!holder.children.length) { holder.remove(); }
+    }
+
     function toggleReaction(messageId, emoji, forceOn) {
         var node = findMessageData(messageId);
         if (!node) { return; }
 
         var existing = node.node.querySelector('[data-emoji="' + cssEscape(emoji) + '"]');
-        var on = forceOn ? !(existing && existing.classList.contains('is-mine')) : !(existing && existing.classList.contains('is-mine'));
+        var on = !(existing && existing.classList.contains('is-mine'));
+        var holder = node.node.querySelector('.bm-chat__msg-reactions');
+        var snapshot = holder ? holder.outerHTML : null;
+
+        applyOptimisticReaction(node.node, emoji, on);
 
         method(routeBase + '/messages/' + messageId + '/reactions', 'POST', { emoji: emoji, on: on })
             .then(function (body) {
-                var fresh = body.reactions || [];
-                renderReactions(node.node, fresh);
+                renderReactions(node.node, body.reactions || []);
             })
-            .catch(function (err) { notify(err.message || 'Реакция не сработала', true); });
-    }
-
-    function cssEscape(value) {
-        return String(value).replace(/["\\]/g, '\\$&');
+            .catch(function (err) {
+                var current = node.node.querySelector('.bm-chat__msg-reactions');
+                if (current && current.parentNode) { current.parentNode.removeChild(current); }
+                if (snapshot) {
+                    var temp = document.createElement('div');
+                    temp.innerHTML = snapshot;
+                    if (temp.firstChild) {
+                        var main = node.node.querySelector('.bm-chat__msg-main');
+                        if (main) { main.appendChild(temp.firstChild); }
+                    }
+                }
+                notify(err.message || 'Реакция не сработала', true);
+            });
     }
 
     function renderReactions(node, reactions) {
@@ -802,7 +915,11 @@
         var temp = document.createElement('div');
         temp.innerHTML = reactionsHtml({ reactions: reactions });
         var block = temp.firstChild;
-        if (block) { node.querySelector('.bm-chat__msg-main').appendChild(block); }
+        if (block) {
+            Array.prototype.forEach.call(block.children, function (chip) { chip.classList.add('is-new'); });
+            var main = node.querySelector('.bm-chat__msg-main');
+            if (main) { main.appendChild(block); }
+        }
     }
 
     /* ================================================================
@@ -1073,6 +1190,7 @@
 
         /* Позиция: к последнему сообщению, без анимации при загрузке. */
         scrollToBottom();
+        if (latestButton) { latestButton.classList.toggle('is-hidden', isNearBottom()); }
         markRead();
     }
 

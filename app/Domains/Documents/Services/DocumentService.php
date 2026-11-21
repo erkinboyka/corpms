@@ -89,7 +89,7 @@ class DocumentService
             'status' => 'draft',
         ]);
 
-        $this->addVersion($document, $author, null, bodyContent: $rendered, changeNote: 'Сгенерировано из шаблона «'.$template->name.'»');
+        $this->addVersion($document, $author, null, bodyContent: $rendered, changeNote: __('Сгенерировано из шаблона «').$template->name.'»');
 
         $this->audit->log($author->user, 'document.created_from_template', 'document', $document->id, null, [
             'template_id' => $template->id,
@@ -201,7 +201,7 @@ class DocumentService
             $workflow ??= $this->pickWorkflow($document);
 
             if ($workflow === null) {
-                throw new LogicException('Для категории документа нет активного workflow');
+                throw new LogicException(__('Для категории документа нет активного workflow'));
             }
 
             DocumentWorkflowState::query()->updateOrCreate(
@@ -253,11 +253,11 @@ class DocumentService
                 ->first();
 
             if ($approval === null) {
-                throw new LogicException('Нет активного согласования на текущем шаге');
+                throw new LogicException(__('Нет активного согласования на текущем шаге'));
             }
 
             if ($this->isActorOfStep($approver, $step, $document) === false) {
-                throw new LogicException('Текущий шаг должен согласовать другой уполномоченный');
+                throw new LogicException(__('Текущий шаг должен согласовать другой уполномоченный'));
             }
 
             $approval->update([
@@ -308,7 +308,7 @@ class DocumentService
     public function register(Employee $registrar, Document $document): Document
     {
         $from = $document->status->value;
-        $this->engine->assert(WorkflowEngine::SUBJECT_DOCUMENT, $from, 'registered', 'Регистрировать можно только согласованный документ');
+        $this->engine->assert(WorkflowEngine::SUBJECT_DOCUMENT, $from, 'registered', __('Регистрировать можно только согласованный документ'));
 
         $document->update([
             'status' => 'registered',
@@ -443,7 +443,7 @@ class DocumentService
         $max = Document::query()->withTrashed()
             ->where('company_id', $companyId)
             ->whereNotNull('reg_number')
-            ->where('reg_number', 'like', 'Р-'.$year.'-%')
+            ->where('reg_number', 'like', __('Р-').$year.'-%')
             ->count();
 
         do {

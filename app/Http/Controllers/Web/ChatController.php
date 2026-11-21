@@ -215,7 +215,7 @@ class ChatController extends Controller
             ConversationType::Direct => (function () use ($request, $me, $data): Conversation {
                 if (empty($data['employee_id'])) {
                     throw ValidationException::withMessages([
-                        'employee_id' => 'Выберите сотрудника',
+                        'employee_id' => __('Выберите сотрудника'),
                     ]);
                 }
 
@@ -256,14 +256,14 @@ class ChatController extends Controller
         ]);
         $this->chat->updateConversation($me, $conversation, $data, $request->file('avatar'), $request->boolean('reset_avatar'));
 
-        return redirect()->route('chat.show', $conversation)->with('status', 'Настройки диалога сохранены');
+        return redirect()->route('chat.show', $conversation)->with('status', __('Настройки диалога сохранены'));
     }
 
     public function deleteConversation(Request $request, Conversation $conversation): RedirectResponse
     {
         $this->chat->deleteConversation($request->user()->employee, $conversation);
 
-        return redirect()->route('chat.index')->with('status', $conversation->isDirect() ? 'Диалог скрыт из вашего списка' : 'Диалог удалён');
+        return redirect()->route('chat.index')->with('status', $conversation->isDirect() ? __('Диалог скрыт из вашего списка') : __('Диалог удалён'));
     }
 
     public function addMembers(Request $request, Conversation $conversation): RedirectResponse
@@ -271,14 +271,14 @@ class ChatController extends Controller
         $data = $request->validate(['member_ids' => ['required', 'array', 'min:1', 'max:200'], 'member_ids.*' => ['integer', 'min:1']]);
         $this->chat->addMembers($request->user()->employee, $conversation, $data['member_ids']);
 
-        return redirect()->route('chat.show', $conversation)->with('status', 'Участники добавлены');
+        return redirect()->route('chat.show', $conversation)->with('status', __('Участники добавлены'));
     }
 
     public function removeMember(Request $request, Conversation $conversation, int $employee): RedirectResponse
     {
         $this->chat->removeMember($request->user()->employee, $conversation, $employee);
 
-        return redirect()->route('chat.show', $conversation)->with('status', 'Участник исключён');
+        return redirect()->route('chat.show', $conversation)->with('status', __('Участник исключён'));
     }
 
     public function wallpaper(Request $request, Conversation $conversation): RedirectResponse
@@ -289,7 +289,7 @@ class ChatController extends Controller
         ]);
         $this->chat->setWallpaper($request->user()->employee, $conversation, $request->file('wallpaper'));
 
-        return redirect()->route('chat.show', $conversation)->with('status', 'Обои обновлены');
+        return redirect()->route('chat.show', $conversation)->with('status', __('Обои обновлены'));
     }
 
     public function image(Request $request, Conversation $conversation, string $kind): StreamedResponse

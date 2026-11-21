@@ -34,7 +34,7 @@ class WorkflowController extends Controller
     {
         $me = app(PermissionService::class)->employee($request->user());
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         // межтенантная изоляция (S2): маршруты согласования своей компании
@@ -73,7 +73,7 @@ class WorkflowController extends Controller
         $user = $request->user();
         $me = app(PermissionService::class)->employee($user);
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $validated = $request->validate([
@@ -124,6 +124,6 @@ class WorkflowController extends Controller
             'steps' => count($validated['steps']),
         ]);
 
-        return redirect()->route('workflows.index')->with('status', 'Маршрут «'.$workflow->name.'» создан');
+        return redirect()->route('workflows.index')->with('status', __('Маршрут «').$workflow->name.__('» создан'));
     }
 }

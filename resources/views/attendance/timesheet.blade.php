@@ -1,12 +1,12 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'ledger')
 
-@section('title', 'Табель — ' . $employee->last_name)
+@section('title', __('Табель') . ' — ' . $employee->last_name)
 
 @php
     $monthNames = [
-        1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель', 5 => 'Май', 6 => 'Июнь',
-        7 => 'Июль', 8 => 'Август', 9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь',
+        1 => __('Январь'), 2 => __('Февраль'), 3 => __('Март'), 4 => __('Апрель'), 5 => __('Май'), 6 => __('Июнь'),
+        7 => __('Июль'), 8 => __('Август'), 9 => __('Сентябрь'), 10 => __('Октябрь'), 11 => __('Ноябрь'), 12 => __('Декабрь'),
     ];
     $workedHours = number_format($totals['worked'] / 60, 1, ',', '');
     $planHours = number_format($totals['planned'] / 60, 1, ',', '');
@@ -17,8 +17,8 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Посещаемость</div>
-            <h1 class="page-title mt-1">Табель · {{ $monthNames[$month] }} {{ $year }}</h1>
+            <div class="crm-eyebrow">{{ __('Посещаемость') }}</div>
+            <h1 class="page-title mt-1">{{ __('Табель') }} {{ $monthNames[$month] }} {{ $year }}</h1>
             <div class="text-secondary mt-1">{{ $employee->last_name }} {{ $employee->first_name }} · {{ $employee->employee_no }}</div>
         </div>
     </div>
@@ -34,22 +34,22 @@
                 $options = \App\Models\Employee::query()->where('company_id', $me->company_id)->where('status', 'active')->orderBy('last_name')->get();
             }
         @endphp
-        <label class="form-label mb-0 me-1" for="ts-emp">Сотрудник</label>
+        <label class="form-label mb-0 me-1" for="ts-emp">{{ __('Сотрудник') }}</label>
         <select id="ts-emp" name="employee_id" class="form-select">
             @foreach ($options as $option)
                 <option value="{{ $option->id }}" @selected($option->id === $employee->id)>{{ $option->last_name }} {{ $option->first_name }}</option>
             @endforeach
         </select>
     @endif
-    <label class="form-label mb-0 me-1" for="ts-month">Месяц</label>
+    <label class="form-label mb-0 me-1" for="ts-month">{{ __('Месяц') }}</label>
     <select id="ts-month" name="month" class="form-select">
         @for ($m = 1; $m <= 12; $m++)
             <option value="{{ $m }}" @selected($m === $month)>{{ $monthNames[$m] }}</option>
         @endfor
     </select>
-    <label class="form-label mb-0 me-1" for="ts-year">Год</label>
+    <label class="form-label mb-0 me-1" for="ts-year">{{ __('Год') }}</label>
     <input type="number" id="ts-year" name="year" value="{{ $year }}" class="form-control" style="width: 6.5rem" min="2020" max="2100">
-    <button class="btn btn-primary"><i class="ti ti-refresh me-1"></i>Показать</button>
+    <button class="btn btn-primary"><i class="ti ti-refresh me-1"></i>{{ __('Показать') }}</button>
     <div class="crm-toolbar__spacer"></div>
     @if (app(\App\Support\PermissionService::class)->check(auth()->user(), 'attendance.timesheet.export'))
         <a class="btn btn-ghost-secondary" href="{{ route('attendance.timesheet.export') }}?{{ http_build_query(['year' => $year, 'month' => $month, 'employee_id' => $employee->id]) }}">
@@ -60,41 +60,41 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-clock-play"></i>Отработано</div>
-        <div class="crm-metric__value">{{ $workedHours }}<small> ч</small></div>
-        <div class="crm-metric__hint">{{ $totals['worked'] }} мин. фактически</div>
+        <div class="crm-metric__label"><i class="ti ti-clock-play"></i>{{ __('Отработано') }}</div>
+        <div class="crm-metric__value">{{ $workedHours }}<small> {{ __('ч') }}</small></div>
+        <div class="crm-metric__hint">{{ $totals['worked'] }} {{ __('мин. фактически') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-calendar-stats"></i>План</div>
-        <div class="crm-metric__value">{{ $planHours }}<small> ч</small></div>
-        <div class="crm-metric__hint">{{ $totals['planned'] }} мин. по графику</div>
+        <div class="crm-metric__label"><i class="ti ti-calendar-stats"></i>{{ __('План') }}</div>
+        <div class="crm-metric__value">{{ $planHours }}<small> {{ __('ч') }}</small></div>
+        <div class="crm-metric__hint">{{ $totals['planned'] }} {{ __('мин. по графику') }}</div>
         <div class="progress mt-2" style="height: 5px;">
             <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $fill }}%"></div>
         </div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-alarm"></i>Опоздания</div>
-        <div class="crm-metric__value" data-count="{{ $totals['late'] }}">{{ $totals['late'] }}<small> мин</small></div>
-        <div class="crm-metric__hint">суммарно за месяц</div>
+        <div class="crm-metric__label"><i class="ti ti-alarm"></i>{{ __('Опоздания') }}</div>
+        <div class="crm-metric__value" data-count="{{ $totals['late'] }}">{{ $totals['late'] }}<small> {{ __('мин') }}</small></div>
+        <div class="crm-metric__hint">{{ __('суммарно за месяц') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-clock-up"></i>Переработки</div>
-        <div class="crm-metric__value" data-count="{{ $totals['overtime'] }}">{{ $totals['overtime'] }}<small> мин</small></div>
-        <div class="crm-metric__hint">сверх графика</div>
+        <div class="crm-metric__label"><i class="ti ti-clock-up"></i>{{ __('Переработки') }}</div>
+        <div class="crm-metric__value" data-count="{{ $totals['overtime'] }}">{{ $totals['overtime'] }}<small> {{ __('мин') }}</small></div>
+        <div class="crm-metric__hint">{{ __('сверх графика') }}</div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h2 class="card-title bm-section-title">Сетка за месяц</h2>
-        <span class="crm-chip ms-auto">{{ count($grid) }} дней</span>
+        <h2 class="card-title bm-section-title">{{ __('Сетка за месяц') }}</h2>
+        <span class="crm-chip ms-auto">{{ count($grid) }} {{ __('дней') }}</span>
     </div>
     <div class="table-responsive">
         <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th scope="col">День</th><th scope="col">Статус</th><th scope="col">Вход</th><th scope="col">Выход</th>
-                    <th scope="col" class="text-end">Отраб.</th><th scope="col" class="text-end">Опозд.</th><th scope="col" class="text-end">Ранний уход</th><th scope="col" class="text-end">Сверх</th>
+                    <th scope="col">{{ __('День') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col">{{ __('Вход') }}</th><th scope="col">{{ __('Выход') }}</th>
+                    <th scope="col" class="text-end">{{ __('Отраб') }}</th><th scope="col" class="text-end">{{ __('Опозд') }}</th><th scope="col" class="text-end">{{ __('Ранний уход') }}</th><th scope="col" class="text-end">{{ __('Сверх') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -123,7 +123,7 @@
                             <td class="text-end crm-table-num">{{ $cell['record']->early_leave_minutes }}</td>
                             <td class="text-end crm-table-num @if($cell['record']->overtime_minutes > 0) text-success fw-semibold @endif">{{ $cell['record']->overtime_minutes }}</td>
                         @else
-                            <td colspan="7" class="text-secondary">{{ $cell['is_off'] ? 'выходной' : 'нет данных' }}</td>
+                            <td colspan="7" class="text-secondary">{{ $cell['is_off'] ? __('выходной') : __('нет данных') }}</td>
                         @endif
                     </tr>
                 @endforeach

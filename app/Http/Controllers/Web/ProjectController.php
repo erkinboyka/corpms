@@ -116,7 +116,7 @@ class ProjectController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $this->validateProject($request, (int) $me->company_id, true);
@@ -141,7 +141,7 @@ class ProjectController extends Controller
             'name' => $project->name,
         ]);
 
-        return redirect()->route('projects.show', $project)->with('status', 'Проект «'.$project->name.'» создан');
+        return redirect()->route('projects.show', $project)->with('status', __('Проект «').$project->name.__('» создан'));
     }
 
     /** Изменение карточки проекта. */
@@ -170,7 +170,7 @@ class ProjectController extends Controller
             'budget' => (string) $project->budget,
         ]);
 
-        return back()->with('status', 'Проект «'.$project->name.'» обновлён');
+        return back()->with('status', __('Проект «').$project->name.__('» обновлён'));
     }
 
     /** Смена статуса проекта. */
@@ -182,7 +182,7 @@ class ProjectController extends Controller
 
         $validated = $request->validate([
             'status' => ['required', Rule::enum(ProjectStatus::class)],
-        ], [], ['status' => 'статус']);
+        ], [], ['status' => __('статус')]);
 
         $from = $project->status;
         $project->status = ProjectStatus::from($validated['status']);
@@ -194,7 +194,7 @@ class ProjectController extends Controller
             'status' => $project->status->value,
         ]);
 
-        return back()->with('status', 'Статус проекта: «'.$this->statusLabel($project->status).'»');
+        return back()->with('status', __('Статус проекта: «').$this->statusLabel($project->status).'»');
     }
 
     /** Привязка существующей задачи к проекту. */
@@ -206,7 +206,7 @@ class ProjectController extends Controller
 
         $validated = $request->validate([
             'task_id' => ['required', 'integer'],
-        ], [], ['task_id' => 'задача']);
+        ], [], ['task_id' => __('задача')]);
 
         TenantGuard::ensureReference('tasks', (int) $validated['task_id'], $me);
 
@@ -217,7 +217,7 @@ class ProjectController extends Controller
             'task_id' => $task->id,
         ]);
 
-        return back()->with('status', 'Задача «'.$task->title.'» привязана к проекту');
+        return back()->with('status', __('Задача «').$task->title.__('» привязана к проекту'));
     }
 
     /** Отвязка задачи от проекта. */
@@ -238,7 +238,7 @@ class ProjectController extends Controller
             'task_id' => $task->id,
         ]);
 
-        return back()->with('status', 'Задача «'.$task->title.'» отвязана от проекта');
+        return back()->with('status', __('Задача «').$task->title.__('» отвязана от проекта'));
     }
 
     /**
@@ -264,7 +264,7 @@ class ProjectController extends Controller
             $rules['status'] = ['nullable', Rule::enum(ProjectStatus::class)];
         }
 
-        return $request->validate($rules, [], ['name' => 'название', 'code' => 'код']);
+        return $request->validate($rules, [], ['name' => __('название'), 'code' => __('код')]);
     }
 
     /**
@@ -284,11 +284,11 @@ class ProjectController extends Controller
     private function statusLabel(ProjectStatus $status): string
     {
         return match ($status) {
-            ProjectStatus::Planned => 'Запланирован',
-            ProjectStatus::Active => 'В работе',
-            ProjectStatus::OnHold => 'Приостановлен',
-            ProjectStatus::Completed => 'Завершён',
-            ProjectStatus::Cancelled => 'Отменён',
+            ProjectStatus::Planned => __('Запланирован'),
+            ProjectStatus::Active => __('В работе'),
+            ProjectStatus::OnHold => __('Приостановлен'),
+            ProjectStatus::Completed => __('Завершён'),
+            ProjectStatus::Cancelled => __('Отменён'),
         };
     }
 

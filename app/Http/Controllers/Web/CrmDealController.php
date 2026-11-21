@@ -68,7 +68,7 @@ class CrmDealController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['title' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['title' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $this->validateDeal($request);
@@ -97,7 +97,7 @@ class CrmDealController extends Controller
             'stage' => $stage->value,
         ]);
 
-        return redirect()->route('crm.deals.index')->with('status', 'Сделка «'.$deal->title.'» создана');
+        return redirect()->route('crm.deals.index')->with('status', __('Сделка «').$deal->title.__('» создана'));
     }
 
     /** Изменение условий сделки (сумма, срок, ответственный). */
@@ -128,7 +128,7 @@ class CrmDealController extends Controller
             'amount' => (string) $deal->amount,
         ]);
 
-        return back()->with('status', 'Сделка «'.$deal->title.'» обновлена');
+        return back()->with('status', __('Сделка «').$deal->title.__('» обновлена'));
     }
 
     /** Перемещение по воронке (won/lost закрывают сделку). */
@@ -140,7 +140,7 @@ class CrmDealController extends Controller
 
         $validated = $request->validate([
             'stage' => ['required', Rule::enum(CrmDealStage::class)],
-        ], [], ['stage' => 'стадия']);
+        ], [], ['stage' => __('стадия')]);
 
         $from = $deal->stage;
         $this->crm->moveDeal($deal, CrmDealStage::from($validated['stage']));
@@ -152,7 +152,7 @@ class CrmDealController extends Controller
             'amount' => (string) $deal->amount,
         ]);
 
-        return back()->with('status', 'Сделка «'.$deal->title.'»: стадия «'.$this->stageLabel($deal->stage).'»');
+        return back()->with('status', __('Сделка «').$deal->title.__('»: стадия «').$this->stageLabel($deal->stage).'»');
     }
 
     /**
@@ -169,18 +169,18 @@ class CrmDealController extends Controller
             'expected_close_date' => ['nullable', 'date'],
             'owner_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['title' => 'название', 'client_id' => 'клиент', 'amount' => 'сумма']);
+        ], [], ['title' => __('название'), 'client_id' => __('клиент'), 'amount' => __('сумма')]);
     }
 
     private function stageLabel(CrmDealStage $stage): string
     {
         return match ($stage) {
-            CrmDealStage::New => 'Новая',
-            CrmDealStage::Qualification => 'Квалификация',
-            CrmDealStage::Proposal => 'Предложение',
-            CrmDealStage::Negotiation => 'Переговоры',
-            CrmDealStage::Won => 'Выиграна',
-            CrmDealStage::Lost => 'Проиграна',
+            CrmDealStage::New => __('Новая'),
+            CrmDealStage::Qualification => __('Квалификация'),
+            CrmDealStage::Proposal => __('Предложение'),
+            CrmDealStage::Negotiation => __('Переговоры'),
+            CrmDealStage::Won => __('Выиграна'),
+            CrmDealStage::Lost => __('Проиграна'),
         };
     }
 

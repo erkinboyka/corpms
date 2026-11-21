@@ -58,7 +58,7 @@ class DepartmentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         // орг-чарт рисует дерево своей компании, а не все тенанты сразу (P0)
@@ -92,11 +92,11 @@ class DepartmentController extends Controller
 
         // ссылки из тела запроса — только в рамках своей компании (P0)
         if (($validated['parent_id'] ?? null) !== null) {
-            TenantGuard::ensureReference('departments', (int) $validated['parent_id'], $employee, 'Родительский отдел принадлежит другой компании');
+            TenantGuard::ensureReference('departments', (int) $validated['parent_id'], $employee, __('Родительский отдел принадлежит другой компании'));
         }
         foreach (['director_id', 'deputy_id'] as $refField) {
             if (($validated[$refField] ?? null) !== null) {
-                TenantGuard::ensureReference('employees', (int) $validated[$refField], $employee, 'Сотрудник принадлежит другой компании');
+                TenantGuard::ensureReference('employees', (int) $validated[$refField], $employee, __('Сотрудник принадлежит другой компании'));
             }
         }
 
@@ -104,7 +104,7 @@ class DepartmentController extends Controller
 
         $this->audit->log($request->user(), 'department.created', 'department', $department->id, null, $validated);
 
-        return back()->with('status', 'Подразделение создано');
+        return back()->with('status', __('Подразделение создано'));
     }
 
     public function update(Request $request, Department $department): RedirectResponse
@@ -121,11 +121,11 @@ class DepartmentController extends Controller
 
         // ссылки из тела запроса — только в рамках своей компании (P0)
         if (($validated['parent_id'] ?? null) !== null) {
-            TenantGuard::ensureReference('departments', (int) $validated['parent_id'], $me, 'Родительский отдел принадлежит другой компании');
+            TenantGuard::ensureReference('departments', (int) $validated['parent_id'], $me, __('Родительский отдел принадлежит другой компании'));
         }
         foreach (['director_id', 'deputy_id'] as $refField) {
             if (($validated[$refField] ?? null) !== null) {
-                TenantGuard::ensureReference('employees', (int) $validated[$refField], $me, 'Сотрудник принадлежит другой компании');
+                TenantGuard::ensureReference('employees', (int) $validated[$refField], $me, __('Сотрудник принадлежит другой компании'));
             }
         }
 
@@ -134,25 +134,25 @@ class DepartmentController extends Controller
         // изменение места в оргструктуре — отдельное право structure.manage (departments.manage гоняет реквизиты)
         if (isset($validated['parent_id']) && (int) ($validated['parent_id'] ?? 0) !== (int) ($old['parent_id'] ?? 0)
             && $this->permissions->check($request->user(), 'structure.manage') === false) {
-            abort(403, 'Перемещение отдела в структуре требует права structure.manage');
+            abort(403, __('Перемещение отдела в структуре требует права structure.manage'));
         }
 
         $department->update($validated);
 
         $this->audit->log($request->user(), 'department.updated', 'department', $department->id, $old, $validated);
 
-        return back()->with('status', 'Подразделение обновлено');
+        return back()->with('status', __('Подразделение обновлено'));
     }
 
     /** Отдел удаляем только пустым: без дочерних узлов и без сотрудников. */
     public function destroy(Request $request, Department $department): RedirectResponse
     {
         if (Department::query()->where('parent_id', $department->id)->exists()) {
-            abort(403, 'Нельзя удалить отдел: он имеет дочерние подразделения');
+            abort(403, __('Нельзя удалить отдел: он имеет дочерние подразделения'));
         }
 
         if (Employee::query()->where('department_id', $department->id)->exists()) {
-            abort(403, 'Нельзя удалить отдел: в нём числятся сотрудники');
+            abort(403, __('Нельзя удалить отдел: в нём числятся сотрудники'));
         }
 
         $old = $department->only(['name', 'code', 'parent_id']);
@@ -161,6 +161,6 @@ class DepartmentController extends Controller
 
         $this->audit->log($request->user(), 'department.deleted', 'department', $department->id, $old, null);
 
-        return back()->with('status', 'Подразделение удалено');
+        return back()->with('status', __('Подразделение удалено'));
     }
 }

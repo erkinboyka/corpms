@@ -73,7 +73,7 @@ class ScheduleController extends Controller
 
         $this->audit->log($request->user(), 'schedule.created', 'work_schedule', $schedule->id, null, $validated);
 
-        return back()->with('status', 'График создан');
+        return back()->with('status', __('График создан'));
     }
 
     public function updateSchedule(Request $request, WorkSchedule $schedule): RedirectResponse
@@ -102,7 +102,7 @@ class ScheduleController extends Controller
 
         $this->audit->log($request->user(), 'schedule.updated', 'work_schedule', $schedule->id, $old, $validated);
 
-        return back()->with('status', 'График обновлён');
+        return back()->with('status', __('График обновлён'));
     }
 
     /** График с назначенными сотрудниками нельзя удалить тихой сменой порядка — сначала снять назначения. */
@@ -111,7 +111,7 @@ class ScheduleController extends Controller
         TenantGuard::ensure($schedule, $request->user()->employee);
 
         if (ScheduleAssignment::query()->where('work_schedule_id', $schedule->id)->exists()) {
-            abort(403, 'Нельзя удалить график: он назначен сотрудникам');
+            abort(403, __('Нельзя удалить график: он назначен сотрудникам'));
         }
 
         $old = $schedule->only(['name', 'type', 'start_time', 'end_time']);
@@ -120,7 +120,7 @@ class ScheduleController extends Controller
 
         $this->audit->log($request->user(), 'schedule.deleted', 'work_schedule', $schedule->id, $old, null);
 
-        return back()->with('status', 'График удалён');
+        return back()->with('status', __('График удалён'));
     }
 
     public function assignSchedule(Request $request): RedirectResponse
@@ -140,7 +140,7 @@ class ScheduleController extends Controller
         TenantGuard::ensureReference('work_schedules', (int) $validated['work_schedule_id'], $me);
 
         foreach ($validated['employee_ids'] as $employeeId) {
-            TenantGuard::ensureReference('employees', (int) $employeeId, $me, 'Сотрудник из другой компании');
+            TenantGuard::ensureReference('employees', (int) $employeeId, $me, __('Сотрудник из другой компании'));
 
             ScheduleAssignment::create([
                 'work_schedule_id' => $validated['work_schedule_id'],
@@ -155,7 +155,7 @@ class ScheduleController extends Controller
             'effective_from' => $validated['effective_from'],
         ]);
 
-        return back()->with('status', 'График назначен (п.21 ТЗ)');
+        return back()->with('status', __('График назначен (п.21 ТЗ)'));
     }
 
     /* ---------------- праздники ---------------- */
@@ -195,7 +195,7 @@ class ScheduleController extends Controller
 
         $this->audit->log($request->user(), 'holiday.created', 'holiday', $holiday->id, null, $validated);
 
-        return back()->with('status', 'Праздник добавлен');
+        return back()->with('status', __('Праздник добавлен'));
     }
 
     public function destroyHoliday(Request $request, Holiday $holiday): RedirectResponse
@@ -208,7 +208,7 @@ class ScheduleController extends Controller
 
         $this->audit->log($request->user(), 'holiday.deleted', 'holiday', $holiday->id, $old, null);
 
-        return back()->with('status', 'Праздник удалён');
+        return back()->with('status', __('Праздник удалён'));
     }
 
     /* ---------------- отпуска ---------------- */
@@ -264,11 +264,11 @@ class ScheduleController extends Controller
         // заявка на себя не требует approve; на другого — только HR/руководитель
         if ($employeeId !== (int) $me->id) {
             if ($this->permissions->check($request->user(), 'leaves.approve') === false) {
-                throw new LogicException('Создать заявку можно только на себя');
+                throw new LogicException(__('Создать заявку можно только на себя'));
             }
 
             // и даже HR/руководитель не создаёт заявку сотруднику другой компании
-            TenantGuard::ensureReference('employees', $employeeId, $me, 'Сотрудник из другой компании');
+            TenantGuard::ensureReference('employees', $employeeId, $me, __('Сотрудник из другой компании'));
         }
 
         $leave = LeaveRequest::create([
@@ -287,7 +287,7 @@ class ScheduleController extends Controller
             'to_date' => $validated['to_date'],
         ]);
 
-        return back()->with('status', 'Заявка отправлена руководителю');
+        return back()->with('status', __('Заявка отправлена руководителю'));
     }
 
     public function decideLeave(Request $request, LeaveRequest $leave): RedirectResponse
@@ -305,7 +305,7 @@ class ScheduleController extends Controller
         $scope = $this->permissions->can($request->user(), 'leaves.approve');
 
         if ($scope === false) {
-            return back()->withErrors(['field' => 'Нет права согласовывать отпуска']);
+            return back()->withErrors(['field' => __('Нет права согласовывать отпуска')]);
         }
 
         if ($scope !== PermissionScope::Company) {
@@ -317,10 +317,10 @@ class ScheduleController extends Controller
                     && $applicant->department_id === $me->department_id;
 
                 if (! $sameDepartment) {
-                    return back()->withErrors(['field' => 'Согласование доступно только для сотрудников вашего отдела']);
+                    return back()->withErrors(['field' => __('Согласование доступно только для сотрудников вашего отдела')]);
                 }
             } elseif ($applicant === null || $applicant->id !== $me->id) {
-                return back()->withErrors(['field' => 'Согласование доступно только для собственных заявок']);
+                return back()->withErrors(['field' => __('Согласование доступно только для собственных заявок')]);
             }
         }
 
@@ -365,7 +365,7 @@ class ScheduleController extends Controller
             'to_date' => $leave->to_date->toDateString(),
         ]);
 
-        return back()->with('status', $decision === 'approved' ? 'Отпуск согласован' : 'Заявка отклонена');
+        return back()->with('status', $decision === 'approved' ? __('Отпуск согласован') : __('Заявка отклонена'));
     }
 
     /** Личное расписание сотрудника: свой график + предстоящие отпуска (абзац про сам_просмотр). */

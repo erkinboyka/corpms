@@ -154,7 +154,7 @@ class TaskController extends Controller
 
         // IDOR-фикс: карточка доступна только в пределах scope видимости
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $task->load([
@@ -208,7 +208,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->permissions->check($request->user(), 'tasks.create')) {
-            throw new LogicException('Нет права tasks.create');
+            throw new LogicException(__('Нет права tasks.create'));
         }
 
         $validated = $request->validate([
@@ -227,10 +227,10 @@ class TaskController extends Controller
             'department_ids' => ['nullable', 'array'],
             'department_ids.*' => ['exists:departments,id'],
         ], [
-            'employee_ids.array' => 'Список исполнителей некорректен.',
-            'employee_ids.*.exists' => 'Выбранный сотрудник не найден.',
-            'department_ids.array' => 'Список отделов некорректен.',
-            'department_ids.*.exists' => 'Выбранный отдел не найден.',
+            'employee_ids.array' => __('Список исполнителей некорректен.'),
+            'employee_ids.*.exists' => __('Выбранный сотрудник не найден.'),
+            'department_ids.array' => __('Список отделов некорректен.'),
+            'department_ids.*.exists' => __('Выбранный отдел не найден.'),
         ]);
 
         /* нормализация обоих форматов в два плоских списка */
@@ -250,23 +250,23 @@ class TaskController extends Controller
         $this->assertDepartmentsInCompany($me, $departments, $request->filled('department_ids') ? 'department_ids' : 'department_id');
 
         if ($type === 'employee' && $employees === []) {
-            throw new \InvalidArgumentException('Не выбран сотрудник');
+            throw new \InvalidArgumentException(__('Не выбран сотрудник'));
         }
         if ($type === 'department' && $departments === []) {
-            throw new \InvalidArgumentException('Не выбран отдел');
+            throw new \InvalidArgumentException(__('Не выбран отдел'));
         }
         if ($type === 'multi' && count($employees) < 2) {
-            throw ValidationException::withMessages(['employee_ids' => 'Выберите минимум двух исполнителей.']);
+            throw ValidationException::withMessages(['employee_ids' => __('Выберите минимум двух исполнителей.')]);
         }
         if ($type === null && $employees === [] && $departments === []) {
             throw ValidationException::withMessages([
-                'employee_ids' => 'Укажите хотя бы одного исполнителя или отдел.',
+                'employee_ids' => __('Укажите хотя бы одного исполнителя или отдел.'),
             ]);
         }
 
         /* право на назначение задач отделам (tasks.assign_department) */
         if ($departments !== [] && ! $this->permissions->check($request->user(), 'tasks.assign_department')) {
-            throw new \InvalidArgumentException('Назначение задач отделу требует права tasks.assign_department');
+            throw new \InvalidArgumentException(__('Назначение задач отделу требует права tasks.assign_department'));
         }
 
         $assignees = [];
@@ -296,7 +296,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $validated = $request->validate([
@@ -316,7 +316,7 @@ class TaskController extends Controller
             $created++;
         }
 
-        return back()->with('status', "Создано подзадач: {$created}");
+        return back()->with('status', __("Создано подзадач: {$created}"));
     }
 
     /* -------------------- изменение -------------------- */
@@ -328,11 +328,11 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         if ((int) ($task->author_id ?? 0) !== (int) $me->id && $this->permissions->check($request->user(), 'tasks.manage') === false) {
-            throw new LogicException('Редактировать задачу может её автор или tasks.manage');
+            throw new LogicException(__('Редактировать задачу может её автор или tasks.manage'));
         }
 
         $validated = $request->validate([
@@ -348,7 +348,7 @@ class TaskController extends Controller
 
         $this->audit->log($request->user(), 'task.updated', 'task', $task->id, $old, $validated);
 
-        return back()->with('status', 'Задача обновлена');
+        return back()->with('status', __('Задача обновлена'));
     }
 
     /** Удаление: автор или tasks.manage; с открытыми подзадачами — запрещено. */
@@ -358,11 +358,11 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         if ((int) ($task->author_id ?? 0) !== (int) $me->id && $this->permissions->check($request->user(), 'tasks.manage') === false) {
-            throw new LogicException('Удалить задачу может её автор или tasks.manage');
+            throw new LogicException(__('Удалить задачу может её автор или tasks.manage'));
         }
 
         $openChildren = $task->children()
@@ -370,7 +370,7 @@ class TaskController extends Controller
             ->exists();
 
         if ($openChildren) {
-            return back()->withErrors(['status' => 'Нельзя удалить задачу: есть незакрытые подзадачи']);
+            return back()->withErrors(['status' => __('Нельзя удалить задачу: есть незакрытые подзадачи')]);
         }
 
         $old = $task->only(['title', 'number', 'status']);
@@ -392,9 +392,9 @@ class TaskController extends Controller
 
         if (! $this->canSeeTask($request, $task)) {
             if ($json) {
-                return response()->json(['message' => 'Нет доступа к этой задаче'], 403);
+                return response()->json(['message' => __('Нет доступа к этой задаче')], 403);
             }
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $validated = $request->validate([
@@ -412,9 +412,9 @@ class TaskController extends Controller
 
         if (! $isAssignee && (int) $task->author_id !== (int) $me->id && $this->permissions->check($request->user(), 'tasks.manage') === false) {
             if ($json) {
-                return response()->json(['message' => 'Нет прав менять статус этой задачи'], 403);
+                return response()->json(['message' => __('Нет прав менять статус этой задачи')], 403);
             }
-            throw new LogicException('Нет прав менять статус этой задачи');
+            throw new LogicException(__('Нет прав менять статус этой задачи'));
         }
 
         // завершение задачи (п.42 ТЗ): только автор, tasks.manage или tasks.complete
@@ -422,7 +422,7 @@ class TaskController extends Controller
             && (int) $task->author_id !== (int) $me->id
             && ! $this->permissions->check($request->user(), 'tasks.manage')
             && ! $this->permissions->check($request->user(), 'tasks.complete')) {
-            $message = 'Завершить задачу может только автор, руководитель (tasks.manage) или holders tasks.complete';
+            $message = __('Завершить задачу может только автор, руководитель (tasks.manage) или holders tasks.complete');
             if ($json) {
                 return response()->json(['message' => $message], 422);
             }
@@ -451,7 +451,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $validated = $request->validate([
@@ -485,7 +485,7 @@ class TaskController extends Controller
         ]);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         // межтенантная изоляция (P0): делегирование только внутри своей компании
@@ -496,19 +496,19 @@ class TaskController extends Controller
         // задание обязано принадлежать задаче из маршрута (иначе через свой assignment
         // можно делегировать назначения чужих задач)
         if ((int) $assignment->task_id !== (int) $task->id) {
-            abort(404, 'Назначение не найдено в контексте задачи');
+            abort(404, __('Назначение не найдено в контексте задачи'));
         }
 
         // делегировать может только текущий исполнитель или роутер задач
         if ((int) ($assignment->employee_id ?? 0) !== (int) $me->id
             && $this->permissions->check($request->user(), 'tasks.reassign') === false) {
-            throw new LogicException('Делегировать может только текущий исполнитель задания');
+            throw new LogicException(__('Делегировать может только текущий исполнитель задания'));
         }
 
         $to = Employee::query()->findOrFail($validated['to_employee_id']);
         $this->tasks->delegate($me, $assignment, $to, $validated['reason'] ?? null);
 
-        return back()->with('status', 'Делегирование выполнено');
+        return back()->with('status', __('Делегирование выполнено'));
     }
 
     /** Отчёт о выполнении (п.42 ТЗ). */
@@ -518,7 +518,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $validated = $request->validate([
@@ -527,7 +527,7 @@ class TaskController extends Controller
 
         $this->tasks->submitResult($me, $task, $validated['summary'] ?? null);
 
-        return back()->with('status', 'Результат отправлен на проверку');
+        return back()->with('status', __('Результат отправлен на проверку'));
     }
 
     /* -------------------- комментарии + время -------------------- */
@@ -538,7 +538,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $validated = $request->validate([
@@ -551,7 +551,7 @@ class TaskController extends Controller
             'body' => $validated['body'],
         ]);
 
-        return back()->with('status', 'Комментарий добавлен');
+        return back()->with('status', __('Комментарий добавлен'));
     }
 
     /** п.49 ТЗ: учёт затрат времени per task — кнопка старт/стоп на карточке. */
@@ -561,7 +561,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $open = TaskTimeLog::query()
@@ -572,12 +572,12 @@ class TaskController extends Controller
         if ($open !== null && (int) $open->task_id === (int) $task->id) {
             $this->tasks->stopTimeTracking($me, $task);
 
-            return back()->with('status', 'Учёт времени остановлен');
+            return back()->with('status', __('Учёт времени остановлен'));
         }
 
         $this->tasks->startTimeTracking($me, $task);
 
-        return back()->with('status', 'Учёт времени запущен');
+        return back()->with('status', __('Учёт времени запущен'));
     }
 
     /* -------------------- файлы -------------------- */
@@ -589,11 +589,11 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         if (! $this->canAttachToTask($request, $task, $me)) {
-            abort(403, 'Файл к задаче может приложить её автор, исполнитель или tasks.manage');
+            abort(403, __('Файл к задаче может приложить её автор, исполнитель или tasks.manage'));
         }
 
         $validated = $request->validate([
@@ -625,7 +625,7 @@ class TaskController extends Controller
         \abort_unless((int) $attachment->task_id === (int) $task->id, 404);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к файлам этой задачи');
+            abort(403, __('Нет доступа к файлам этой задачи'));
         }
 
         $disk = Storage::disk('local');
@@ -643,7 +643,7 @@ class TaskController extends Controller
         \assert($me !== null);
 
         if (! $this->canSeeTask($request, $task)) {
-            abort(403, 'Нет доступа к этой задаче');
+            abort(403, __('Нет доступа к этой задаче'));
         }
 
         $allowed = (int) $attachment->employee_id === (int) $me->id
@@ -651,7 +651,7 @@ class TaskController extends Controller
             || $this->permissions->check($request->user(), 'tasks.manage');
 
         if (! $allowed) {
-            abort(403, 'Удалить файл может тот, кто приложил, автор задачи или tasks.manage');
+            abort(403, __('Удалить файл может тот, кто приложил, автор задачи или tasks.manage'));
         }
 
         $old = $attachment->only(['original_name', 'size']);
@@ -734,7 +734,7 @@ class TaskController extends Controller
             ->count();
 
         if ($found !== count($ids)) {
-            throw ValidationException::withMessages([$field => 'Выбранный сотрудник не найден.']);
+            throw ValidationException::withMessages([$field => __('Выбранный сотрудник не найден.')]);
         }
     }
 
@@ -755,7 +755,7 @@ class TaskController extends Controller
             ->count();
 
         if ($found !== count($ids)) {
-            throw ValidationException::withMessages([$field => 'Выбранный отдел не найден.']);
+            throw ValidationException::withMessages([$field => __('Выбранный отдел не найден.')]);
         }
     }
 }

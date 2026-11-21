@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'stream')
 
-@section('title', 'Отпуска и заявки')
+@section('title', __('Отпуска и заявки'))
 
 @php
     $statusChips = [
@@ -25,13 +25,13 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Кадры</div>
-            <h1 class="page-title mt-1">Отпуска и заявки</h1>
-            <div class="text-secondary mt-1">Заявки на отпуск, больничные и отгулы · всего {{ $leaves->total() }}</div>
+            <div class="crm-eyebrow">{{ __('Кадры') }}</div>
+            <h1 class="page-title mt-1">{{ __('Отпуска и заявки') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Заявки на отпуск, больничные и отгулы · всего') }} {{ $leaves->total() }}</div>
         </div>
         <div class="col-auto d-print-none">
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newLeave">
-                <i class="ti ti-plus me-1"></i>Отправить заявку
+                <i class="ti ti-plus me-1"></i>{{ __('Отправить заявку') }}
             </button>
         </div>
     </div>
@@ -39,19 +39,19 @@
 
 <div class="crm-metrics mb-3">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-file-text"></i>Всего заявок</div>
+        <div class="crm-metric__label" style="color: var(--crm-text-secondary);"><i class="ti ti-file-text"></i>{{ __('Всего заявок') }}</div>
         <div class="crm-metric__value">{{ $counts->sum() }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-hourglass"></i>Ждут решения</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-hourglass"></i>{{ __('Ждут решения') }}</div>
         <div class="crm-metric__value">{{ $counts['pending'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>Одобрено</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-circle-check"></i>{{ __('Одобрено') }}</div>
         <div class="crm-metric__value">{{ $counts['approved'] ?? 0 }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-circle-x"></i>Отклонено</div>
+        <div class="crm-metric__label" style="color: var(--crm-danger);"><i class="ti ti-circle-x"></i>{{ __('Отклонено') }}</div>
         <div class="crm-metric__value">{{ $counts['rejected'] ?? 0 }}</div>
     </div>
 </div>
@@ -59,8 +59,8 @@
 {{-- ===== Очередь согласования ===== --}}
 @if ($canApprove && $pending->isNotEmpty())
     <div class="crm-form__section">
-        <h3>Очередь согласования <span class="crm-chip crm-chip--orange ms-1">{{ $pending->count() }}</span></h3>
-        <div class="crm-form__desc">Заявки, ждущие вашего решения. Решение попадает в историю.</div>
+        <h3>{{ __('Очередь согласования') }} <span class="crm-chip crm-chip--orange ms-1">{{ $pending->count() }}</span></h3>
+        <div class="crm-form__desc">{{ __('Заявки, ждущие вашего решения. Решение попадает в историю') }}</div>
         <div class="crm-queue">
             @foreach ($pending as $leave)
                 <div class="crm-queue__item" style="--c: var(--crm-warning);">
@@ -74,19 +74,19 @@
                         </div>
                         <div class="crm-queue__sub">
                             {{ $leave->from_date->format('d.m.Y') }} — {{ $leave->to_date->format('d.m.Y') }}
-                            · {{ (int) $leave->from_date->diffInDays($leave->to_date) + 1 }} дн.
+                            · {{ (int) $leave->from_date->diffInDays($leave->to_date) + 1 }} {{ __('дн') }}.
                             @if ($leave->reason) · «{{ Str::limit($leave->reason, 60) }}»@endif
                         </div>
                     </div>
                     <form method="post" action="{{ route('leaves.decide', $leave) }}" class="d-flex gap-1" data-submit-guard>
                         @csrf @method('PUT')
                         <input type="hidden" name="decision" value="approved">
-                        <button class="btn btn-sm btn-success" title="Одобрить"><i class="ti ti-check me-1"></i>Одобрить</button>
+                        <button class="btn btn-sm btn-success" title="{{ __("Одобрить") }}"><i class="ti ti-check me-1"></i>{{ __('Одобрить') }}</button>
                     </form>
                     <form method="post" action="{{ route('leaves.decide', $leave) }}" class="d-flex" data-submit-guard>
                         @csrf @method('PUT')
                         <input type="hidden" name="decision" value="rejected">
-                        <button class="btn btn-sm btn-ghost-danger" title="Отклонить"><i class="ti ti-x"></i></button>
+                        <button class="btn btn-sm btn-ghost-danger" title="{{ __("Отклонить") }}"><i class="ti ti-x"></i></button>
                     </form>
                 </div>
             @endforeach
@@ -96,20 +96,20 @@
 
 {{-- ===== Все заявки ===== --}}
 <form method="get" class="crm-toolbar">
-    <select name="status" class="form-select" aria-label="Статус" onchange="this.form.submit()">
-        <option value="">Все статусы</option>
+    <select name="status" class="form-select" aria-label="{{ __("Статус") }}" onchange="this.form.submit()">
+        <option value="">{{ __('Все статусы') }}</option>
         @foreach (['pending', 'approved', 'rejected', 'cancelled'] as $statusOption)
             <option value="{{ $statusOption }}" @selected($statusFilter === $statusOption)>{{ $crm_label('leave_status', $statusOption) }}</option>
         @endforeach
     </select>
     <div class="crm-toolbar__spacer"></div>
-    <span class="text-secondary small">Показано {{ $leaves->count() }} из {{ $leaves->total() }}</span>
+    <span class="text-secondary small">{{ __('Показано') }} {{ $leaves->count() }} {{ __('из') }} {{ $leaves->total() }}</span>
 </form>
 
 <div class="card">
     <div class="table-responsive">
         <table data-record-key="0" class="table table-hover table-vcenter card-table crm-thead-sticky">
-            <thead><tr><th scope="col">Сотрудник</th><th scope="col">Тип</th><th scope="col">Период</th><th scope="col">Дней</th><th scope="col">Статус</th><th scope="col">Решение</th><th scope="col"></th></tr></thead>
+            <thead><tr><th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Тип') }}</th><th scope="col">{{ __('Период') }}</th><th scope="col">{{ __('Дней') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col">{{ __('Решение') }}</th><th scope="col"></th></tr></thead>
             <tbody>
                 @forelse ($leaves as $leave)
                     <tr>
@@ -130,25 +130,25 @@
                                 <form method="post" action="{{ route('leaves.decide', $leave) }}" class="d-inline" data-submit-guard>
                                     @csrf @method('PUT')
                                     <input type="hidden" name="decision" value="approved">
-                                    <button class="btn btn-sm btn-ghost-success" title="Одобрить"><i class="ti ti-check"></i></button>
+                                    <button class="btn btn-sm btn-ghost-success" title="{{ __("Одобрить") }}"><i class="ti ti-check"></i></button>
                                 </form>
                                 <form method="post" action="{{ route('leaves.decide', $leave) }}" class="d-inline" data-submit-guard>
                                     @csrf @method('PUT')
                                     <input type="hidden" name="decision" value="rejected">
-                                    <button class="btn btn-sm btn-ghost-danger" title="Отклонить"><i class="ti ti-x"></i></button>
+                                    <button class="btn btn-sm btn-ghost-danger" title="{{ __("Отклонить") }}"><i class="ti ti-x"></i></button>
                                 </form>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7">@include('partials.empty-state', ['icon' => 'calendar-off', 'title' => 'Заявок нет', 'text' => 'Отправьте заявку — она появится здесь и уйдёт руководителю.'])</td></tr>
+                    <tr><td colspan="7">@include('partials.empty-state', ['icon' => 'calendar-off', 'title' => __('Заявок нет'), 'text' => __('Отправьте заявку — она появится здесь и уйдёт руководителю.')])</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
     @if ($leaves->hasPages())
         <div class="card-footer d-flex align-items-center">
-            <div class="text-secondary me-auto">Страница {{ $leaves->currentPage() }} из {{ $leaves->lastPage() }}</div>
+            <div class="text-secondary me-auto">{{ __('Страница') }} {{ $leaves->currentPage() }} {{ __('из') }} {{ $leaves->lastPage() }}</div>
             {{ $leaves->links('pagination::tabler') }}
         </div>
     @endif
@@ -159,27 +159,27 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('leaves.request') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новая заявка</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Новая заявка') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Период</h3>
-                    <div class="crm-form__desc">Даты начала и конца — включительно.</div>
+                    <h3>{{ __('Период') }}</h3>
+                    <div class="crm-form__desc">{{ __('Даты начала и конца — включительно') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="nl-from">С<span class="req">*</span></label>
+                            <label class="form-label" for="nl-from">{{ __('С') }}<span class="req">*</span></label>
                             <input type="date" id="nl-from" class="form-control" name="from_date" required>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="nl-to">По<span class="req">*</span></label>
+                            <label class="form-label" for="nl-to">{{ __('По') }}<span class="req">*</span></label>
                             <input type="date" id="nl-to" class="form-control" name="to_date" required>
                         </div>
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Суть заявки</h3>
-                    <div class="crm-form__desc">Тип отсутствия и пояснение для руководителя.</div>
+                    <h3>{{ __('Суть заявки') }}</h3>
+                    <div class="crm-form__desc">{{ __('Тип отсутствия и пояснение для руководителя') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nl-type">Тип<span class="req">*</span></label>
+                        <label class="form-label" for="nl-type">{{ __('Тип') }}<span class="req">*</span></label>
                         <select id="nl-type" class="form-select" name="type" required>
                             @foreach ($types as $type)
                                 <option value="{{ $type }}">{{ $crm_label('leave_type', $type) }}</option>
@@ -187,14 +187,14 @@
                         </select>
                     </div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="nl-reason">Комментарий</label>
-                        <textarea id="nl-reason" class="form-control" name="reason" rows="4" data-crm-rich placeholder="Пояснение к заявке"></textarea>
+                        <label class="form-label" for="nl-reason">{{ __('Комментарий') }}</label>
+                        <textarea id="nl-reason" class="form-control" name="reason" rows="4" data-crm-rich placeholder="{{ __("Пояснение к заявке") }}"></textarea>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary"><i class="ti ti-send me-1"></i>Отправить заявку</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-send me-1"></i>{{ __('Отправить заявку') }}</button>
             </div>
         </form>
     </div>

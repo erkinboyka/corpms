@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'directory')
 
-@section('title', request()->routeIs('documents.mine') ? 'Мои документы' : 'Документы')
+@section('title', request()->routeIs('documents.mine') ? __('Мои документы') : __('Документы'))
 
 @php
     $isMine = request()->routeIs('documents.mine');
@@ -34,18 +34,18 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Документооборот</div>
-            <h1 class="page-title mt-1">{{ $isMine ? 'Мои документы' : 'Документы' }}</h1>
-            <div class="text-secondary mt-1">Версии, согласование и подписи · всего {{ $total }} · показано {{ $shown }}</div>
+            <div class="crm-eyebrow">{{ __('Документооборот') }}</div>
+            <h1 class="page-title mt-1">{{ $isMine ? __('Мои документы') : __('Документы') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Версии, согласование и подписи · всего') }} {{ $total }} {{ __('показано') }} {{ $shown }}</div>
         </div>
         <div class="col-auto d-print-none">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDocument"><i class="ti ti-plus me-1"></i>Новый документ</button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDocument"><i class="ti ti-plus me-1"></i>{{ __('Новый документ') }}</button>
         </div>
     </div>
 </div>
 
 @if (count($metrics) > 0)
-    <dl class="bm-document-summary" aria-label="Документы по статусам">
+    <dl class="bm-document-summary" aria-label="{{ __("Документы по статусам") }}">
         @foreach ($metrics as $metric)
             <div>
                 <dt>{{ $metric['label'] }}</dt>
@@ -57,20 +57,20 @@
 
 <form method="get" class="crm-toolbar">
     <div class="input-icon">
-        <input type="text" name="q" value="{{ $search }}" class="form-control crm-search-input" placeholder="Поиск по названию или номеру" aria-label="Поиск документов">
+        <input type="text" name="q" value="{{ $search }}" class="form-control crm-search-input" placeholder="{{ __("Поиск по названию или номеру") }}" aria-label="{{ __("Поиск документов") }}">
         <span class="input-icon-addon"><i class="ti ti-search"></i></span>
     </div>
-    <select name="status" class="form-select" aria-label="Статус" onchange="this.form.submit()">
-        <option value="">Все статусы</option>
+    <select name="status" class="form-select" aria-label="{{ __("Статус") }}" onchange="this.form.submit()">
+        <option value="">{{ __('Все статусы') }}</option>
         @foreach ($statuses as $s)
             <option value="{{ $s }}" @selected($status === $s)>{{ $crm_label('document_status', $s) }}</option>
         @endforeach
     </select>
-    <button class="btn btn-primary">Найти</button>
+    <button class="btn btn-primary">{{ __('Найти') }}</button>
     <div class="crm-toolbar__spacer"></div>
-    <div class="crm-switch" data-crm-switch="docs" role="group" aria-label="Вид документов">
-        <button type="button" data-view="list"><i class="ti ti-list"></i>Список</button>
-        <button type="button" data-view="cards"><i class="ti ti-layout-grid"></i>Карты</button>
+    <div class="crm-switch" data-crm-switch="docs" role="group" aria-label="{{ __("Вид документов") }}">
+        <button type="button" data-view="list"><i class="ti ti-list"></i>{{ __('Список') }}</button>
+        <button type="button" data-view="cards"><i class="ti ti-layout-grid"></i>{{ __('Карты') }}</button>
     </div>
 </form>
 
@@ -80,7 +80,7 @@
         <div class="card">
             <div class="table-responsive">
                 <table data-record-key="1" class="table table-hover table-vcenter card-table crm-thead-sticky">
-                    <thead><tr><th scope="col">№</th><th scope="col">Документ</th><th scope="col">Автор</th><th scope="col">Конфиденциальность</th><th scope="col">Статус</th><th scope="col">Обновлён</th><th scope="col"></th></tr></thead>
+                    <thead><tr><th scope="col">№</th><th scope="col">{{ __('Документ') }}</th><th scope="col">{{ __('Автор') }}</th><th scope="col">{{ __('Конфиденциальность') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col">{{ __('Обновлён') }}</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($documents as $document)
                             <tr>
@@ -90,18 +90,18 @@
                                         <span class="crm-table__main">{{ $document->title }}</span>
                                     </a>
                                     <div class="crm-table__sub">
-                                        {{ $document->category?->name ?? 'без категории' }}
-                                        @if ($document->reg_number) · рег. {{ $document->reg_number }}@endif
+                                        {{ $document->category?->name ?? __('без категории') }}
+                                        @if ($document->reg_number) · {{ __('рег') }}. {{ $document->reg_number }}@endif
                                     </div>
                                 </td>
                                 <td>{{ $document->author?->last_name ?? '—' }}</td>
                                 <td><span class="crm-chip {{ $confChips[$document->confidentiality->value] ?? 'crm-chip--grey' }}">{{ $crm_label('confidentiality', $document->confidentiality->value) }}</span></td>
                                 <td><span class="crm-chip {{ $statusChips[$document->status->value] ?? 'crm-chip--grey' }}">{{ $crm_label('document_status', $document->status->value) }}</span></td>
                                 <td class="text-secondary crm-table-num">{{ $document->updated_at?->format('d.m.Y') }}</td>
-                                <td class="text-end"><a class="btn btn-sm btn-ghost-secondary crm-row-actions" href="{{ route('documents.show', $document) }}" title="Открыть"><i class="ti ti-chevron-right"></i></a></td>
+                                <td class="text-end"><a class="btn btn-sm btn-ghost-secondary crm-row-actions" href="{{ route('documents.show', $document) }}" title="{{ __("Открыть") }}"><i class="ti ti-chevron-right"></i></a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="7">@include('partials.empty-state', ['icon' => 'file-off', 'title' => 'Документов нет', 'text' => 'Создайте первый документ или снимите фильтр статуса.'])</td></tr>
+                            <tr><td colspan="7">@include('partials.empty-state', ['icon' => 'file-off', 'title' => __('Документов нет'), 'text' => __('Создайте первый документ или снимите фильтр статуса.')])</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -130,7 +130,7 @@
                                 <a href="{{ route('documents.show', $document) }}" class="text-reset text-decoration-none">{{ $document->title }}</a>
                             </div>
                             <div class="crm-entity__meta">
-                                <i class="ti ti-folder me-1"></i>{{ $document->category?->name ?? 'без категории' }}
+                                <i class="ti ti-folder me-1"></i>{{ $document->category?->name ?? __('без категории') }}
                                 <span class="mx-1">·</span>
                                 <i class="ti ti-user me-1"></i>{{ $document->author?->last_name ?? '—' }}
                             </div>
@@ -143,7 +143,7 @@
                 </div>
             @empty
                 <div class="col-12">
-                    @include('partials.empty-state', ['icon' => 'file-off', 'title' => 'Документов нет', 'text' => 'Создайте первый документ или снимите фильтр статуса.'])
+                    @include('partials.empty-state', ['icon' => 'file-off', 'title' => __('Документов нет'), 'text' => __('Создайте первый документ или снимите фильтр статуса.')])
                 </div>
             @endforelse
         </div>
@@ -155,19 +155,19 @@
     <div class="modal-dialog modal-lg" role="document">
         <form class="modal-content" method="post" action="{{ route('documents.store') }}" enctype="multipart/form-data" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новый документ</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Новый документ') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Суть документа</h3>
-                    <div class="crm-form__desc">Название и категория — по ним документ находят в поиске.</div>
+                    <h3>{{ __('Суть документа') }}</h3>
+                    <div class="crm-form__desc">{{ __('Название и категория — по ним документ находят в поиске') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nd-title">Заголовок<span class="req">*</span></label>
-                        <input type="text" id="nd-title" name="title" class="form-control" value="{{ old('title') }}" placeholder="Например: Заявление на отпуск" required>
+                        <label class="form-label" for="nd-title">{{ __('Заголовок') }}<span class="req">*</span></label>
+                        <input type="text" id="nd-title" name="title" class="form-control" value="{{ old('title') }}" placeholder="{{ __("Например: Заявление на отпуск") }}" required>
                     </div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nd-category">Категория<span class="req">*</span></label>
+                        <label class="form-label" for="nd-category">{{ __('Категория') }}<span class="req">*</span></label>
                         <select id="nd-category" name="category_id" class="form-select" required>
-                            <option value="">— выбрать категорию —</option>
+                            <option value="">{{ __('выбрать категорию') }}</option>
                             @foreach (\App\Models\DocumentCategory::query()->where('is_active', true)->get() as $category)
                                 <option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>{{ $category->name }}</option>
                             @endforeach
@@ -175,23 +175,23 @@
                     </div>
                 </div>
                 <div class="crm-form__section">
-                    <h3>Содержание</h3>
-                    <div class="crm-form__desc">Текст прямо в системе или загруженный файл — хотя бы одно.</div>
+                    <h3>{{ __('Содержание') }}</h3>
+                    <div class="crm-form__desc">{{ __('Текст прямо в системе или загруженный файл — хотя бы одно') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nd-body">Текст документа</label>
-                        <textarea data-crm-rich id="nd-body" name="body" class="form-control" rows="5" placeholder="Текст документа (или приложите файл)">{{ old('body') }}</textarea>
+                        <label class="form-label" for="nd-body">{{ __('Текст документа') }}</label>
+                        <textarea data-crm-rich id="nd-body" name="body" class="form-control" rows="5" placeholder="{{ __("Текст документа (или приложите файл)") }}">{{ old('body') }}</textarea>
                     </div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="nd-file">Файл</label>
+                        <label class="form-label" for="nd-file">{{ __('Файл') }}</label>
                         <input type="file" id="nd-file" name="file" class="form-control">
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Классификация</h3>
-                    <div class="crm-form__desc">Приоритет обработки и уровень допуска к содержимому.</div>
+                    <h3>{{ __('Классификация') }}</h3>
+                    <div class="crm-form__desc">{{ __('Приоритет обработки и уровень допуска к содержимому') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="nd-priority">Приоритет</label>
+                            <label class="form-label" for="nd-priority">{{ __('Приоритет') }}</label>
                             <select id="nd-priority" name="priority" class="form-select">
                                 @foreach (['low', 'medium', 'high', 'critical'] as $p)
                                     <option value="{{ $p }}" @selected(old('priority', 'medium') === $p)>{{ $crm_label('document_priority', $p) }}</option>
@@ -199,7 +199,7 @@
                             </select>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="nd-conf">Конфиденциальность</label>
+                            <label class="form-label" for="nd-conf">{{ __('Конфиденциальность') }}</label>
                             <select id="nd-conf" name="confidentiality" class="form-select">
                                 @foreach (['public', 'internal', 'confidential', 'secret'] as $c)
                                     <option value="{{ $c }}" @selected(old('confidentiality', 'internal') === $c)>{{ $crm_label('confidentiality', $c) }}</option>
@@ -210,8 +210,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i>Создать документ</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i>{{ __('Создать документ') }}</button>
             </div>
         </form>
     </div>

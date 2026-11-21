@@ -51,12 +51,12 @@ class SignatureService
         $this->engine->assert(WorkflowEngine::SUBJECT_DOCUMENT, $from, 'signing', 'Подпись доступна только после согласования (п.59 ТЗ)');
 
         if ($signerIds === []) {
-            throw new LogicException('Не указаны подписанты');
+            throw new LogicException(__('Не указаны подписанты'));
         }
 
         $version = $document->currentVersion;
         if ($version === null) {
-            throw new LogicException('В документе нет текущей версии');
+            throw new LogicException(__('В документе нет текущей версии'));
         }
 
         DB::transaction(function () use ($requester, $document, $version, $signerIds, $requiresOtp, $driver, $from) {
@@ -95,7 +95,7 @@ class SignatureService
     public function issueOtp(DocumentSignatureRequest $request): string
     {
         if (! $request->requires_otp) {
-            throw new LogicException('Для этого запроса OTP не требуется');
+            throw new LogicException(__('Для этого запроса OTP не требуется'));
         }
 
         $code = (string) random_int(100000, 999999);
@@ -130,8 +130,8 @@ class SignatureService
             $this->notifications->notify(
                 $signer,
                 'signature.otp',
-                'OTP-код для подписи документа',
-                'Документ «'.($document->title ?? 'без названия').'». Код подтверждения: '.$code
+                __('OTP-код для подписи документа'),
+                __('Документ «').($document->title ?? __('без названия')).'». Код подтверждения: '.$code
                     .'. Действует '.(int) app(SettingsService::class)->get('corpms.signature.otp_ttl', 5).' мин.',
                 $document,
             );
@@ -148,15 +148,15 @@ class SignatureService
 
     public function sign(Employee $signer, DocumentSignatureRequest $request, ?string $otp = null, ?string $ip = null, ?string $userAgent = null): DocumentSignature
     {
-        $document = $request->document;
-
-        return DB::transaction(function () use ($signer, $request, $document, $otp, $ip, $userAgent) {
+        return DB::transaction(function () use ($signer, $request, $otp, $ip, $userAgent) {
+            $document = Document::query()->lockForUpdate()->findOrFail($request->document_id);
+            $request = DocumentSignatureRequest::query()->lockForUpdate()->findOrFail($request->id);
             if ($request->signer_id !== $signer->id) {
-                throw new LogicException('Запрос подписи адресован другому сотруднику');
+                throw new LogicException(__('Запрос подписи адресован другому сотруднику'));
             }
 
             if (! in_array($request->status->value, ['pending', 'partial'], true)) {
-                throw new LogicException('Запрос подписи уже закрыт ('.$request->status.')');
+                throw new LogicException('Запрос подписи уже закрыт ('.$request->status->value.')');
             }
 
             if (! in_array($document->status->value, ['approved', 'signing'], true)) {
@@ -210,23 +210,23 @@ class SignatureService
         $token = QrToken::query()->where('token_hash', hash('sha256', $plainToken))->first();
 
         if ($token === null || $token->created_by !== $signer->id) {
-            throw new RuntimeException('QR-токен не найден');
+            throw new RuntimeException(__('QR-токен не найден'));
         }
 
         if ($token->revoked_at !== null) {
-            throw new RuntimeException('QR-токен отозван');
+            throw new RuntimeException(__('QR-токен отозван'));
         }
 
         if ($token->expires_at !== null && now()->gt($token->expires_at)) {
-            throw new RuntimeException('QR-токен истёк');
+            throw new RuntimeException(__('QR-токен истёк'));
         }
 
         if ($token->used_at !== null && $token->one_time) {
-            throw new RuntimeException('QR-токен уже использован');
+            throw new RuntimeException(__('QR-токен уже использован'));
         }
 
         if ($token->purpose !== 'sign' || $token->subject_type !== $request::class || (int) $token->subject_id !== (int) $request->id) {
-            throw new RuntimeException('QR-токен не относится к этому запросу подписи');
+            throw new RuntimeException(__('QR-токен не относится к этому запросу подписи'));
         }
 
         $signature = $this->sign($signer, $request, null, $ip, $userAgent);
@@ -243,11 +243,11 @@ class SignatureService
     public function decline(Employee $signer, DocumentSignatureRequest $request, string $reason): DocumentSignatureRequest
     {
         if ($request->signer_id !== $signer->id) {
-            throw new LogicException('Запрос подписи адресован другому сотруднику');
+            throw new LogicException(__('Запрос подписи адресован другому сотруднику'));
         }
 
         if (! in_array($request->status->value, ['pending', 'partial'], true)) {
-            throw new LogicException('Запрос уже закрыт');
+            throw new LogicException(__('Запрос уже закрыт'));
         }
 
         DB::transaction(function () use ($signer, $request, $reason) {
@@ -299,7 +299,7 @@ class SignatureService
     public function revoke(Employee $revoker, DocumentSignature $signature, string $reason): DocumentSignature
     {
         if ($signature->status->value !== 'valid') {
-            throw new LogicException('Отозвать можно только действующую подпись');
+            throw new LogicException(__('Отозвать можно только действующую подпись'));
         }
 
         $signature->forceFill([
@@ -327,11 +327,11 @@ class SignatureService
         $expiresAt = $meta['otp_expires_at'] ?? null;
 
         if ($stored === null) {
-            throw new LogicException('OTP-код не выдан. Сначала запросите его');
+            throw new LogicException(__('OTP-код не выдан. Сначала запросите его'));
         }
 
         if ($expiresAt !== null && now()->gt(Carbon::parse($expiresAt))) {
-            throw new RuntimeException('OTP-код истёк');
+            throw new RuntimeException(__('OTP-код истёк'));
         }
 
         $attempts = (int) ($meta['otp_attempts'] ?? 0) + 1;
@@ -339,7 +339,7 @@ class SignatureService
         $request->saveQuietly();
 
         if ($otp === null || hash('sha256', $otp) !== $stored) {
-            throw new RuntimeException('Неверный OTP-код');
+            throw new RuntimeException(__('Неверный OTP-код'));
         }
     }
 

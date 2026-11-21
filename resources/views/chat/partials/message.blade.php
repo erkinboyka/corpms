@@ -26,21 +26,21 @@
 
         <div class="bm-chat__msg-main">
             <header class="bm-chat__msg-meta">
-                <span class="bm-chat__msg-author">{{ $authorName !== '' ? $authorName : 'Сотрудник' }}</span>
+                <span class="bm-chat__msg-author">{{ $authorName !== '' ? $authorName : __('Сотрудник') }}</span>
                 <time class="bm-chat__msg-time" datetime="{{ $message->created_at->toIso8601String() }}">
                     {{ $message->created_at->format('H:i') }}
                 </time>
                 @if ($message->edited_at)
-                    <span class="bm-chat__msg-flag" title="Сообщение отредактировано">изменено</span>
+                    <span class="bm-chat__msg-flag" title="{{ __("Сообщение отредактировано") }}">{{ __('изменено') }}</span>
                 @endif
             </header>
 
             @if ($message->replyTo && $message->replyTo->trashed() === false)
-                <button type="button" class="bm-chat__msg-quote" data-reply-to="{{ $message->replyTo->id }}" title="Перейти к исходному сообщению">
+                <button type="button" class="bm-chat__msg-quote" data-reply-to="{{ $message->replyTo->id }}" title="{{ __("Перейти к исходному сообщению") }}">
                     <span class="bm-chat__msg-quote-author">
-                        {{ trim(($message->replyTo->author?->first_name ?? '').' '.($message->replyTo->author?->last_name ?? '')) ?: 'Сообщение' }}
+                        {{ trim(($message->replyTo->author?->first_name ?? '').' '.($message->replyTo->author?->last_name ?? '')) ?: __('Сообщение') }}
                     </span>
-                    <span class="bm-chat__msg-quote-text">{{ \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish($message->replyTo->body ?? ''), 120) ?: 'Вложение' }}</span>
+                    <span class="bm-chat__msg-quote-text">{{ \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish($message->replyTo->body ?? ''), 120) ?: __('Вложение') }}</span>
                 </button>
             @endif
 
@@ -60,7 +60,9 @@
             @if ($reactions->isNotEmpty())
                 <div class="bm-chat__msg-reactions">
                     @foreach ($reactions->groupBy('emoji') as $emoji => $group)
-                        <button type="button" class="bm-chat__reaction" data-emoji="{{ $emoji }}" data-toggle-reaction>
+                        @php $mine = $group->contains('employee_id', $me->id); @endphp
+                        <button type="button" class="bm-chat__reaction{{ $mine ? ' is-mine' : '' }}" data-emoji="{{ $emoji }}" data-toggle-reaction
+                                title="{{ $mine ? __('Снять реакцию') : __('Поставить реакцию') }}">
                             <span>{{ $emoji }}</span>
                             <span class="bm-chat__reaction-count">{{ $group->count() }}</span>
                         </button>
@@ -69,20 +71,20 @@
             @endif
         </div>
 
-        <div class="bm-chat__msg-tools" role="group" aria-label="Действия с сообщением">
+        <div class="bm-chat__msg-tools" role="group" aria-label="{{ __("Действия с сообщением") }}">
             @if ($canSend)
-                <button type="button" class="bm-chat__tool" data-chat-reply="{{ $message->id }}" title="Ответить" aria-label="Ответить">
+                <button type="button" class="bm-chat__tool" data-chat-reply="{{ $message->id }}" title="{{ __("Ответить") }}" aria-label="{{ __("Ответить") }}">
                     <i class="ti ti-arrow-back-up"></i>
                 </button>
             @endif
-            <button type="button" class="bm-chat__tool" data-chat-react="{{ $message->id }}" title="Реакция" aria-label="Реакция">
+            <button type="button" class="bm-chat__tool" data-chat-react="{{ $message->id }}" title="{{ __("Реакция") }}" aria-label="{{ __("Реакция") }}">
                 <i class="ti ti-mood-smile"></i>
             </button>
             @if ($isMine && ! $isSystem)
-                <button type="button" class="bm-chat__tool" data-chat-edit="{{ $message->id }}" title="Редактировать" aria-label="Редактировать">
+                <button type="button" class="bm-chat__tool" data-chat-edit="{{ $message->id }}" title="{{ __("Редактировать") }}" aria-label="{{ __("Редактировать") }}">
                     <i class="ti ti-pencil"></i>
                 </button>
-                <button type="button" class="bm-chat__tool bm-chat__tool--danger" data-chat-delete="{{ $message->id }}" title="Удалить" aria-label="Удалить">
+                <button type="button" class="bm-chat__tool bm-chat__tool--danger" data-chat-delete="{{ $message->id }}" title="{{ __("Удалить") }}" aria-label="{{ __("Удалить") }}">
                     <i class="ti ti-trash"></i>
                 </button>
             @endif

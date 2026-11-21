@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'stream')
 
-@section('title', 'События биометрии')
+@section('title', __('События биометрии'))
 
 @php
     $dirChips = ['in' => 'crm-chip--green', 'out' => 'crm-chip--orange'];
@@ -16,32 +16,32 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Доступ</div>
-            <h1 class="page-title mt-1">Журнал биометрических событий</h1>
-            <div class="text-secondary mt-1">События терминалов: проходы, liveness, обработка · показано {{ $events->count() }}</div>
+            <div class="crm-eyebrow">{{ __('Доступ') }}</div>
+            <h1 class="page-title mt-1">{{ __('Журнал биометрических событий') }}</h1>
+            <div class="text-secondary mt-1">{{ __('События терминалов: проходы, liveness, обработка · показано') }} {{ $events->count() }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary" href="{{ route('biometrics.index') }}"><i class="ti ti-arrow-left me-1"></i>К устройствам</a>
+            <a class="btn btn-ghost-secondary" href="{{ route('biometrics.index') }}"><i class="ti ti-arrow-left me-1"></i>{{ __('К устройствам') }}</a>
         </div>
     </div>
 </div>
 
 <form method="get" class="crm-toolbar">
-    <select name="device_id" class="form-select" aria-label="Устройство" onchange="this.form.submit()">
-        <option value="">Все устройства</option>
+    <select name="device_id" class="form-select" aria-label="{{ __("Устройство") }}" onchange="this.form.submit()">
+        <option value="">{{ __('Все устройства') }}</option>
         @foreach ($devices as $device)
             <option value="{{ $device->id }}" @selected((int) request('device_id') === $device->id)>{{ $device->name }}</option>
         @endforeach
     </select>
     <div class="crm-toolbar__spacer"></div>
-    <span class="text-secondary small">{{ request('device_id') ? 'Фильтр по устройству включён' : 'Без фильтра — все устройства' }}</span>
+    <span class="text-secondary small">{{ request('device_id') ? __('Фильтр по устройству включён') : __('Без фильтра — все устройства') }}</span>
 </form>
 
 <div class="card">
     <div class="table-responsive">
         <table data-record-key="1" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
-                <tr><th scope="col">Время</th><th scope="col">Сотрудник</th><th scope="col">Устройство</th><th scope="col">Направление</th><th scope="col">Достоверность</th><th scope="col">Liveness</th><th scope="col">Обработка</th></tr>
+                <tr><th scope="col">{{ __('Время') }}</th><th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Устройство') }}</th><th scope="col">{{ __('Направление') }}</th><th scope="col">{{ __('Достоверность') }}</th><th scope="col">Liveness</th><th scope="col">{{ __('Обработка') }}</th></tr>
             </thead>
             <tbody>
                 @forelse ($events as $event)
@@ -52,13 +52,13 @@
                                 <span class="crm-table__main">{{ $event->employee->last_name }} {{ $event->employee->first_name }}</span>
                                 <div class="crm-table__sub">{{ $event->employee->employee_no ?? '' }}</div>
                             @else
-                                <span class="crm-chip crm-chip--orange">не распознан</span>
+                                <span class="crm-chip crm-chip--orange">{{ __('не распознан') }}</span>
                             @endif
                         </td>
                         <td class="text-secondary">{{ $event->device?->name ?? '—' }}</td>
                         <td>
                             <span class="crm-chip {{ $dirChips[$event->direction] ?? 'crm-chip--grey' }}">
-                                <i class="ti ti-{{ $event->direction === 'in' ? 'log-in' : 'log-out' }} me-1"></i>{{ $event->direction === 'in' ? 'вход' : 'выход' }}
+                                <i class="ti ti-{{ $event->direction === 'in' ? 'log-in' : 'log-out' }} me-1"></i>{{ $event->direction === 'in' ? __('вход') : __('выход') }}
                             </span>
                         </td>
                         <td class="crm-table-num">
@@ -70,9 +70,9 @@
                         </td>
                         <td>
                             @if ($event->liveness_required)
-                                <span class="crm-chip {{ $event->liveness_passed ? 'crm-chip--green' : 'crm-chip--red' }}">{{ $event->liveness_passed ? 'пройдена' : 'не пройдена' }}</span>
+                                <span class="crm-chip {{ $event->liveness_passed ? 'crm-chip--green' : 'crm-chip--red' }}">{{ $event->liveness_passed ? __('пройдена') : __('не пройдена') }}</span>
                             @else
-                                <span class="text-secondary small">не требуется</span>
+                                <span class="text-secondary small">{{ __('не требуется') }}</span>
                             @endif
                         </td>
                         <td>
@@ -83,7 +83,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7">@include('partials.empty-state', ['icon' => 'activity', 'title' => 'Событий нет', 'text' => 'По выбранному фильтру событий не найдено — снимите фильтр устройства.'])</td></tr>
+                    <tr><td colspan="7">@include('partials.empty-state', ['icon' => 'activity', 'title' => __('Событий нет'), 'text' => __('По выбранному фильтру событий не найдено — снимите фильтр устройства.')])</td></tr>
                 @endforelse
             </tbody>
         </table>

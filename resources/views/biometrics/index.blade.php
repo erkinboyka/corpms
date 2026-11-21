@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'directory')
 
-@section('title', 'Биометрия')
+@section('title', __('Биометрия'))
 
 @php
     $statusChips = ['online' => 'crm-chip--green', 'offline' => 'crm-chip--orange', 'disabled' => 'crm-chip--grey'];
@@ -17,16 +17,16 @@
 
     // карточки выбора в мастере регистрации устройства
     $deviceTypeCards = [
-        'face_terminal' => ['ti-face-id', 'Терминал распознавания лиц'],
-        'kiosk' => ['ti-hand-click', 'Киоск самоотметки'],
-        'fingerprint_gate' => ['ti-fingerprint', 'Турникет с отпечатком'],
-        'turnstile' => ['ti-door', 'Турникет'],
-        'qr_reader' => ['ti-qrcode', 'Сканер QR/пропусков'],
+        'face_terminal' => ['ti-face-id', __('Терминал распознавания лиц')],
+        'kiosk' => ['ti-hand-click', __('Киоск самоотметки')],
+        'fingerprint_gate' => ['ti-fingerprint', __('Турникет с отпечатком')],
+        'turnstile' => ['ti-door', __('Турникет')],
+        'qr_reader' => ['ti-qrcode', __('Сканер QR/пропусков')],
     ];
     $directionCards = [
-        'in' => ['ti-login', 'Только вход'],
-        'out' => ['ti-logout', 'Только выход'],
-        'both' => ['ti-arrows-left-right', 'Вход и выход'],
+        'in' => ['ti-login', __('Только вход')],
+        'out' => ['ti-logout', __('Только выход')],
+        'both' => ['ti-arrows-left-right', __('Вход и выход')],
     ];
 @endphp
 
@@ -34,17 +34,17 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Доступ</div>
-            <h1 class="page-title mt-1">Биометрия</h1>
-            <div class="text-secondary mt-1">Устройства и профили доступа · offline после {{ $offlineAfter }} мин молчания</div>
+            <div class="crm-eyebrow">{{ __('Доступ') }}</div>
+            <h1 class="page-title mt-1">{{ __('Биометрия') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Устройства и профили доступа · offline после') }} {{ $offlineAfter }} {{ __('мин молчания') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('biometrics.events') }}"><i class="ti ti-activity me-1"></i>События</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('biometrics.privacy') }}"><i class="ti ti-shield-lock me-1"></i>Приватность</a>
+            <a class="btn btn-ghost-secondary me-1" href="{{ route('biometrics.events') }}"><i class="ti ti-activity me-1"></i>{{ __('События') }}</a>
+            <a class="btn btn-ghost-secondary me-1" href="{{ route('biometrics.privacy') }}"><i class="ti ti-shield-lock me-1"></i>{{ __('Приватность') }}</a>
             <a class="btn btn-ghost-secondary me-1" href="{{ route('rfid.index') }}"><i class="ti ti-credit-card me-1"></i>RFID</a>
             @if ($canManage)
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerDevice">
-                    <i class="ti ti-plus me-1"></i>Зарегистрировать устройство
+                    <i class="ti ti-plus me-1"></i>{{ __('Зарегистрировать устройство') }}
                 </button>
             @endif
         </div>
@@ -53,63 +53,63 @@
 
 {{-- ===== Онбординг: одна строка о том, как пользоваться биометрией ===== --}}
 <div class="bio-flow mb-3 d-print-none">
-    <span class="bio-flow__lead"><i class="ti ti-route me-1"></i>Как это работает</span>
+    <span class="bio-flow__lead"><i class="ti ti-route me-1"></i>{{ __('Как это работает') }}</span>
     @if ($canManage)
         <button type="button" class="bio-flow__item" data-bs-toggle="modal" data-bs-target="#registerDevice">
-            <span class="bio-flow__num">1</span>Зарегистрируйте устройство
+            <span class="bio-flow__num">1</span>{{ __('Зарегистрируйте устройство') }}
         </button>
     @else
-        <span class="bio-flow__item"><span class="bio-flow__num">1</span>Зарегистрируйте устройство</span>
+        <span class="bio-flow__item"><span class="bio-flow__num">1</span>{{ __('Зарегистрируйте устройство') }}</span>
     @endif
     <span class="bio-flow__sep"><i class="ti ti-arrow-right"></i></span>
     @if ($canEnroll)
         <button type="button" class="bio-flow__item" data-bs-toggle="modal" data-bs-target="#enrollProfile">
-            <span class="bio-flow__num">2</span>Привяжите сотрудника (идентификация)
+            <span class="bio-flow__num">2</span>{{ __('Привяжите сотрудника (идентификация)') }}
         </button>
     @else
-        <span class="bio-flow__item"><span class="bio-flow__num">2</span>Привяжите сотрудника (идентификация)</span>
+        <span class="bio-flow__item"><span class="bio-flow__num">2</span>{{ __('Привяжите сотрудника (идентификация)') }}</span>
     @endif
     <span class="bio-flow__sep"><i class="ti ti-arrow-right"></i></span>
     @can('checkBoxPermission', 'attendance.view')
         <a class="bio-flow__item" href="{{ route('attendance.index') }}">
-            <span class="bio-flow__num">3</span>Отметки появятся в разделе «Посещаемость»
+            <span class="bio-flow__num">3</span>{{ __('Отметки появятся в разделе «Посещаемость') }}
         </a>
     @else
-        <span class="bio-flow__item"><span class="bio-flow__num">3</span>Отметки появятся в разделе «Посещаемость»</span>
+        <span class="bio-flow__item"><span class="bio-flow__num">3</span>{{ __('Отметки появятся в разделе «Посещаемость') }}</span>
     @endcan
 </div>
 
-<div class="crm-metrics mb-3" data-crm-sec="metrics" data-crm-sec-label="Метрики">
+<div class="crm-metrics mb-3" data-crm-sec="metrics" data-crm-sec-label="{{ __("Метрики") }}">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-devices"></i>Устройств</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-devices"></i>{{ __('Устройств') }}</div>
         <div class="crm-metric__value">{{ $devices->count() }}</div>
-        <div class="crm-metric__hint">offline порог {{ $offlineAfter }} мин</div>
+        <div class="crm-metric__hint">{{ __('offline порог') }} {{ $offlineAfter }} {{ __('мин') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-wifi"></i>Онлайн</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-wifi"></i>{{ __('Онлайн') }}</div>
         <div class="crm-metric__value">{{ $onlineCount }}</div>
         <div class="crm-metric__hint">{{ $offlineCount }} offline</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-fingerprint"></i>Профилей</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-fingerprint"></i>{{ __('Профилей') }}</div>
         <div class="crm-metric__value">{{ $profilesCount }}</div>
-        <div class="crm-metric__hint">хэши шаблонов</div>
+        <div class="crm-metric__hint">{{ __('хэши шаблонов') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-bolt"></i>Событий сегодня</div>
+        <div class="crm-metric__label" style="color: var(--crm-warning);"><i class="ti ti-bolt"></i>{{ __('Событий сегодня') }}</div>
         <div class="crm-metric__value">{{ $eventsToday }}</div>
-        <div class="crm-metric__hint">по всем устройствам</div>
+        <div class="crm-metric__hint">{{ __('по всем устройствам') }}</div>
     </div>
 </div>
 
 {{-- ===== Матрица устройств ===== --}}
-<div class="crm-form__section" data-crm-sec="devices" data-crm-sec-label="Матрица устройств">
-    <h3>Матрица устройств <span class="text-secondary fw-normal">({{ $devices->count() }})</span></h3>
-    <div class="crm-form__desc">Состояния оборудования в реальном времени: связь, направление, нагрузка.</div>
+<div class="crm-form__section" data-crm-sec="devices" data-crm-sec-label="{{ __("Матрица устройств") }}">
+    <h3>{{ __('Матрица устройств') }} <span class="text-secondary fw-normal">({{ $devices->count() }})</span></h3>
+    <div class="crm-form__desc">{{ __('Состояния оборудования в реальном времени: связь, направление, нагрузка') }}</div>
     <div class="table-responsive">
         <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0 crm-thead-sticky">
             <thead>
-                <tr><th scope="col">Устройство</th><th scope="col">Тип</th><th scope="col">Производитель / модель</th><th scope="col">S/N</th><th scope="col">Направление</th><th scope="col">Статус</th><th scope="col">Виден</th><th scope="col">Событ. сегодня</th><th scope="col">Enrollment</th><th scope="col"></th></tr>
+                <tr><th scope="col">{{ __('Устройство') }}</th><th scope="col">{{ __('Тип') }}</th><th scope="col">{{ __('Производитель / модель') }}</th><th scope="col">S/N</th><th scope="col">{{ __('Направление') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col">{{ __('Виден') }}</th><th scope="col">{{ __('Событ. сегодня') }}</th><th scope="col">Enrollment</th><th scope="col"></th></tr>
             </thead>
             <tbody>
                 @forelse ($devices as $device)
@@ -137,17 +137,17 @@
                                 <form method="post" action="{{ route('biometrics.devices.update', $device) }}" class="d-inline" data-submit-guard>
                                     @csrf
                                     <input type="hidden" name="status" value="{{ $device->status->value === 'disabled' ? 'online' : 'disabled' }}">
-                                    <button class="btn btn-sm btn-ghost-secondary" title="{{ $device->status->value === 'disabled' ? 'Включить' : 'Отключить' }}">
+                                    <button class="btn btn-sm btn-ghost-secondary" title="{{ $device->status->value === 'disabled' ? __('Включить') : __('Отключить') }}">
                                         <i class="ti ti-{{ $device->status->value === 'disabled' ? 'power' : 'player-pause' }}"></i>
                                     </button>
                                 </form>
-                                <button type="button" class="btn btn-sm btn-ghost-danger" title="Удалить"
+                                <button type="button" class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"
                                         data-bs-toggle="modal" data-bs-target="#delDevice-{{ $device->id }}"><i class="ti ti-trash"></i></button>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10">@include('partials.empty-state', ['icon' => 'devices', 'title' => 'Устройств нет', 'text' => 'Зарегистрируйте первое устройство — оно появится в матрице со статусом связи.'])</td></tr>
+                    <tr><td colspan="10">@include('partials.empty-state', ['icon' => 'devices', 'title' => __('Устройств нет'), 'text' => __('Зарегистрируйте первое устройство — оно появится в матрице со статусом связи.')])</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -159,17 +159,17 @@
     <div class="col-lg-6" data-crm-sec="profiles">
         <div class="crm-form__section h-100">
             <h3>
-                Профили сотрудников
+                {{ __('Профили сотрудников') }}
                 @if ($canEnroll)
                     <button class="btn btn-sm btn-primary float-end" data-bs-toggle="modal" data-bs-target="#enrollProfile">
-                        <i class="ti ti-user-plus me-1"></i>Регистрация
+                        <i class="ti ti-user-plus me-1"></i>{{ __('Регистрация') }}
                     </button>
                 @endif
             </h3>
-            <div class="crm-form__desc">Хэши биометрических шаблонов — сами данные на устройствах.</div>
+            <div class="crm-form__desc">{{ __('Хэши биометрических шаблонов — сами данные на устройствах') }}</div>
             <div class="table-responsive">
                 <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th scope="col">Сотрудник</th><th scope="col">Vendor</th><th scope="col">Хэш шаблона</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
+                    <thead><tr><th scope="col">{{ __('Сотрудник') }}</th><th scope="col">Vendor</th><th scope="col">{{ __('Хэш шаблона') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($profiles as $profile)
                             <tr>
@@ -183,20 +183,20 @@
                                     @if ($canEnroll && $profile->status->value === 'enrolled')
                                         <form method="post" action="{{ route('biometrics.profile.disable', $profile) }}" class="d-inline" data-submit-guard>
                                             @csrf
-                                            <button class="btn btn-sm btn-ghost-secondary" title="Деактивировать"><i class="ti ti-player-pause"></i></button>
+                                            <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Деактивировать") }}"><i class="ti ti-player-pause"></i></button>
                                         </form>
                                     @endif
                                     @if ($canEnroll && $profile->status->value !== 'deleted')
                                         <form method="post" action="{{ route('biometrics.profile.delete', $profile) }}" class="d-inline"
-                                              onsubmit="return confirm('Удалить профиль?')" data-submit-guard>
+                                              onsubmit="return confirm(__('Удалить профиль?'))" data-submit-guard>
                                             @csrf
-                                            <button class="btn btn-sm btn-ghost-danger" title="Удалить"><i class="ti ti-trash"></i></button>
+                                            <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"><i class="ti ti-trash"></i></button>
                                         </form>
                                     @endif
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5">@include('partials.empty-state', ['icon' => 'user-x', 'title' => 'Профилей нет', 'text' => 'Запишите биометрию сотрудника на устройстве.'])</td></tr>
+                            <tr><td colspan="5">@include('partials.empty-state', ['icon' => 'user-x', 'title' => __('Профилей нет'), 'text' => __('Запишите биометрию сотрудника на устройстве.')])</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -207,11 +207,11 @@
     {{-- ===== Журнал enrollment ===== --}}
     <div class="col-lg-6" data-crm-sec="enroll-log">
         <div class="crm-form__section h-100">
-            <h3>Журнал регистрации <span class="text-secondary fw-normal">({{ $enrollments->count() }})</span></h3>
-            <div class="crm-form__desc">Кто, где и когда записывал биометрию.</div>
+            <h3>{{ __('Журнал регистрации') }} <span class="text-secondary fw-normal">({{ $enrollments->count() }})</span></h3>
+            <div class="crm-form__desc">{{ __('Кто, где и когда записывал биометрию') }}</div>
             <div class="table-responsive">
                 <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
-                    <thead><tr><th scope="col">Когда</th><th scope="col">Сотрудник</th><th scope="col">Устройство</th><th scope="col">Производитель</th><th scope="col">Оператор</th></tr></thead>
+                    <thead><tr><th scope="col">{{ __('Когда') }}</th><th scope="col">{{ __('Сотрудник') }}</th><th scope="col">{{ __('Устройство') }}</th><th scope="col">{{ __('Производитель') }}</th><th scope="col">{{ __('Оператор') }}</th></tr></thead>
                     <tbody>
                         @forelse ($enrollments as $enrollment)
                             <tr>
@@ -222,7 +222,7 @@
                                 <td class="text-secondary">{{ $enrollment->operated_by ?? '—' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5">@include('partials.empty-state', ['icon' => 'history', 'title' => 'Записей нет', 'text' => 'Журнал наполнится после первой записи профиля.'])</td></tr>
+                            <tr><td colspan="5">@include('partials.empty-state', ['icon' => 'history', 'title' => __('Записей нет'), 'text' => __('Журнал наполнится после первой записи профиля.')])</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -237,41 +237,41 @@
     <div class="modal-dialog modal-lg" role="document">
         <form class="modal-content" method="post" action="{{ route('biometrics.devices.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Регистрация устройства</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Регистрация устройства') }}</h5></div>
             <div class="modal-body">
 
                 {{-- шаги мастера --}}
-                <div class="wz-steps" role="group" aria-label="Шаги регистрации устройства">
+                <div class="wz-steps" role="group" aria-label="{{ __("Шаги регистрации устройства") }}">
                     <button type="button" class="wz-steps__item is-active" data-wz-goto="1" aria-current="step">
-                        <span class="wz-steps__num">1</span><span class="wz-steps__title">Устройство</span>
+                        <span class="wz-steps__num">1</span><span class="wz-steps__title">{{ __('Устройство') }}</span>
                     </button>
                     <span class="wz-steps__sep" aria-hidden="true"></span>
                     <button type="button" class="wz-steps__item" data-wz-goto="2" disabled>
-                        <span class="wz-steps__num">2</span><span class="wz-steps__title">Подключение</span>
+                        <span class="wz-steps__num">2</span><span class="wz-steps__title">{{ __('Подключение') }}</span>
                     </button>
                     <span class="wz-steps__sep" aria-hidden="true"></span>
                     <button type="button" class="wz-steps__item" data-wz-goto="3" disabled>
-                        <span class="wz-steps__num">3</span><span class="wz-steps__title">Проверка</span>
+                        <span class="wz-steps__num">3</span><span class="wz-steps__title">{{ __('Проверка') }}</span>
                     </button>
                 </div>
 
                 {{-- Шаг 1 — Устройство --}}
                 <div class="wz-pane" data-wz-step="1">
-                    <p class="wz-lead">Как устройство будет называться в списке и что написано на корпусе.</p>
+                    <p class="wz-lead">{{ __('Как устройство будет называться в списке и что написано на корпусе') }}</p>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="bd-name">Название<span class="req">*</span></label>
-                            <input type="text" id="bd-name" name="name" class="form-control" required placeholder="Турникет вход lobby" autocomplete="off">
-                            <div class="form-text">Как устройство будет отображаться в списке</div>
+                            <label class="form-label" for="bd-name">{{ __('Название') }}<span class="req">*</span></label>
+                            <input type="text" id="bd-name" name="name" class="form-control" required placeholder="{{ __("Турникет вход lobby") }}" autocomplete="off">
+                            <div class="form-text">{{ __('Как устройство будет отображаться в списке') }}</div>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="bd-sn">Серийный номер<span class="req">*</span></label>
+                            <label class="form-label" for="bd-sn">{{ __('Серийный номер') }}<span class="req">*</span></label>
                             <input type="text" id="bd-sn" name="serial_number" class="form-control" required placeholder="ZN-000123" autocomplete="off">
-                            <div class="form-text">Серийный номер с наклейки на корпусе</div>
+                            <div class="form-text">{{ __('Серийный номер с наклейки на корпусе') }}</div>
                         </div>
                     </div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label">Тип устройства<span class="req">*</span></label>
+                        <label class="form-label">{{ __('Тип устройства') }}<span class="req">*</span></label>
                         <div class="wz-cards">
                             @foreach ($deviceTypeCards as $type => $card)
                                 <label class="wz-card">
@@ -286,9 +286,9 @@
 
                 {{-- Шаг 2 — Подключение --}}
                 <div class="wz-pane d-none" data-wz-step="2">
-                    <p class="wz-lead">Направление прохода и производитель оборудования.</p>
+                    <p class="wz-lead">{{ __('Направление прохода и производитель оборудования') }}</p>
                     <div class="crm-form__field">
-                        <label class="form-label">Направление<span class="req">*</span></label>
+                        <label class="form-label">{{ __('Направление') }}<span class="req">*</span></label>
                         <div class="wz-cards wz-cards--dir">
                             @foreach ($directionCards as $dir => $card)
                                 <label class="wz-card">
@@ -300,33 +300,33 @@
                         </div>
                     </div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="bd-vendor">Производитель<span class="req">*</span></label>
+                        <label class="form-label" for="bd-vendor">{{ __('Производитель') }}<span class="req">*</span></label>
                         <input type="text" id="bd-vendor" name="vendor" class="form-control" required placeholder="ZKTeco" autocomplete="off">
-                        <div class="form-text">производитель: ZKTeco, Suprema…</div>
+                        <div class="form-text">{{ __('производитель: ZKTeco, Suprema…') }}</div>
                     </div>
 
                     <details class="wz-extra">
                         <summary>
                             <i class="ti ti-chevron-down wz-extra__chev"></i>
-                            Дополнительно <span class="text-secondary fw-normal">(необязательно)</span>
+                            {{ __('Дополнительно') }} <span class="text-secondary fw-normal">{{ __('(необязательно)') }}</span>
                         </summary>
                         <div class="wz-extra__grid">
                             <div class="crm-form__field">
-                                <label class="form-label" for="bd-model">Модель</label>
+                                <label class="form-label" for="bd-model">{{ __('Модель') }}</label>
                                 <input type="text" id="bd-model" name="model" class="form-control" autocomplete="off" placeholder="iFace 402">
                             </div>
                             <div class="crm-form__field">
-                                <label class="form-label" for="bd-loc">Расположение</label>
-                                <input type="text" id="bd-loc" name="location" class="form-control" autocomplete="off" placeholder="вход, 1 этаж">
-                                <div class="form-text">этаж, вход, зона</div>
+                                <label class="form-label" for="bd-loc">{{ __('Расположение') }}</label>
+                                <input type="text" id="bd-loc" name="location" class="form-control" autocomplete="off" placeholder="{{ __("вход, 1 этаж") }}">
+                                <div class="form-text">{{ __('этаж, вход, зона') }}</div>
                             </div>
                             <div class="crm-form__field">
                                 <label class="form-label" for="bd-ip">IP</label>
                                 <input type="text" id="bd-ip" name="ip" class="form-control" autocomplete="off" placeholder="192.168.1.50">
-                                <div class="form-text">напр. 192.168.1.50 — для подключения по сети</div>
+                                <div class="form-text">{{ __('напр. 192.168.1.50 — для подключения по сети') }}</div>
                             </div>
                             <div class="crm-form__field">
-                                <label class="form-label" for="bd-fw">Прошивка</label>
+                                <label class="form-label" for="bd-fw">{{ __('Прошивка') }}</label>
                                 <input type="text" id="bd-fw" name="firmware" class="form-control" autocomplete="off" placeholder="v6.60">
                             </div>
                         </div>
@@ -335,20 +335,20 @@
 
                 {{-- Шаг 3 — Проверка --}}
                 <div class="wz-pane d-none" data-wz-step="3">
-                    <p class="wz-lead">Проверьте данные — после регистрации устройство сразу начнёт отдавать события.</p>
+                    <p class="wz-lead">{{ __('Проверьте данные — после регистрации устройство сразу начнёт отдавать события') }}</p>
                     <div class="wz-sum" id="bd-summary" aria-live="polite"></div>
                     <div class="alert alert-warning d-flex align-items-start gap-2 mt-3 mb-0">
                         <i class="ti ti-alert-triangle mt-1"></i>
-                        <div>После регистрации API-токен будет показан один раз.</div>
+                        <div>{{ __('После регистрации API-токен будет показан один раз') }}</div>
                     </div>
                 </div>
 
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn me-auto" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-ghost-secondary wz-back d-none"><i class="ti ti-arrow-left me-1"></i>Назад</button>
-                <button type="button" class="btn btn-primary wz-next">Далее<i class="ti ti-arrow-right ms-1"></i></button>
-                <button type="submit" class="btn btn-primary wz-submit d-none"><i class="ti ti-check me-1"></i>Зарегистрировать устройство</button>
+                <button type="button" class="btn me-auto" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="button" class="btn btn-ghost-secondary wz-back d-none"><i class="ti ti-arrow-left me-1"></i>{{ __('Назад') }}</button>
+                <button type="button" class="btn btn-primary wz-next">{{ __('Далее') }}<i class="ti ti-arrow-right ms-1"></i></button>
+                <button type="submit" class="btn btn-primary wz-submit d-none"><i class="ti ti-check me-1"></i>{{ __('Зарегистрировать устройство') }}</button>
             </div>
         </form>
     </div>
@@ -360,13 +360,13 @@
     <div class="modal-dialog modal-sm" role="document">
         <form class="modal-content" method="post" action="{{ route('biometrics.devices.delete', $device) }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Удалить устройство</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Удалить устройство') }}</h5></div>
             <div class="modal-body">
-                Удалить «{{ $device->name }}»? Действие необратимо.
+                {{ __('Удалить') }}{{ $device->name }}{{ __('? Действие необратимо') }}
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-danger">Удалить</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-danger">{{ __('Удалить') }}</button>
             </div>
         </form>
     </div>
@@ -380,55 +380,55 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('biometrics.profile.enroll') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Регистрация биометрического профиля</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Регистрация биометрического профиля') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Кого и где</h3>
-                    <div class="crm-form__desc">Сотрудник и устройство, на котором снимается шаблон.</div>
+                    <h3>{{ __('Кого и где') }}</h3>
+                    <div class="crm-form__desc">{{ __('Сотрудник и устройство, на котором снимается шаблон') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="be-empl">Сотрудник<span class="req">*</span></label>
+                        <label class="form-label" for="be-empl">{{ __('Сотрудник') }}<span class="req">*</span></label>
                         <select id="be-empl" name="employee_id" class="form-select" required>
-                            <option value="">— выбрать —</option>
+                            <option value="">{{ __('выбрать') }}</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}">{{ $employee->last_name }} {{ $employee->first_name }} ({{ $employee->employee_no }})</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Кого записываем — биометрия привяжется к этому сотруднику</div>
+                        <div class="form-text">{{ __('Кого записываем — биометрия привяжется к этому сотруднику') }}</div>
                     </div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="be-dev">Устройство<span class="req">*</span></label>
+                        <label class="form-label" for="be-dev">{{ __('Устройство') }}<span class="req">*</span></label>
                         <select id="be-dev" name="device_id" class="form-select" required>
                             @foreach ($devices as $device)
                                 <option value="{{ $device->id }}">{{ $device->name }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Устройство, где сотрудник стоит при записи шаблона</div>
+                        <div class="form-text">{{ __('Устройство, где сотрудник стоит при записи шаблона') }}</div>
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>Шаблон</h3>
-                    <div class="crm-form__desc">Биометрия не передаётся по сети — только хэш.</div>
+                    <h3>{{ __('Шаблон') }}</h3>
+                    <div class="crm-form__desc">{{ __('Биометрия не передаётся по сети — только хэш') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
                             <label class="form-label" for="be-vendor">Vendor<span class="req">*</span></label>
                             <input type="text" id="be-vendor" name="vendor" class="form-control" required placeholder="generic">
-                            <div class="form-text">Совпадает с производителем устройства</div>
+                            <div class="form-text">{{ __('Совпадает с производителем устройства') }}</div>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="be-ref">Ссылка шаблона</label>
+                            <label class="form-label" for="be-ref">{{ __('Ссылка шаблона') }}</label>
                             <input type="text" id="be-ref" name="template_ref" class="form-control">
                         </div>
                     </div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="be-hash">Хэш шаблона (от устройства)<span class="req">*</span></label>
+                        <label class="form-label" for="be-hash">{{ __('Хэш шаблона (от устройства)') }}<span class="req">*</span></label>
                         <input type="text" id="be-hash" name="template_hash" class="form-control" required>
-                        <div class="form-text">Строка, которую выдало устройство после записи</div>
+                        <div class="form-text">{{ __('Строка, которую выдало устройство после записи') }}</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary">Записать</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('Записать') }}</button>
             </div>
         </form>
     </div>
@@ -741,12 +741,12 @@
             function renderSummary() {
                 if (!summary) { return; }
                 var rows = [
-                    ['Название', fieldValue('name')],
-                    ['Тип устройства', cardLabel('device_type')],
-                    ['Направление', cardLabel('direction')],
-                    ['Производитель', fieldValue('vendor')]
+                    [__('Название'), fieldValue('name')],
+                    [__('Тип устройства'), cardLabel('device_type')],
+                    [__('Направление'), cardLabel('direction')],
+                    [__('Производитель'), fieldValue('vendor')]
                 ];
-                [['Модель', 'model'], ['Расположение', 'location'], ['IP', 'ip'], ['Прошивка', 'firmware']]
+                [[__('Модель'), 'model'], [__('Расположение'), 'location'], ['IP', 'ip'], [__('Прошивка'), 'firmware']]
                     .forEach(function (pair) {
                         var value = fieldValue(pair[1]);
                         if (value) { rows.push([pair[0], value]); }

@@ -1493,6 +1493,26 @@ body.crm-palette-open { overflow: hidden; }
     to { opacity: 1; translate: 0 0; }
 }
 
+/* --- Призыв к добавлению записи --- */
+.crm-add-banner {
+    border-color: color-mix(in srgb, var(--crm-accent) 24%, var(--tblr-border-color));
+    background: linear-gradient(120deg, color-mix(in srgb, var(--crm-accent) 8%, transparent), transparent 65%);
+}
+.crm-add-banner__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--crm-accent) 14%, transparent);
+    color: var(--crm-accent);
+    font-size: 1.35rem;
+}
+.crm-add-banner__title { font-size: 1rem; font-weight: 650; color: var(--crm-text); }
+.crm-add-banner__text { font-size: .84rem; color: var(--crm-text-muted); }
+
 /* --- Метрическая лента (строка KPI внутри модуля) --- */
 .crm-metrics {
     display: flex;
@@ -2092,17 +2112,17 @@ body.crm-palette-open { overflow: hidden; }
     border-radius: 10px;
     background: var(--tblr-bg-surface, #fff);
     cursor: pointer;
-    transition: border-color var(--crm-motion-feedback) ease, background-color var(--crm-motion-feedback) ease;
+    transition: border-color var(--crm-motion-feedback) var(--crm-ease-standard),
+        background-color var(--crm-motion-feedback) var(--crm-ease-standard);
 }
 .crm-org__node:hover { border-color: rgba(var(--crm-accent-rgb), .45); background-color: var(--crm-table-hover); }
 .crm-org__node:focus-visible { outline-offset: -3px; }
-.crm-org__toggle { color: var(--tblr-secondary); transition: transform var(--crm-motion-control) var(--crm-ease-standard); display: inline-flex; }
-.crm-org__toggle i { transition: opacity var(--crm-motion-control); }
-.crm-org details[open]:not([data-org-closing]) > .crm-org__node .crm-org__toggle { transform: rotate(90deg); }
-.crm-org details:is(:not([open]), [data-org-closing]) > .crm-org__node .crm-org__toggle i { opacity: .4; }
-.crm-org__content-inner { contain: layout; display: flow-root; }
-.crm-org__content.is-animating { overflow: clip; }
-html:has(.crm-org__content.is-animating) { overflow-anchor: none; }
+.crm-org__toggle { color: var(--tblr-secondary); display: inline-flex; }
+.crm-org__branch[open] > .crm-org__node .crm-org__toggle { transform: rotate(90deg); }
+.crm-org__branch:not([open]) > .crm-org__node .crm-org__toggle i { opacity: .4; }
+@media (prefers-reduced-motion: no-preference) {
+    .crm-org__toggle { transition: transform var(--crm-motion-feedback) var(--crm-ease-standard); }
+}
 .crm-org__logo { width: 34px; height: 34px; font-size: 12.5px; border-radius: 10px; flex: none; }
 .crm-org__body { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .crm-org__name { font-size: 14px; font-weight: 600; line-height: 1.25; }
@@ -2258,8 +2278,7 @@ html:has(.crm-org__content.is-animating) { overflow-anchor: none; }
     min-width: 0;
     height: 30px;
     margin: 0;
-    padding-inline: 24px 2px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2377808b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='5.5'/%3E%3Cpath d='m15 15 4 4'/%3E%3C/svg%3E") no-repeat left center / 18px 18px;
+    padding-inline: 2px;
     color: var(--crm-text);
     font: inherit;
 }

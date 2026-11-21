@@ -41,64 +41,69 @@ class SettingsService
     {
         return [
             'corpms.tasks.max_subtask_depth' => [
-                'name' => 'Предел вложенности подзадач',
+                'name' => __('Предел вложенности подзадач'),
                 'type' => 'int',
-                'group' => 'Задачи',
+                'group' => __('Задачи'),
             ],
             'corpms.documents.max_file_size_mb' => [
                 'name' => 'Макс. размер файла документа (МБ)',
                 'type' => 'int',
-                'group' => 'Документы',
+                'group' => __('Документы'),
             ],
             'corpms.documents.max_file_count' => [
-                'name' => 'Макс. файлов на документ',
+                'name' => __('Макс. файлов на документ'),
                 'type' => 'int',
-                'group' => 'Документы',
+                'group' => __('Документы'),
             ],
             'corpms.signature.otp_ttl' => [
                 'name' => 'Время жизни OTP-кода (мин)',
                 'type' => 'int',
-                'group' => 'Подписи',
+                'group' => __('Подписи'),
             ],
             'corpms.signature.qr_token_ttl_hours' => [
                 'name' => 'Время жизни QR-токена (ч)',
                 'type' => 'int',
-                'group' => 'Подписи',
+                'group' => __('Подписи'),
             ],
             'corpms.biometric.require_liveness' => [
-                'name' => 'Обязательная liveness-проверка',
+                'name' => __('Обязательная liveness-проверка'),
                 'type' => 'bool',
-                'group' => 'Посещаемость',
+                'group' => __('Посещаемость'),
             ],
             'corpms.biometric.offline_after_minutes' => [
                 'name' => 'Устройство offline после (мин)',
                 'type' => 'int',
-                'group' => 'Посещаемость',
+                'group' => __('Посещаемость'),
             ],
             'corpms.notifications.daily_summary_hour' => [
-                'name' => 'Час утренней сводки',
+                'name' => __('Час утренней сводки'),
                 'type' => 'int',
-                'group' => 'Уведомления',
+                'group' => __('Уведомления'),
             ],
             'corpms.ai.base_url' => [
-                'name' => 'Адрес провайдера',
+                'name' => __('Адрес провайдера'),
                 'type' => 'string',
-                'group' => 'AI-ассистент',
+                'group' => __('AI-ассистент'),
+            ],
+            'corpms.ai.image_model' => [
+                'name' => __('Модель генерации PNG'),
+                'type' => 'string',
+                'group' => __('AI-ассистент'),
             ],
             'corpms.ai.api_key' => [
-                'name' => 'API-ключ',
+                'name' => __('API-ключ'),
                 'type' => 'secret',
-                'group' => 'AI-ассистент',
+                'group' => __('AI-ассистент'),
             ],
             'corpms.ai.model' => [
-                'name' => 'Модель',
+                'name' => __('Модель'),
                 'type' => 'string',
-                'group' => 'AI-ассистент',
+                'group' => __('AI-ассистент'),
             ],
             'corpms.ai.timeout' => [
-                'name' => 'Ожидание ответа, сек.',
+                'name' => __('Ожидание ответа, сек.'),
                 'type' => 'int',
-                'group' => 'AI-ассистент',
+                'group' => __('AI-ассистент'),
             ],
         ];
     }

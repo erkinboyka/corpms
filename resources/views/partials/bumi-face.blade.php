@@ -1,5 +1,5 @@
 <button type="button" class="bumi-face {{ $class ?? '' }}" data-bumi-face data-bumi-emotion="{{ $emotion ?? 'smile' }}"
-        aria-label="Сменить выражение лица Bumi" title="Сменить выражение лица Bumi">
+        aria-label="{{ __("Сменить выражение лица Bumi") }}" title="{{ __("Сменить выражение лица Bumi") }}">
     <svg viewBox="79 31 314 242" width="40" height="32" aria-hidden="true" focusable="false">
         <use href="/assets/bm-mascot-mini.svg?v3#helmet"/>
         <g class="bumi-face__expression bumi-face__expression--smile">

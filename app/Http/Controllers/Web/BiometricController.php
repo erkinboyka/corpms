@@ -39,7 +39,7 @@ class BiometricController extends Controller
         $user = $request->user();
         $me = app(PermissionService::class)->employee($user);
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         $companyId = $me->company_id;
 
@@ -58,7 +58,7 @@ class BiometricController extends Controller
             ->limit(200)
             ->get();
 
-        // статус "расчётный": online => last_seen свежее порога
+        // статус __("расчётный"): online => last_seen свежее порога
         $devices->each(function (BiometricDevice $device) use ($threshold): void {
             $device->computed_status = ($device->status === DeviceStatus::Online && $device->last_seen_at !== null && $device->last_seen_at->greaterThanOrEqualTo($threshold))
                 ? DeviceStatus::Online
@@ -106,7 +106,7 @@ class BiometricController extends Controller
         \assert($user instanceof User);
         $me = app(PermissionService::class)->employee($user);
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $validated = $request->validate([
@@ -152,7 +152,7 @@ class BiometricController extends Controller
 
         $this->audit->log($request->user(), 'device.updated', 'biometric_device', $device->id, null, $validated);
 
-        return back()->with('status', 'Устройство обновлено');
+        return back()->with('status', __('Устройство обновлено'));
     }
 
     public function deleteDevice(BiometricDevice $device): RedirectResponse
@@ -160,7 +160,7 @@ class BiometricController extends Controller
         $this->audit->log(auth()->user(), 'device.deleted', 'biometric_device', $device->id, ['serial_number' => $device->serial_number], null);
         $device->delete();
 
-        return back()->with('status', 'Устройство удалено (события сохранены)');
+        return back()->with('status', __('Устройство удалено (события сохранены)'));
     }
 
     /* -------------------- профили (enroll) -------------------- */
@@ -171,7 +171,7 @@ class BiometricController extends Controller
         \assert($user instanceof User);
         $me = app(PermissionService::class)->employee($user);
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $validated = $request->validate([
@@ -186,8 +186,8 @@ class BiometricController extends Controller
         $device = BiometricDevice::query()->findOrFail($validated['device_id']);
 
         // межтенантная изоляция (P0): ID приходят из тела запроса, middleware их не видит
-        TenantGuard::ensureEmployee($employee, $me, 'Сотрудник принадлежит другой компании');
-        TenantGuard::ensureCompany((int) $device->company_id, $me, 'Устройство принадлежит другой компании');
+        TenantGuard::ensureEmployee($employee, $me, __('Сотрудник принадлежит другой компании'));
+        TenantGuard::ensureCompany((int) $device->company_id, $me, __('Устройство принадлежит другой компании'));
 
         // фиксируем enrollment-акт (журнал устройства)
         BiometricEnrollment::create([
@@ -224,7 +224,7 @@ class BiometricController extends Controller
             'vendor' => $profile->vendor,
         ]);
 
-        return back()->with('status', 'Профиль деактивирован');
+        return back()->with('status', __('Профиль деактивирован'));
     }
 
     public function deleteProfile(BiometricProfile $profile): RedirectResponse
@@ -239,7 +239,7 @@ class BiometricController extends Controller
             'vendor' => $profile->vendor,
         ]);
 
-        return back()->with('status', 'Профиль удалён');
+        return back()->with('status', __('Профиль удалён'));
     }
 
     /* -------------------- журнал биособытий (п.72 ТЗ) -------------------- */
@@ -251,7 +251,7 @@ class BiometricController extends Controller
         \assert($user instanceof User);
         $me = app(PermissionService::class)->employee($user);
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $permissions = app(PermissionService::class);
@@ -291,7 +291,7 @@ class BiometricController extends Controller
     {
         $me = app(PermissionService::class)->employee($request->user());
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         return view('biometrics.privacy', [
@@ -314,7 +314,7 @@ class BiometricController extends Controller
     {
         $me = app(PermissionService::class)->employee($request->user());
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $validated = $request->validate([
@@ -343,7 +343,7 @@ class BiometricController extends Controller
             'purged' => $purged,
         ]);
 
-        return redirect()->route('biometrics.privacy')->with('status', 'Политика сохранена'.($purged > 0 ? ', удалено записей: '.$purged : ''));
+        return redirect()->route('biometrics.privacy')->with('status', __('Политика сохранена').($purged > 0 ? ', удалено записей: '.$purged : ''));
     }
 
     /**

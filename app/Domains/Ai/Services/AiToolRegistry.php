@@ -144,7 +144,7 @@ class AiToolRegistry
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'query' => ['type' => 'string', 'description' => 'Поисковый запрос'],
+                        'query' => ['type' => 'string', 'description' => __('Поисковый запрос')],
                     ],
                     'required' => ['query'],
                 ],
@@ -152,13 +152,13 @@ class AiToolRegistry
             ],
 
             'search_tasks' => [
-                'description' => 'Поиск задач компании по названию. Возвращает заголовок, статус и ссылку.',
+                'description' => __('Поиск задач компании по названию. Возвращает заголовок, статус и ссылку.'),
                 'permission' => 'tasks.view',
                 'critical' => false,
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'query' => ['type' => 'string', 'description' => 'Поисковый запрос'],
+                        'query' => ['type' => 'string', 'description' => __('Поисковый запрос')],
                     ],
                     'required' => ['query'],
                 ],
@@ -166,7 +166,7 @@ class AiToolRegistry
             ],
 
             'attendance_summary' => [
-                'description' => 'Сводка посещаемости за сегодня в области доступа вызывающего.',
+                'description' => __('Сводка посещаемости за сегодня в области доступа вызывающего.'),
                 'permission' => 'attendance.view',
                 'critical' => false,
                 'schema' => [
@@ -178,7 +178,7 @@ class AiToolRegistry
             ],
 
             'task_stats' => [
-                'description' => 'Статистика задач по статусам в области доступа вызывающего.',
+                'description' => __('Статистика задач по статусам в области доступа вызывающего.'),
                 'permission' => 'analytics.view',
                 'critical' => false,
                 'schema' => [
@@ -196,8 +196,8 @@ class AiToolRegistry
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'title' => ['type' => 'string', 'description' => 'Название задачи'],
-                        'description' => ['type' => 'string', 'description' => 'Описание задачи'],
+                        'title' => ['type' => 'string', 'description' => __('Название задачи')],
+                        'description' => ['type' => 'string', 'description' => __('Описание задачи')],
                     ],
                     'required' => ['title'],
                 ],
@@ -213,7 +213,7 @@ class AiToolRegistry
             ],
 
             'crm_pipeline_summary' => [
-                'description' => 'Сводка воронки CRM: открытые сделки и суммы по стадиям. Только чтение.',
+                'description' => __('Сводка воронки CRM: открытые сделки и суммы по стадиям. Только чтение.'),
                 'permission' => 'crm.view',
                 'critical' => false,
                 'schema' => [
@@ -231,7 +231,7 @@ class AiToolRegistry
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'query' => ['type' => 'string', 'description' => 'Поисковый запрос'],
+                        'query' => ['type' => 'string', 'description' => __('Поисковый запрос')],
                     ],
                     'required' => ['query'],
                 ],
@@ -245,7 +245,7 @@ class AiToolRegistry
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'month' => ['type' => 'string', 'description' => 'Месяц YYYY-MM; по умолчанию текущий'],
+                        'month' => ['type' => 'string', 'description' => __('Месяц YYYY-MM; по умолчанию текущий')],
                     ],
                     'required' => [],
                 ],
@@ -283,7 +283,7 @@ class AiToolRegistry
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'month' => ['type' => 'string', 'description' => 'Месяц YYYY-MM; по умолчанию текущий'],
+                        'month' => ['type' => 'string', 'description' => __('Месяц YYYY-MM; по умолчанию текущий')],
                     ],
                     'required' => [],
                 ],
@@ -297,7 +297,7 @@ class AiToolRegistry
                 'schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'month' => ['type' => 'string', 'description' => 'Месяц YYYY-MM; по умолчанию текущий'],
+                        'month' => ['type' => 'string', 'description' => __('Месяц YYYY-MM; по умолчанию текущий')],
                     ],
                     'required' => [],
                 ],
@@ -371,17 +371,10 @@ class AiToolRegistry
      */
     protected function searchDocuments(Employee $asker, string $query): array
     {
-        $access = $this->analytics->accessibleEmployees($asker->user, 'documents.view');
-        $ids = $access['employees']->pluck('id')->all();
-
-        $documents = Document::query()
-            ->where('company_id', $asker->company_id)
+        $documents = BumiRecords::documents($asker)
             ->where(fn ($w) => $w->where('title', 'like', "%{$query}%")
                 ->orWhere('document_number', 'like', "%{$query}%")
                 ->orWhere('reg_number', 'like', "%{$query}%"))
-            ->when($access['scope_value'] !== 'company', fn ($w) => $w
-                ->where(fn ($scope) => $scope->whereIn('author_id', $ids)
-                    ->orWhereHas('signatureRequests', fn ($signature) => $signature->whereIn('signer_id', $ids))))
             ->orderByDesc('id')
             ->limit(5)
             ->get();
@@ -399,15 +392,9 @@ class AiToolRegistry
     /** Поиск задач в пределах компании и scope tasks.view. */
     protected function searchTasks(Employee $asker, string $query): array
     {
-        $access = $this->analytics->accessibleEmployees($asker->user, 'tasks.view');
-        $ids = $access['employees']->pluck('id')->all();
-
-        $tasks = Task::query()
-            ->where('company_id', $asker->company_id)
+        $tasks = BumiRecords::tasks($asker)
             ->where(fn ($w) => $w->where('title', 'like', "%{$query}%")
                 ->orWhere('number', 'like', "%{$query}%"))
-            ->when($access['scope_value'] !== 'company', fn ($w) => $w
-                ->whereHas('assignments', fn ($assignment) => $assignment->whereIn('employee_id', $ids)->limit(1)))
             ->orderByDesc('id')
             ->limit(5)
             ->get();
@@ -440,7 +427,7 @@ class AiToolRegistry
 
         return [
             'scope' => $access['scope_value'],
-            'tasks' => $this->analytics->taskStats($access['employees']),
+            'tasks' => $this->analytics->taskStats($access['employees'], exclusive: true),
         ];
     }
 

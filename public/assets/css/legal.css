@@ -1,0 +1,498 @@
+/* ============================================================================
+   BM SYSTEMS — Legal documents + Two-factor authentication
+   Единый премиальный стиль для «Политики», «Условий», «Махфият» и 2FA.
+   Использует только токены tokens.css: светлая/тёмная тема из коробки.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   1. LEGAL DOCUMENTS — оболочка
+   --------------------------------------------------------------------------- */
+.legal-shell {
+    --legal-gap: clamp(1rem, 2vw, 1.5rem);
+    position: relative;
+    padding-bottom: var(--crm-space-7);
+}
+
+/* Hero */
+.legal-hero {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: var(--legal-gap);
+    padding: clamp(1.5rem, 3.5vw, 2.75rem);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-xl);
+    background:
+        radial-gradient(circle at 88% 8%, rgba(var(--crm-accent-rgb), .16), transparent 42%),
+        radial-gradient(circle at 8% 92%, rgba(var(--crm-info-rgb), .10), transparent 40%),
+        var(--crm-surface-solid);
+    box-shadow: var(--crm-shadow-2);
+}
+.legal-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(var(--crm-accent-rgb), .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--crm-accent-rgb), .045) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: linear-gradient(110deg, #000, transparent 72%);
+    pointer-events: none;
+}
+.legal-hero > * { position: relative; z-index: 1; }
+
+.legal-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .3rem .7rem;
+    border: 1px solid rgba(var(--crm-accent-rgb), .28);
+    border-radius: var(--crm-radius-pill);
+    background: rgba(var(--crm-accent-rgb), .08);
+    color: var(--crm-accent);
+    font-size: var(--crm-text-caption-2);
+    font-weight: 650;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.legal-hero h1 {
+    margin: .85rem 0 .55rem;
+    font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+    font-weight: 720;
+    line-height: 1.12;
+    letter-spacing: -.035em;
+    color: var(--crm-text);
+}
+.legal-hero__lead {
+    max-width: 62ch;
+    margin: 0;
+    color: var(--crm-text-secondary);
+    font-size: var(--crm-text-body-lg);
+    line-height: 1.6;
+}
+.legal-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.25rem;
+    margin-top: 1.35rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--crm-border);
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption);
+}
+.legal-hero__meta span { display: inline-flex; align-items: center; gap: .4rem; }
+.legal-hero__meta i { font-size: 1rem; color: var(--crm-accent); }
+
+/* Двухколоночная сетка: навигация + текст */
+.legal-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 15.5rem) minmax(0, 1fr);
+    gap: var(--legal-gap);
+    align-items: start;
+}
+.legal-side { position: sticky; top: calc(var(--crm-topbar-h) + 1rem); }
+.legal-main { min-width: 0; }
+
+/* Навигация по документам */
+.legal-nav {
+    padding: .85rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    background: var(--crm-surface-solid);
+    box-shadow: var(--crm-shadow-1);
+}
+.legal-nav__title {
+    margin: .25rem .5rem .7rem;
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption-2);
+    font-weight: 650;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+.legal-nav__link {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .65rem .7rem;
+    border-radius: var(--crm-radius-md);
+    color: var(--crm-text-secondary);
+    text-decoration: none;
+    transition: background var(--crm-motion-control), color var(--crm-motion-control);
+}
+.legal-nav__link + .legal-nav__link { margin-top: .15rem; }
+.legal-nav__link:hover {
+    background: var(--crm-table-hover);
+    color: var(--crm-text);
+    text-decoration: none;
+}
+.legal-nav__link.is-active {
+    background: rgba(var(--crm-accent-rgb), .10);
+    color: var(--crm-accent);
+    font-weight: 600;
+}
+.legal-nav__link i { font-size: 1.15rem; flex: 0 0 auto; }
+.legal-nav__link span { display: block; line-height: 1.25; }
+.legal-nav__link small { display: block; color: var(--crm-text-muted); font-size: var(--crm-text-caption-2); }
+
+/* Оглавление секций */
+.legal-toc {
+    margin-top: .85rem;
+    padding: .9rem;
+    border: 1px dashed var(--crm-border-strong);
+    border-radius: var(--crm-radius-md);
+    background: color-mix(in srgb, var(--crm-surface) 60%, transparent);
+}
+.legal-toc__title {
+    margin: 0 0 .55rem;
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption-2);
+    font-weight: 650;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.legal-toc a {
+    display: block;
+    padding: .3rem .35rem;
+    border-radius: var(--crm-radius-xs);
+    color: var(--crm-text-secondary);
+    font-size: var(--crm-text-caption);
+    text-decoration: none;
+}
+.legal-toc a:hover { background: var(--crm-table-hover); color: var(--crm-accent); text-decoration: none; }
+
+/* Секции документа */
+.legal-section {
+    scroll-margin-top: calc(var(--crm-topbar-h) + 1.25rem);
+    margin-bottom: var(--legal-gap);
+    padding: clamp(1.15rem, 2.4vw, 1.75rem);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    background: var(--crm-surface-solid);
+    box-shadow: var(--crm-shadow-1);
+    transition: border-color var(--crm-motion-surface), box-shadow var(--crm-motion-surface);
+}
+.legal-section:hover {
+    border-color: rgba(var(--crm-accent-rgb), .28);
+    box-shadow: var(--crm-shadow-2);
+}
+.legal-section__head {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    margin-bottom: .8rem;
+}
+.legal-section__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    flex: 0 0 auto;
+    border-radius: var(--crm-radius-md);
+    background: rgba(var(--crm-accent-rgb), .10);
+    color: var(--crm-accent);
+    font-size: 1.35rem;
+}
+.legal-section__num {
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption-2);
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+.legal-section h2 {
+    margin: 0;
+    color: var(--crm-text);
+    font-size: var(--crm-text-section);
+    font-weight: 680;
+    letter-spacing: -.01em;
+}
+.legal-section p {
+    margin: 0 0 .75rem;
+    color: var(--crm-text-secondary);
+    line-height: 1.65;
+}
+.legal-section p:last-child { margin-bottom: 0; }
+.legal-section__note {
+    margin-top: 1rem;
+    padding: .8rem 1rem;
+    border-left: 3px solid var(--crm-info);
+    border-radius: 0 var(--crm-radius-sm) var(--crm-radius-sm) 0;
+    background: var(--crm-info-lt);
+    color: var(--crm-text-secondary);
+    font-size: var(--crm-text-callout);
+}
+
+/* Футер документа: обновлено + ссылки */
+.legal-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding: 1.15rem 1.35rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    background: var(--crm-surface);
+}
+.legal-foot__updated {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption);
+}
+.legal-foot__updated i { color: var(--crm-accent); font-size: 1.05rem; }
+.legal-foot__links { display: flex; flex-wrap: wrap; gap: .5rem; }
+.legal-foot__links a {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .75rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-pill);
+    color: var(--crm-text-secondary);
+    font-size: var(--crm-text-caption);
+    text-decoration: none;
+    transition: all var(--crm-motion-control);
+}
+.legal-foot__links a:hover {
+    border-color: rgba(var(--crm-accent-rgb), .4);
+    background: rgba(var(--crm-accent-rgb), .08);
+    color: var(--crm-accent);
+    text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+   2. AUTH 2FA — экран ввода кода
+   --------------------------------------------------------------------------- */
+.totp-card { text-align: center; }
+.totp-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.75rem;
+    height: 3.75rem;
+    margin: 0 auto 1.1rem;
+    border-radius: 50%;
+    background: linear-gradient(140deg, rgba(var(--crm-accent-rgb), .18), rgba(var(--crm-accent-rgb), .06));
+    border: 1px solid rgba(var(--crm-accent-rgb), .28);
+    color: var(--crm-accent);
+    font-size: 1.8rem;
+    box-shadow: 0 0 0 6px rgba(var(--crm-accent-rgb), .05);
+}
+.totp-card h1 { margin: 0 0 .4rem; font-size: clamp(1.5rem, 3vw, 1.85rem); letter-spacing: -.035em; }
+.totp-card__lead { margin: 0 0 1.5rem; color: var(--crm-text-secondary); font-size: var(--crm-text-body); }
+
+.otp-boxes {
+    display: flex;
+    justify-content: center;
+    gap: clamp(.35rem, 1.3vw, .6rem);
+    margin: 0 0 1.1rem;
+}
+.otp-box {
+    width: clamp(2.6rem, 11vw, 3.35rem);
+    height: clamp(3.1rem, 12vw, 3.85rem);
+    padding: 0;
+    border: 1.5px solid var(--crm-border-strong);
+    border-radius: var(--crm-radius-md);
+    background: var(--crm-input-bg);
+    color: var(--crm-text);
+    font-family: var(--crm-font-mono);
+    font-size: 1.5rem;
+    font-weight: 650;
+    text-align: center;
+    transition: border-color var(--crm-motion-control), box-shadow var(--crm-motion-control), transform var(--crm-motion-feedback);
+}
+.otp-box:focus {
+    outline: none;
+    border-color: var(--crm-accent);
+    box-shadow: var(--crm-focus-ring);
+    transform: translateY(-1px);
+}
+.otp-box.is-filled { border-color: rgba(var(--crm-accent-rgb), .55); background: rgba(var(--crm-accent-rgb), .06); }
+.otp-box.is-invalid { border-color: var(--crm-danger); box-shadow: 0 0 0 3px rgba(var(--crm-danger-rgb), .14); }
+.otp-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    margin-bottom: 1.35rem;
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption);
+}
+.otp-hint i { color: var(--crm-info); }
+.totp-card .btn { min-height: var(--crm-tap); }
+.totp-card__footer {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--crm-border);
+    color: var(--crm-text-muted);
+    font-size: var(--crm-text-caption);
+}
+.totp-card__footer a { color: var(--crm-accent); text-decoration: none; }
+.totp-card__footer a:hover { text-decoration: underline; }
+
+/* ---------------------------------------------------------------------------
+   3. PROFILE 2FA — настройка
+   --------------------------------------------------------------------------- */
+.twofa-status {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    background: var(--crm-surface-solid);
+}
+.twofa-status__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    border-radius: var(--crm-radius-md);
+    font-size: 1.4rem;
+}
+.twofa-status--on { border-color: rgba(var(--crm-success-rgb), .3); background: var(--crm-success-lt); }
+.twofa-status--on .twofa-status__icon { background: rgba(var(--crm-success-rgb), .16); color: var(--crm-success); }
+.twofa-status--off { border-color: rgba(var(--crm-warning-rgb), .3); background: var(--crm-warning-lt); }
+.twofa-status--off .twofa-status__icon { background: rgba(var(--crm-warning-rgb), .16); color: var(--crm-warning); }
+.twofa-status strong { display: block; color: var(--crm-text); font-size: var(--crm-text-body-lg); }
+.twofa-status small { display: block; margin-top: .15rem; color: var(--crm-text-secondary); }
+
+.twofa-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+.twofa-panel {
+    padding: 1.35rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    background: var(--crm-surface-solid);
+    box-shadow: var(--crm-shadow-1);
+}
+.twofa-panel__title {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin: 0 0 1rem;
+    color: var(--crm-text);
+    font-size: var(--crm-text-section);
+    font-weight: 680;
+}
+.twofa-panel__title i { color: var(--crm-accent); font-size: 1.2rem; }
+
+.twofa-qr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: .75rem;
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-md);
+    background: #fff;
+}
+.twofa-qr img,
+.twofa-qr__svg {
+    display: block;
+    width: min(100%, 190px);
+    height: auto;
+    max-width: 100%;
+    overflow: visible;
+}
+.twofa-qr__hint { margin: .65rem 0 0; color: var(--crm-text-muted); font-size: var(--crm-text-caption); text-align: center; }
+.twofa-qr__manual { margin: .35rem 0 0; color: var(--crm-text-muted); font-size: var(--crm-text-caption-2); text-align: center; }
+.twofa-qr__manual a { color: var(--crm-accent); text-decoration: none; }
+.twofa-qr__manual a:hover { text-decoration: underline; }
+
+.twofa-steps { margin: 0; padding: 0; list-style: none; counter-reset: twofa; }
+.twofa-steps li {
+    position: relative;
+    padding: 0 0 1.1rem 2.6rem;
+    color: var(--crm-text-secondary);
+    line-height: 1.55;
+    counter-increment: twofa;
+}
+.twofa-steps li:last-child { padding-bottom: 0; }
+.twofa-steps li::before {
+    content: counter(twofa);
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: rgba(var(--crm-accent-rgb), .10);
+    color: var(--crm-accent);
+    font-size: var(--crm-text-caption);
+    font-weight: 700;
+}
+.twofa-steps li::after {
+    content: "";
+    position: absolute;
+    left: .84rem;
+    top: 1.9rem;
+    bottom: .25rem;
+    width: 1px;
+    background: var(--crm-border-strong);
+}
+.twofa-steps li:last-child::after { display: none; }
+.twofa-steps strong { display: block; color: var(--crm-text); font-weight: 620; }
+
+.twofa-secret { margin-top: 1.15rem; }
+.twofa-secret__label { display: block; margin-bottom: .4rem; color: var(--crm-text-muted); font-size: var(--crm-text-caption-2); font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
+.twofa-secret__value {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem .75rem;
+    border: 1px dashed var(--crm-border-strong);
+    border-radius: var(--crm-radius-sm);
+    background: var(--crm-input-bg);
+    font-family: var(--crm-font-mono);
+    font-size: var(--crm-text-caption);
+    color: var(--crm-text);
+    word-break: break-all;
+}
+.twofa-secret__value button { margin-left: auto; flex: 0 0 auto; }
+
+.twofa-code-form { margin-top: 1.35rem; padding-top: 1.25rem; border-top: 1px solid var(--crm-border); }
+.twofa-code-form .form-label { color: var(--crm-text); font-weight: 600; }
+.twofa-code-form .form-control {
+    font-family: var(--crm-font-mono);
+    font-size: 1.1rem;
+    letter-spacing: .25em;
+    text-align: center;
+}
+.twofa-code-form .btn { min-height: var(--crm-tap); }
+
+.twofa-danger {
+    margin-top: 1.25rem;
+    padding: 1.15rem;
+    border: 1px solid rgba(var(--crm-danger-rgb), .28);
+    border-radius: var(--crm-radius-lg);
+    background: var(--crm-danger-lt);
+}
+.twofa-danger h3 { margin: 0 0 .5rem; color: var(--crm-danger); font-size: var(--crm-text-body-lg); font-weight: 650; }
+.twofa-danger p { margin: 0 0 1rem; color: var(--crm-text-secondary); font-size: var(--crm-text-callout); }
+
+/* Адаптив */
+@media (max-width: 900px) {
+    .legal-grid { grid-template-columns: minmax(0, 1fr); }
+    .legal-side { position: static; }
+    .legal-nav__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .35rem; }
+    .legal-nav__link + .legal-nav__link { margin-top: 0; }
+    .twofa-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+    .legal-hero { padding: 1.25rem; border-radius: var(--crm-radius-lg); }
+    .legal-section { padding: 1.1rem; }
+    .legal-foot { padding: 1rem; }
+    .otp-boxes { gap: .3rem; }
+}

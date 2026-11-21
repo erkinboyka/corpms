@@ -96,7 +96,7 @@ class CrmLeadController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['title' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['title' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -108,7 +108,7 @@ class CrmLeadController extends Controller
             'estimated_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'owner_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['title' => 'название', 'source' => 'источник']);
+        ], [], ['title' => __('название'), 'source' => __('источник')]);
 
         $this->guardOwner($validated['owner_id'] ?? null, $me);
 
@@ -131,7 +131,7 @@ class CrmLeadController extends Controller
             'source' => $lead->source->value,
         ]);
 
-        return redirect()->route('crm.leads.index')->with('status', 'Лид «'.$lead->title.'» создан');
+        return redirect()->route('crm.leads.index')->with('status', __('Лид «').$lead->title.__('» создан'));
     }
 
     /** Квалификация лида (new → qualified). */
@@ -142,7 +142,7 @@ class CrmLeadController extends Controller
         TenantGuard::ensure($lead, $me);
 
         if ($lead->status !== CrmLeadStatus::New) {
-            return back()->withErrors(['status' => 'Квалифицировать можно только новый лид']);
+            return back()->withErrors(['status' => __('Квалифицировать можно только новый лид')]);
         }
 
         $lead->status = CrmLeadStatus::Qualified;
@@ -152,7 +152,7 @@ class CrmLeadController extends Controller
             'status' => $lead->status->value,
         ]);
 
-        return back()->with('status', 'Лид «'.$lead->title.'» квалифицирован');
+        return back()->with('status', __('Лид «').$lead->title.__('» квалифицирован'));
     }
 
     /** Потеря лида (new/qualified → lost). */
@@ -163,7 +163,7 @@ class CrmLeadController extends Controller
         TenantGuard::ensure($lead, $me);
 
         if ($lead->status->isOpen() === false) {
-            return back()->withErrors(['status' => 'Лид уже закрыт']);
+            return back()->withErrors(['status' => __('Лид уже закрыт')]);
         }
 
         $lead->status = CrmLeadStatus::Lost;
@@ -173,7 +173,7 @@ class CrmLeadController extends Controller
             'status' => $lead->status->value,
         ]);
 
-        return back()->with('status', 'Лид «'.$lead->title.'» отмечен как потерянный');
+        return back()->with('status', __('Лид «').$lead->title.__('» отмечен как потерянный'));
     }
 
     /** Конверсия лида в клиента и сделку. */
@@ -196,7 +196,7 @@ class CrmLeadController extends Controller
 
         return redirect()
             ->route('crm.deals.index')
-            ->with('status', 'Лид «'.$lead->title.'» сконвертирован: сделка №'.$deal->id);
+            ->with('status', __('Лид «').$lead->title.__('» сконвертирован: сделка №').$deal->id);
     }
 
     private function guardOwner(mixed $ownerId, Employee $me): void

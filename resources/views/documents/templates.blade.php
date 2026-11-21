@@ -1,26 +1,26 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'directory')
 
-@section('title', 'Шаблоны документов')
+@section('title', __('Шаблоны документов'))
 
 @section('content')
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Документооборот</div>
-            <h1 class="page-title mt-1">Шаблоны документов</h1>
-            <div class="text-secondary mt-1">Категории, шаблоны и генерация с подстановкой переменных</div>
+            <div class="crm-eyebrow">{{ __('Документооборот') }}</div>
+            <h1 class="page-title mt-1">{{ __('Шаблоны документов') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Категории, шаблоны и генерация с подстановкой переменных') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('documents.index') }}"><i class="ti ti-arrow-left me-1"></i>Документы</a>
+            <a class="btn btn-ghost-secondary me-1" href="{{ route('documents.index') }}"><i class="ti ti-arrow-left me-1"></i>{{ __('Документы') }}</a>
             @if ($canManageCategories)
                 <button class="btn btn-ghost-secondary me-1" data-bs-toggle="modal" data-bs-target="#newCategory">
-                    <i class="ti ti-folder-plus me-1"></i>Категория
+                    <i class="ti ti-folder-plus me-1"></i>{{ __('Категория') }}
                 </button>
             @endif
             @if ($canManageTemplates)
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTemplate">
-                    <i class="ti ti-plus me-1"></i>Новый шаблон
+                    <i class="ti ti-plus me-1"></i>{{ __('Новый шаблон') }}
                 </button>
             @endif
         </div>
@@ -31,8 +31,8 @@
     {{-- ===== Категории ===== --}}
     <div class="col-lg-4">
         <div class="crm-form__section">
-            <h3>Категории <span class="text-secondary fw-normal">({{ $categories->count() }})</span></h3>
-            <div class="crm-form__desc">Разделы каталога документов.</div>
+            <h3>{{ __('Категории') }} <span class="text-secondary fw-normal">({{ $categories->count() }})</span></h3>
+            <div class="crm-form__desc">{{ __('Разделы каталога документов') }}</div>
             <div class="crm-queue">
                 @forelse ($categories as $category)
                     <div class="crm-queue__item" style="--c: var(--crm-info);">
@@ -41,14 +41,14 @@
                         </span>
                         <div class="crm-queue__body">
                             <div class="crm-queue__title">{{ $category->name }}</div>
-                            <div class="crm-queue__sub"><code>{{ $category->code }}</code> · {{ $category->documents_count }} док.</div>
+                            <div class="crm-queue__sub"><code>{{ $category->code }}</code> · {{ $category->documents_count }} {{ __('док') }}</div>
                         </div>
                     </div>
                 @empty
                     <div class="crm-queue__item" style="--c: var(--crm-text-secondary);">
                         <div class="crm-queue__body">
-                            <div class="crm-queue__title">Категорий нет</div>
-                            <div class="crm-queue__sub">Создайте категорию — документы распределятся по ним.</div>
+                            <div class="crm-queue__title">{{ __('Категорий нет') }}</div>
+                            <div class="crm-queue__sub">{{ __('Создайте категорию — документы распределятся по ним') }}</div>
                         </div>
                     </div>
                 @endforelse
@@ -59,8 +59,8 @@
     {{-- ===== Шаблоны ===== --}}
     <div class="col-lg-8">
         <div class="crm-form__section">
-            <h3>Шаблоны <span class="text-secondary fw-normal">({{ $templates->count() }})</span></h3>
-            <div class="crm-form__desc">Готовые тексты с переменными — генерация создаёт документ одной кнопкой.</div>
+            <h3>{{ __('Шаблоны') }} <span class="text-secondary fw-normal">({{ $templates->count() }})</span></h3>
+            <div class="crm-form__desc">{{ __('Готовые тексты с переменными — генерация создаёт документ одной кнопкой') }}</div>
             <div class="row g-3">
                 @forelse ($templates as $template)
                     <div class="col-md-6">
@@ -70,11 +70,11 @@
                             </div>
                             <div class="crm-entity__body">
                                 <div class="d-flex align-items-center gap-1 flex-wrap mb-1">
-                                    <span class="crm-chip crm-chip--grey">{{ $template->category?->name ?? 'без категории' }}</span>
+                                    <span class="crm-chip crm-chip--grey">{{ $template->category?->name ?? __('без категории') }}</span>
                                     @if ($template->is_active === false)
-                                        <span class="crm-chip crm-chip--red">откл.</span>
+                                        <span class="crm-chip crm-chip--red">{{ __('откл') }}</span>
                                     @else
-                                        <span class="crm-chip crm-chip--green">активен</span>
+                                        <span class="crm-chip crm-chip--green">{{ __('активен') }}</span>
                                     @endif
                                 </div>
                                 <div class="crm-entity__title">{{ $template->name }}</div>
@@ -87,10 +87,10 @@
                                     </div>
                                 @endif
                                 <div class="crm-entity__footer">
-                                    <span class="text-secondary small"><i class="ti ti-git-branch me-1"></i>{{ $template->workflow?->name ?? 'без маршрута' }}</span>
+                                    <span class="text-secondary small"><i class="ti ti-git-branch me-1"></i>{{ $template->workflow?->name ?? __('без маршрута') }}</span>
                                     @if ($canCreate)
                                         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#gen-{{ $template->id }}">
-                                            <i class="ti ti-sparkles me-1"></i>Сгенерировать
+                                            <i class="ti ti-sparkles me-1"></i>{{ __('Сгенерировать') }}
                                         </button>
                                     @endif
                                 </div>
@@ -99,7 +99,7 @@
                     </div>
                 @empty
                     <div class="col-12">
-                        @include('partials.empty-state', ['icon' => 'template', 'title' => 'Шаблонов пока нет', 'text' => 'Создайте шаблон, чтобы документы собирались из готового текста.'])
+                        @include('partials.empty-state', ['icon' => 'template', 'title' => __('Шаблонов пока нет'), 'text' => __('Создайте шаблон, чтобы документы собирались из готового текста.')])
                     </div>
                 @endforelse
             </div>
@@ -113,20 +113,20 @@
     <div class="modal-dialog modal-sm" role="document">
         <form class="modal-content" method="post" action="{{ route('documents.categories.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новая категория</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Новая категория') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__field">
-                    <label class="form-label" for="nc-code">Код<span class="req">*</span></label>
+                    <label class="form-label" for="nc-code">{{ __('Код') }}<span class="req">*</span></label>
                     <input type="text" id="nc-code" name="code" class="form-control" placeholder="HR" required>
                 </div>
                 <div class="crm-form__field mb-0">
-                    <label class="form-label" for="nc-name">Название<span class="req">*</span></label>
-                    <input type="text" id="nc-name" name="name" class="form-control" placeholder="Кадровые документы" required>
+                    <label class="form-label" for="nc-name">{{ __('Название') }}<span class="req">*</span></label>
+                    <input type="text" id="nc-name" name="name" class="form-control" placeholder="{{ __("Кадровые документы") }}" required>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary">Добавить</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('Добавить') }}</button>
             </div>
         </form>
     </div>
@@ -139,18 +139,18 @@
     <div class="modal-dialog modal-lg" role="document">
         <form class="modal-content" method="post" action="{{ route('documents.templates.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новый шаблон</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Новый шаблон') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section">
-                    <h3>Шаблон</h3>
-                    <div class="crm-form__desc">Название и категория — как документ находят в списке.</div>
+                    <h3>{{ __('Шаблон') }}</h3>
+                    <div class="crm-form__desc">{{ __('Название и категория — как документ находят в списке') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="ntpl-name">Название<span class="req">*</span></label>
-                            <input type="text" id="ntpl-name" name="name" class="form-control" placeholder="Заявление на отпуск" required maxlength="150">
+                            <label class="form-label" for="ntpl-name">{{ __('Название') }}<span class="req">*</span></label>
+                            <input type="text" id="ntpl-name" name="name" class="form-control" placeholder="{{ __("Заявление на отпуск") }}" required maxlength="150">
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="ntpl-cat">Категория<span class="req">*</span></label>
+                            <label class="form-label" for="ntpl-cat">{{ __('Категория') }}<span class="req">*</span></label>
                             <select id="ntpl-cat" name="category_id" class="form-select" required>
                                 @foreach ($categories as $category)
                                     <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -160,29 +160,29 @@
                     </div>
                 </div>
                 <div class="crm-form__section">
-                    <h3>Текст шаблона</h3>
-                    <div class="crm-form__desc">Переменные вида {{ '${' }} $employee_name {{ '}' }} подставятся при генерации.</div>
+                    <h3>{{ __('Текст шаблона') }}</h3>
+                    <div class="crm-form__desc">{{ __('Переменные вида') }} {{ '${' }} $employee_name {{ '}' }} {{ __('подставятся при генерации') }}</div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="ntpl-body">Текст шаблона<span class="req">*</span></label>
-                        <textarea data-crm-rich id="ntpl-body" name="body" class="form-control" rows="7" required placeholder="Заявление {{ '${' }} $employee_name {{ '}' }} о..."></textarea>
+                        <label class="form-label" for="ntpl-body">{{ __('Текст шаблона') }}<span class="req">*</span></label>
+                        <textarea data-crm-rich id="ntpl-body" name="body" class="form-control" rows="7" required placeholder="{{ __('Заявление') }} {{ '${' }} $employee_name {{ '}' }} {{ __('о') }}..."></textarea>
                     </div>
                 </div>
 
                 <div class="crm-form__section mb-0">
-                    <h3>Дополнительные настройки</h3>
-                    <div class="crm-form__desc">Формат, маршрут согласования и список переменных.</div>
+                    <h3>{{ __('Дополнительные настройки') }}</h3>
+                    <div class="crm-form__desc">{{ __('Формат, маршрут согласования и список переменных') }}</div>
                     <div class="crm-form__row">
                         <div class="crm-form__field">
-                            <label class="form-label" for="ntpl-kind">Формат</label>
+                            <label class="form-label" for="ntpl-kind">{{ __('Формат') }}</label>
                             <select id="ntpl-kind" name="kind" class="form-select">
-                                <option value="blade">текст</option>
+                                <option value="blade">{{ __('текст') }}</option>
                                 <option value="docx">docx</option>
                             </select>
                         </div>
                         <div class="crm-form__field">
-                            <label class="form-label" for="ntpl-wf">Маршрут согласования</label>
+                            <label class="form-label" for="ntpl-wf">{{ __('Маршрут согласования') }}</label>
                             <select id="ntpl-wf" name="workflow_id" class="form-select">
-                                <option value="">— без маршрута —</option>
+                                <option value="">{{ __('без маршрута') }}</option>
                                 @foreach ($workflows as $workflow)
                                     <option value="{{ $workflow->id }}">{{ $workflow->name }}</option>
                                 @endforeach
@@ -190,17 +190,17 @@
                         </div>
                     </div>
                     <div class="crm-form__field mb-0">
-                        <label class="form-label" for="ntpl-vars">Переменные</label>
+                        <label class="form-label" for="ntpl-vars">{{ __('Переменные') }}</label>
                         <input type="text" id="ntpl-vars" name="variables" class="form-control" placeholder="employee_name, date_from"
                                autocomplete="off"
-                               data-crm-tags data-crm-tags-hint="Enter — добавить переменную">
-                        <div class="form-text" id="ntpl-vars-hint">Автодетект: напишите в тексте слово с $ (например $employee_name) — переменная появится здесь сама.</div>
+                               data-crm-tags data-crm-tags-hint="{{ __("Enter — добавить переменную") }}">
+                        <div class="form-text" id="ntpl-vars-hint">{{ __('Автодетект: напишите в тексте слово с') }}$ ({{ __('например') }} $employee_name) — {{ __('переменная появится здесь сама') }}.</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary">Создать шаблон</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('Создать шаблон') }}</button>
             </div>
         </form>
     </div>
@@ -214,35 +214,35 @@
             <div class="modal-dialog" role="document">
                 <form class="modal-content" method="post" action="{{ route('documents.templates.create', $template) }}" data-submit-guard>
                     @csrf
-                    <div class="modal-header"><h5 class="modal-title">Документ из «{{ $template->name }}»</h5></div>
+                    <div class="modal-header"><h5 class="modal-title">{{ __('Документ из') }}{{ $template->name }}»</h5></div>
                     <div class="modal-body">
                         <div class="crm-form__section">
-                            <h3>Параметры документа</h3>
-                            <div class="crm-form__desc">Что за документ и к какому сроку.</div>
+                            <h3>{{ __('Параметры документа') }}</h3>
+                            <div class="crm-form__desc">{{ __('Что за документ и к какому сроку') }}</div>
                             <div class="crm-form__field">
-                                <label class="form-label" for="gen-title-{{ $template->id }}">Заголовок</label>
+                                <label class="form-label" for="gen-title-{{ $template->id }}">{{ __('Заголовок') }}</label>
                                 <input type="text" id="gen-title-{{ $template->id }}" name="title" class="form-control" value="{{ $template->name }}">
                             </div>
                             <div class="crm-form__row">
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="gen-prio-{{ $template->id }}">Приоритет</label>
+                                    <label class="form-label" for="gen-prio-{{ $template->id }}">{{ __('Приоритет') }}</label>
                                     <select id="gen-prio-{{ $template->id }}" name="priority" class="form-select">
-                                        <option value="low">низкий</option>
-                                        <option value="medium" selected>обычный</option>
-                                        <option value="high">высокий</option>
-                                        <option value="critical">критичный</option>
+                                        <option value="low">{{ __('низкий') }}</option>
+                                        <option value="medium" selected>{{ __('обычный') }}</option>
+                                        <option value="high">{{ __('высокий') }}</option>
+                                        <option value="critical">{{ __('критичный') }}</option>
                                     </select>
                                 </div>
                                 <div class="crm-form__field">
-                                    <label class="form-label" for="gen-due-{{ $template->id }}">Срок</label>
+                                    <label class="form-label" for="gen-due-{{ $template->id }}">{{ __('Срок') }}</label>
                                     <input type="date" id="gen-due-{{ $template->id }}" name="due_at" class="form-control">
                                 </div>
                             </div>
                         </div>
                         @if ($template->variables)
                             <div class="crm-form__section mb-0">
-                                <h3>Переменные</h3>
-                                <div class="crm-form__desc">Значения подставятся в текст при генерации.</div>
+                                <h3>{{ __('Переменные') }}</h3>
+                                <div class="crm-form__desc">{{ __('Значения подставятся в текст при генерации') }}</div>
                                 <div class="crm-form__row">
                                     @foreach ($template->variables as $variable)
                                         <div class="crm-form__field">
@@ -255,8 +255,8 @@
                         @endif
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                        <button type="submit" class="btn btn-primary"><i class="ti ti-sparkles me-1"></i>Создать документ</button>
+                        <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                        <button type="submit" class="btn btn-primary"><i class="ti ti-sparkles me-1"></i>{{ __('Создать документ') }}</button>
                     </div>
                 </form>
             </div>
@@ -291,7 +291,7 @@
             if (hint) {
                 hint.textContent = found.length > 0
                     ? 'Автоопределено из текста: ' + found.map(function (v) { return '$' + v; }).join(', ')
-                    : 'Автодетект: напишите в тексте слово с $ (например $employee_name) — переменная появится здесь сама.';
+                    : __('Автодетект: напишите в тексте слово с $ (например $employee_name) — переменная появится здесь сама.');
             }
             if (found.length > 0) {
                 /* значения уходят в виджет тегов (corpms.js, crm:tags-add) —

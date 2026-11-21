@@ -32,8 +32,9 @@ class AppServiceProvider extends ServiceProvider
             session()->put('auth_version', (int) $event->user->auth_version);
         });
 
-        // русский хелпер подписей enum-ов для всех шаблонов
-        View::share('crm_label', static fn (?string $group = null, ?string $value = null) => $group === null ? '' : EnumLabels::label($group, $value));
+        // Подписи enum-ов хранятся в виде русских исходных строк — прогоняем их
+        // через перевод, иначе воронка CRM остаётся русской среди таджикского UI.
+        View::share('crm_label', static fn (?string $group = null, ?string $value = null) => $group === null ? '' : __(EnumLabels::label($group, $value)));
 
         // Blade-гейт @can('checkBoxPermission', 'slug.permission'):
         // UI-кнопки гейтятся той же матрицей прав, что и HTTP-middleware.

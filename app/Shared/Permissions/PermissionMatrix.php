@@ -23,6 +23,7 @@ final class PermissionMatrix
         'workflow' => 'Workflow',
         'signature' => 'Подпись',
         'chat' => 'Чат',
+        'lms' => 'Обучение',
         'analytics' => 'Аналитика',
         'reports' => 'Отчёты',
         'payroll' => 'Зарплата',
@@ -120,6 +121,12 @@ final class PermissionMatrix
         'chat.manage' => ['Управление диалогами и модерация', 'chat'],
         'chat.groups.create' => ['Создание групп', 'chat'],
         'chat.channels.create' => ['Создание каналов компании', 'chat'],
+
+        // --- Обучение (LMS) ---
+        'lms.view' => ['Просмотр курсов и обучение', 'lms'],
+        'lms.manage' => ['Управление курсами и заданиями', 'lms'],
+        'lms.teach' => ['Ведение уроков и созвонов', 'lms'],
+        'lms.join' => ['Участие: доска, задания, видеозвонок', 'lms'],
 
         // --- Аналитика ---
         'analytics.view' => ['Просмотр аналитики', 'analytics'],

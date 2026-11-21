@@ -1,11 +1,11 @@
 @if ($paginator->hasPages())
-    <nav aria-label="Постраничная навигация" class="mt-2">
+    <nav aria-label="{{ __("Постраничная навигация") }}" class="mt-2">
         <ul class="pagination m-0">
             {{-- предыдущая --}}
             @if ($paginator->onFirstPage())
                 <li class="page-item disabled" aria-disabled="true"><span class="page-link"><i class="ti ti-chevron-left"></i></span></li>
             @else
-                <li class="page-item"><a class="page-link" href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="Предыдущая"><i class="ti ti-chevron-left"></i></a></li>
+                <li class="page-item"><a class="page-link" href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="{{ __("Предыдущая") }}"><i class="ti ti-chevron-left"></i></a></li>
             @endif
 
             {{-- номера страниц с «окном» вокруг текущей --}}
@@ -28,7 +28,7 @@
 
             {{-- следующая --}}
             @if ($paginator->hasMorePages())
-                <li class="page-item"><a class="page-link" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="Следующая"><i class="ti ti-chevron-right"></i></a></li>
+                <li class="page-item"><a class="page-link" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="{{ __("Следующая") }}"><i class="ti ti-chevron-right"></i></a></li>
             @else
                 <li class="page-item disabled" aria-disabled="true"><span class="page-link"><i class="ti ti-chevron-right"></i></span></li>
             @endif

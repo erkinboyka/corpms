@@ -50,7 +50,7 @@ class FinAccountController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -59,7 +59,7 @@ class FinAccountController extends Controller
             'currency' => ['nullable', 'string', 'size:3'],
             'opening_balance' => ['nullable', 'numeric', 'min:-999999999999', 'max:999999999999'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['name' => 'название', 'kind' => 'вид счёта']);
+        ], [], ['name' => __('название'), 'kind' => __('вид счёта')]);
 
         $account = FinAccount::query()->create([
             'company_id' => $me->company_id,
@@ -76,7 +76,7 @@ class FinAccountController extends Controller
             'kind' => $account->kind->value,
         ]);
 
-        return redirect()->route('finance.accounts.index')->with('status', 'Счёт «'.$account->name.'» создан');
+        return redirect()->route('finance.accounts.index')->with('status', __('Счёт «').$account->name.__('» создан'));
     }
 
     /** Включение/выключение счёта (без удаления — история операций сохраняется). */
@@ -93,6 +93,6 @@ class FinAccountController extends Controller
             'is_active' => $account->is_active,
         ]);
 
-        return back()->with('status', 'Счёт «'.$account->name.'» '.($account->is_active ? 'включён' : 'выключен'));
+        return back()->with('status', __('Счёт «').$account->name.'» '.($account->is_active ? __('включён') : __('выключен')));
     }
 }

@@ -92,7 +92,7 @@ class AccountingEntryController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['entry_date' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['entry_date' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $mode = $request->validate(['entry_mode' => ['sometimes', 'required', 'in:simple,advanced']])['entry_mode'] ?? 'advanced';
@@ -109,8 +109,8 @@ class AccountingEntryController extends Controller
             'lines.*.debit' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'lines.*.credit' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
         ]), [], [
-            'entry_date' => 'дата', 'lines' => 'строки проводки',
-            'debit_account_id' => 'счёт дебета', 'credit_account_id' => 'счёт кредита', 'amount' => 'сумма',
+            'entry_date' => __('дата'), 'lines' => __('строки проводки'),
+            'debit_account_id' => __('счёт дебета'), 'credit_account_id' => __('счёт кредита'), 'amount' => __('сумма'),
         ]);
 
         $lines = $mode === 'simple' ? [
@@ -123,12 +123,12 @@ class AccountingEntryController extends Controller
             ->filter(static fn (array $line): bool => (float) ($line['debit'] ?? 0) > 0 || (float) ($line['credit'] ?? 0) > 0);
 
         if ($filled->isEmpty()) {
-            return back()->withErrors(['lines' => 'Заполните хотя бы две строки проводки'])->withInput();
+            return back()->withErrors(['lines' => __('Заполните хотя бы две строки проводки')])->withInput();
         }
 
         foreach ($filled as $line) {
             if (empty($line['account_id'])) {
-                return back()->withErrors(['lines' => 'Для каждой суммы укажите счёт'])->withInput();
+                return back()->withErrors(['lines' => __('Для каждой суммы укажите счёт')])->withInput();
             }
 
             TenantGuard::ensureReference('acc_accounts', (int) $line['account_id'], $me);
@@ -150,7 +150,7 @@ class AccountingEntryController extends Controller
             'date' => $validated['entry_date'],
         ]);
 
-        return redirect()->route('accounting.entries.show', $entry)->with('status', 'Проводка №'.$entry->id.' создана');
+        return redirect()->route('accounting.entries.show', $entry)->with('status', __('Проводка №').$entry->id.' создана');
     }
 
     /** Карточка проводки со строками. */

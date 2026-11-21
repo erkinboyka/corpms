@@ -87,7 +87,7 @@ class FinTransactionController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['amount' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['amount' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -98,7 +98,7 @@ class FinTransactionController extends Controller
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
             'occurred_at' => ['required', 'date'],
             'description' => ['nullable', 'string', 'max:255'],
-        ], [], ['amount' => 'сумма', 'direction' => 'направление', 'occurred_at' => 'дата']);
+        ], [], ['amount' => __('сумма'), 'direction' => __('направление'), 'occurred_at' => __('дата')]);
 
         TenantGuard::ensureReference('fin_accounts', (int) $validated['account_id'], $me);
 
@@ -116,7 +116,7 @@ class FinTransactionController extends Controller
             $category = FinCategory::query()->find((int) $categoryId);
 
             if ($category !== null && $category->direction->value !== $validated['direction']) {
-                return back()->withErrors(['category_id' => 'Статья относится к другому направлению'])->withInput();
+                return back()->withErrors(['category_id' => __('Статья относится к другому направлению')])->withInput();
             }
         }
 

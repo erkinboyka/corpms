@@ -47,7 +47,7 @@ class PayrollCalculationService
         return DB::transaction(function () use ($period, $actor): PayrollPeriod {
             $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
             if (in_array($period->status, [PayrollPeriodStatus::Draft, PayrollPeriodStatus::Calculated], true) === false) {
-                throw new LogicException('Пересчёт возможен только для черновика или рассчитанного периода');
+                throw new LogicException(__('Пересчёт возможен только для черновика или рассчитанного периода'));
             }
 
             $start = $period->period_start->toDateString();
@@ -59,7 +59,7 @@ class PayrollCalculationService
                 ->get();
 
             if ($components->isEmpty()) {
-                throw new LogicException('В компании нет активных компонентов начисления');
+                throw new LogicException(__('В компании нет активных компонентов начисления'));
             }
 
             // Сотрудники компании, работавшие в периоде (включая уволенных в периоде —
@@ -139,7 +139,7 @@ class PayrollCalculationService
             }
 
             if ($created === 0 && $period->lines()->count() === 0) {
-                throw new LogicException('Нет данных для расчёта: нужны оклады сотрудников и активные компоненты');
+                throw new LogicException(__('Нет данных для расчёта: нужны оклады сотрудников и активные компоненты'));
             }
 
             $this->refreshTotals($period, $actor);
@@ -231,7 +231,7 @@ class PayrollCalculationService
         return DB::transaction(function () use ($period, $actor): PayrollPeriod {
             $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
             if ($period->status !== PayrollPeriodStatus::Calculated) {
-                throw new LogicException('Согласовать можно только рассчитанную ведомость');
+                throw new LogicException(__('Согласовать можно только рассчитанную ведомость'));
             }
 
             $period->update([
@@ -250,7 +250,7 @@ class PayrollCalculationService
         return DB::transaction(function () use ($period, $actor): PayrollPeriod {
             $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
             if ($period->status !== PayrollPeriodStatus::Approved) {
-                throw new LogicException('Выплатить можно только согласованную ведомость');
+                throw new LogicException(__('Выплатить можно только согласованную ведомость'));
             }
 
             $period->update([

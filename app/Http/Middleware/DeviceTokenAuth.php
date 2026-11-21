@@ -25,7 +25,7 @@ class DeviceTokenAuth
         $device = $token !== null ? $this->biometric->deviceByToken($token) : null;
 
         if ($device === null) {
-            return response()->json(['message' => 'Устройство не авторизовано'], 401);
+            return response()->json(['message' => __('Устройство не авторизовано')], 401);
         }
 
         $request->attributes->set('biometric_device', $device);

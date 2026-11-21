@@ -33,7 +33,7 @@ class ProjectMilestoneController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'due_date' => ['nullable', 'date'],
-        ], [], ['title' => 'название', 'due_date' => 'срок']);
+        ], [], ['title' => __('название'), 'due_date' => __('срок')]);
 
         $milestone = $this->projects->addMilestone(
             $project,
@@ -46,7 +46,7 @@ class ProjectMilestoneController extends Controller
             'title' => $milestone->title,
         ]);
 
-        return back()->with('status', 'Веха «'.$milestone->title.'» добавлена');
+        return back()->with('status', __('Веха «').$milestone->title.__('» добавлена'));
     }
 
     /** Отметка вехи: выполнена/возвращена в работу. */
@@ -66,7 +66,7 @@ class ProjectMilestoneController extends Controller
 
         return back()->with(
             'status',
-            'Веха «'.$milestone->title.'» '.($milestone->completed_at !== null ? 'выполнена' : 'возвращена в работу'),
+            __('Веха «').$milestone->title.'» '.($milestone->completed_at !== null ? __('выполнена') : __('возвращена в работу')),
         );
     }
 
@@ -84,6 +84,6 @@ class ProjectMilestoneController extends Controller
             'milestone_id' => $milestone->id,
         ]);
 
-        return back()->with('status', 'Веха удалена');
+        return back()->with('status', __('Веха удалена'));
     }
 }

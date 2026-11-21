@@ -137,20 +137,9 @@ class DocumentRagService
 
         $this->indexMissing((int) $asker->company_id);
 
-        // права на документы: company/department/own — как в поиске документов
-        $access = $this->analytics->accessibleEmployees($user, 'documents.view');
-        $ids = $access['employees']->pluck('id')->all();
-
         $candidates = DocumentChunk::query()
             ->where('company_id', $asker->company_id)
-            ->whereHas('document', function ($query) use ($access, $ids): void {
-                if ($access['scope_value'] !== 'company') {
-                    // явная группировка — как в intentSearch: OR не должен
-                    // выйти за пределы ограничения на документ
-                    $query->where(fn ($scope) => $scope->whereIn('author_id', $ids)
-                        ->orWhereHas('signatureRequests', fn ($signature) => $signature->whereIn('signer_id', $ids)));
-                }
-            })
+            ->whereIn('document_id', BumiRecords::documents($asker)->select('id'))
             ->with('document:id,company_id,title,document_number,reg_number')
             ->limit(2000)
             ->get();

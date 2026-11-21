@@ -40,10 +40,10 @@ class PasswordResetController extends Controller
         $status = Password::broker()->sendResetLink($request->only('email'));
 
         $message = match ($status) {
-            Password::RESET_LINK_SENT => 'Если учётная запись существует, ссылка для сброса пароля отправлена на почту.',
+            Password::RESET_LINK_SENT => __('Если учётная запись существует, ссылка для сброса пароля отправлена на почту.'),
             // USER_NOT_FOUND и THROTTLED — одинаковая нейтральная фраза
             default => 'Если учётная запись существует, ссылка для сброса пароля отправлена на почту. '
-                .'При повторной отправке подождите минуту.',
+                .__('При повторной отправке подождите минуту.'),
         };
 
         return back()->with('status', $message);
@@ -65,10 +65,10 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'string', PasswordRule::min(12), 'confirmed'],
         ], [
-            'password.min' => 'Новый пароль должен содержать не менее 12 символов.',
+            'password.min' => __('Новый пароль должен содержать не менее 12 символов.'),
         ], [
             'email' => 'Email',
-            'password' => 'Пароль',
+            'password' => __('Пароль'),
         ]);
 
         $status = Password::broker()->reset(
@@ -86,7 +86,7 @@ class PasswordResetController extends Controller
 
         if ($status !== Password::PASSWORD_RESET) {
             throw ValidationException::withMessages([
-                'email' => 'Ссылка для сброса неверна или устарела. Запросите новую.',
+                'email' => __('Ссылка для сброса неверна или устарела. Запросите новую.'),
             ]);
         }
 
@@ -98,6 +98,6 @@ class PasswordResetController extends Controller
             $request->session()->regenerate();
         }
 
-        return redirect()->route('dashboard')->with('status', 'Пароль изменён. Выполнен вход в систему.');
+        return redirect()->route('dashboard')->with('status', __('Пароль изменён. Выполнен вход в систему.'));
     }
 }

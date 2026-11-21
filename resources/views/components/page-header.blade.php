@@ -1,6 +1,6 @@
 {{-- Единый заголовок страницы BM Systems.
      Использование:
-       <x-page-header eyebrow="Люди" title="Сотрудники" subtitle="...">
+       <x-page-header eyebrow="{{ __("Люди") }}" title="{{ __("Сотрудники") }}" subtitle="...">
            <button class="btn btn-primary">Действие</button>
        </x-page-header>
 --}}

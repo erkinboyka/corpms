@@ -74,6 +74,136 @@ class AiAndLiveFeedHttpTest extends TestCase
         ]);
     }
 
+    public function test_bumi_only_signs_the_selected_version_after_confirmation(): void
+    {
+        $ask = fn () => $this->postJson('/ai/message', ['question' => 'Подпиши документ'])->assertOk();
+        $ask()->assertJsonPath('blocks', [])->assertJsonPath('reply', 'Сейчас у вас нет документов, ожидающих вашей подписи.');
+        $category = \App\Models\DocumentCategory::create(['name' => 'Акты', 'code' => 'act']);
+        $service = app(\App\Domains\Documents\Services\DocumentService::class);
+        $signatures = app(\App\Domains\Documents\Services\SignatureService::class);
+        foreach ([$this->worker, $this->adminEmployee] as $signer) {
+            $doc = $service->create($this->adminEmployee, ['title' => 'Акт '.$signer->id, 'category_id' => $category->id, 'body' => 'Текст версии']);
+            $doc->update(['status' => 'approved']);
+            $signatures->requestSignatures($this->adminEmployee, $doc->fresh(), [$signer->id]);
+        }
+        $card = $ask()->assertJsonCount(1, 'blocks')->assertJsonPath('blocks.0.document', $doc->id)
+            ->assertJsonPath('blocks.0.version', 1)->json('blocks.0');
+        $this->assertDatabaseCount('document_signatures', 0);
+        $url = route('documents.signature.sign', [$card['document'], $card['request']]);
+        $this->postJson($url)->assertOk();
+        $this->postJson($url)->assertUnprocessable();
+        $this->assertDatabaseCount('document_signatures', 1);
+        $this->assertDatabaseHas('document_signatures', ['document_id' => $doc->id, 'signer_id' => $this->adminEmployee->id]);
+        $this->get('/ai')->assertOk()->assertSee('Подписано');
+        $ask()->assertJsonPath('blocks', []);
+    }
+
+    public function test_template_catalog_exports_all_layouts_with_their_values_and_sources(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $catalog = $this->postJson('/ai/message', ['question' => 'Покажи шаблоны'])->assertOk()->assertJsonPath('blocks.0.type', 'templates');
+        self::assertStringContainsString('Брифинг руководства', $catalog->json('blocks_html'));
+        $cases = ['Подготовь отчёт' => 'HTML', 'Создай презентацию' => 'PPTX', 'Построй диаграмму' => 'SVG'];
+        foreach ($cases as $command => $format) {
+            $layouts = [];
+            for ($n = 1; $n <= 15; $n++) {
+                $response = $this->postJson('/ai/message', ['question' => "$command, шаблон №$n по данным: Склад=4, Офис=7"])
+                    ->assertOk()->assertJsonPath('ok', true)->assertJsonPath('blocks.1.format', $format)
+                    ->assertJsonPath('blocks.1.template', $n)->assertJsonPath('blocks.2.items.0.label', 'Числа из вашего сообщения');
+                $content = $this->get(route('ai.files.download', $response->json('blocks.1.file')))->assertOk()->streamedContent();
+                if ($format === 'PPTX') {
+                    $copy = tempnam(sys_get_temp_dir(), 'deck');
+                    try {
+                        file_put_contents($copy, $content);
+                        $zip = new \ZipArchive;
+                        self::assertTrue($zip->open($copy));
+                        $list = simplexml_load_string($zip->getFromName('ppt/presentation.xml'))->xpath('//p:sldId');
+                        self::assertGreaterThanOrEqual(4, count($list));
+                        $content = '';
+                        foreach ($list as $i => $slide) {
+                            $xml = $zip->getFromName('ppt/slides/slide'.($i+1).'.xml');
+                            self::assertNotFalse(simplexml_load_string($xml));
+                            $content .= $xml;
+                        }
+                        $zip->close();
+                    } finally {
+                        unlink($copy);
+                    }
+                } elseif ($format === 'SVG') {
+                    self::assertNotFalse(simplexml_load_string($content));
+                }
+                self::assertStringContainsString('Склад', $content);
+                self::assertStringContainsString('Офис', $content);
+                self::assertStringContainsString('Числа из вашего сообщения', $content);
+                $layouts[] = hash('sha256', $content);
+            }
+            self::assertCount(15, array_unique($layouts));
+        }
+    }
+
+    public function test_bumi_proves_answers_and_fills_named_assignee(): void
+    {
+        $ask = fn ($question) => $this->postJson('/ai/message', compact('question'))->assertOk()->assertJsonPath('ok', true);
+        $task = Task::create(['company_id'=>$this->company->id, 'title'=>'Сверить смету', 'number'=>'BM-142',
+            'author_id'=>$this->adminEmployee->id, 'status'=>'overdue']);
+        $ask('Найди задачу BM-142')->assertJsonPath('blocks.0.items.0.url', route('tasks.show', $task, false));
+        $ask('Какие задачи просрочены?')->assertJsonPath('blocks.0.type', 'sources');
+        $ask('Создай задачу «Проверить счёт», исполнитель: Ольга Рядовая')->assertJsonPath('blocks.0.assignee', $this->worker->id);
+        $ask('Создай задачу «Проверить счёт», исполнитель: Неизвестный')->assertJsonPath('blocks.0.assignee', null);
+        $ask('Заполни заявку на отгул завтра, причина: семейные дела')->assertJsonPath('blocks.0.reason','семейные дела');
+        $ask('Укажи где находятся документы')->assertJsonPath('blocks.0.guide', true);
+        AttendanceRecord::create(['employee_id'=>$this->worker->id, 'date'=>today()->toDateString(),
+            'clock_in_at'=>now(), 'late_minutes'=>12, 'status'=>AttendanceStatus::Late]);
+        $ask('Кто опоздал сегодня?')->assertJsonPath('blocks.0.rows.0.0','Рядовая Ольга')->assertJsonPath('blocks.1.items.0.url','/attendance');
+        $ask('Построй диаграмму, шаблон №6 по данным: А=0, Б=0')->assertJsonPath('blocks.0.type','templates');
+    }
+
+    public function test_bumi_forms_and_private_exports(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $ask = fn (string $q) => $this->postJson('/ai/message', ['question' => $q])->assertOk()->assertJsonPath('ok', true);
+        $draft = $ask('Создай задачу «Проверить смету» на завтра')->assertJsonPath('blocks.0.title', 'Проверить смету')->json('blocks.0');
+        $this->post('/tasks', ['title' => $draft['title'], 'priority' => $draft['priority'], 'deadline' => $draft['deadline'], 'type' => 'task', 'employee_id' => $this->adminEmployee->id])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('tasks', ['title' => 'Проверить смету']);
+        $leave = $ask('Заполни заявку на отпуск с 12.12.2026 по 19.12.2026')->assertJsonPath('blocks.0.start', '2026-12-12')->json('blocks.0');
+        $this->post('/leaves', ['type' => $leave['kind'], 'from_date' => $leave['start'], 'to_date' => $leave['end']])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('leave_requests', ['employee_id' => $this->adminEmployee->id]);
+        $category = \App\Models\DocumentCategory::create(['name' => 'Записки', 'code' => 'note']);
+        $doc = $ask('Подготовь документ: План инвентаризации')->assertJsonPath('blocks.0.type', 'document_draft')->json('blocks.0');
+        $this->post('/documents', ['title'=>$doc['title'], 'body'=>$doc['body'], 'category_id'=>$category->id])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('documents', ['title' => 'План инвентаризации']);
+        $ask('Построй график опозданий за неделю')->assertJsonCount(7, 'blocks.0.data')->assertJsonPath('blocks.0.style', 'line');
+        $ask('Построй круговую диаграмму: склад=3, офис=6')->assertJsonPath('blocks.0.style', 'donut');
+        foreach (['Создай файл с текстом: План встречи' => ['TXT','План встречи'],
+                  'Построй диаграмму: март=15, апрель=29' => ['SVG','апрель'],
+                  'Выгрузи таблицу: март=15, апрель=29' => ['CSV','апрель'],
+                  'Подготовь отчёт по посещаемости' => ['HTML','Посещаемость']] as $question => [$format,$sample]) {
+            $files = collect($ask($question)->json('blocks'));
+            $file = $files->firstWhere('type', 'file');
+            self::assertSame($format, $file['format']);
+            $url = route('ai.files.download', $file['file']);
+            self::assertStringContainsString($sample, $this->get($url)->assertOk()->streamedContent());
+        }
+        EmployeeRole::create(['employee_id' => $this->worker->id, 'role_id' => Role::query()->where('slug', 'super_admin')->value('id')]);
+        $this->actingAs($this->workerUser)->get($url)->assertNotFound();
+    }
+
+    public function test_bumi_generates_an_image_and_interprets_a_free_form_request(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        config(['corpms.ai.base_url' => 'https://ai.example.test/v1', 'corpms.ai.api_key' => 'test', 'corpms.ai.image_model' => 'test-image']);
+        $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/WXkAAAAASUVORK5CYII=';
+        Http::fake([
+            'ai.example.test/v1/images/generations' => Http::response(['data' => [['b64_json' => $png]]]),
+            'ai.example.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => "\x60\x60\x60json\n".json_encode(['operation' => ['kind' => 'task','subject' => 'Проверить смету']])."\n\x60\x60\x60"]]]]),
+        ]);
+        $file = $this->postJson('/ai/message', ['question' => 'Нарисуй постер для выставки'])->assertOk()->assertJsonPath('blocks.0.format', 'PNG')->json('blocks.0.file');
+        self::assertSame(base64_decode($png), $this->get(route('ai.files.download', ['file' => $file,'preview' => 1]))->assertOk()->assertHeader('Content-Type','image/png')->streamedContent());
+        $this->postJson('/ai/message', ['question' => 'Надо бы занести проверку сметы в список дел'])->assertOk()->assertJsonPath('blocks.0.type', 'task_draft')->assertJsonPath('blocks.0.title','Проверить смету');
+        $this->assertDatabaseCount('tasks', 0);
+    }
+
     /* -------------------- AI: локальный аналитик -------------------- */
 
     public function test_ai_answers_attendance_question_from_facts(): void

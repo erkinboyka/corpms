@@ -100,7 +100,7 @@ class Conversation extends Model
             ->first()?->employee;
 
         if ($peer === null) {
-            return 'Диалог';
+            return __('Диалог');
         }
 
         return trim($peer->first_name.' '.$peer->last_name);

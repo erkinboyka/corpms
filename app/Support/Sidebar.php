@@ -27,6 +27,10 @@ class Sidebar
         'employees.show' => 'employees.index',
         'employees.subordinates' => 'employees.index',
         'finance.invoices.show' => 'finance.invoices.index',
+        'lms.courses.show' => 'lms.index',
+        'lms.lessons.show' => 'lms.index',
+        'lms.whiteboards.show' => 'lms.index',
+        'lms.meetings.show' => 'lms.index',
         'payroll.show' => 'payroll.index',
         'projects.show' => 'projects.index',
         'purchases.show' => 'purchases.index',
@@ -53,6 +57,11 @@ class Sidebar
             ['tasks.index', 'Все задачи', 'list', null],
             ['tasks.mine', 'Мои задачи', 'user-check', null],
             ['tasks.overdue', 'Просроченные', 'alarm', null],
+        ]],
+        ['module', 'Обучение', 'school', 'lms.view', [
+            ['lms.index', 'Курсы и доски', 'book', null],
+            ['lms.assignments.index', 'Практика', 'list-check', null],
+            ['lms.pulse', 'Пульс Бumi', 'pulse', null],
         ]],
         ['projects.index', 'Проекты', 'folders', 'projects.view'],
         ['module', 'Графики и отпуска', 'calendar-time', null, [
@@ -136,6 +145,9 @@ class Sidebar
         ['_', 'Администрирование'],
         ['users.index', 'Учётные записи', 'user-cog', 'users.manage'],
         ['integrations.index', 'Интеграции', 'plug', 'integrations.manage'],
+        ['imports.index', 'Импорт данных', 'upload', 'employees.manage@company'],
+        ['backups.index', 'Резервные копии', 'database-export', 'settings.view@company'],
+        ['certificates.index', 'Доверенные сертификаты', 'certificate', 'settings.view@company'],
         ['module', 'Биометрия', 'fingerprint', null, [
             ['biometrics.index', 'Устройства', 'device-fingerprint', 'biometry.devices.view'],
             ['biometrics.events', 'События', 'activity', 'biometry.events.view'],
@@ -173,7 +185,7 @@ class Sidebar
         foreach (self::ITEMS as $item) {
             if ($item[0] === '_') {
                 $flushSection();
-                $sectionLabel = $item[1];
+                $sectionLabel = __($item[1]);
                 $sectionStart = count($list);
 
                 continue;
@@ -187,14 +199,14 @@ class Sidebar
                     if ($childPermission !== null && ! $permissions->check($user, $childPermission)) {
                         continue;
                     }
-                    $visibleChildren[] = ['type' => 'item', 'route' => $route, 'title' => $childTitle, 'icon' => $childIcon];
+                    $visibleChildren[] = ['type' => 'item', 'route' => $route, 'title' => __($childTitle), 'icon' => $childIcon];
                 }
 
                 if ($visibleChildren === [] || ($permission !== null && ! $permissions->check($user, $permission))) {
                     continue;
                 }
 
-                $list[] = ['type' => 'module', 'title' => $title, 'icon' => $icon, 'children' => $visibleChildren];
+                $list[] = ['type' => 'module', 'title' => __($title), 'icon' => $icon, 'children' => $visibleChildren];
                 $sectionHasVisible = true;
 
                 continue;
@@ -206,7 +218,7 @@ class Sidebar
                 continue;
             }
 
-            $list[] = ['type' => 'item', 'route' => $route, 'title' => $title, 'icon' => $icon];
+            $list[] = ['type' => 'item', 'route' => $route, 'title' => __($title), 'icon' => $icon];
             $sectionHasVisible = true;
         }
 
@@ -260,23 +272,23 @@ class Sidebar
 
             foreach (self::ITEMS as $item) {
                 if ($item[0] === '_') {
-                    $section = $item[1];
+                    $section = __($item[1]);
                     $module = null;
 
                     continue;
                 }
 
                 if ($item[0] === 'module') {
-                    $module = $item[1];
+                    $module = __($item[1]);
 
                     foreach ($item[4] as [$childRoute, $childTitle]) {
-                        $cache[$childRoute] = [$section, $module, $childTitle];
+                        $cache[$childRoute] = [$section, $module, __($childTitle)];
                     }
 
                     continue;
                 }
 
-                $cache[$item[0]] = [$section, null, $item[1]];
+                $cache[$item[0]] = [$section, null, __($item[1])];
             }
         }
 

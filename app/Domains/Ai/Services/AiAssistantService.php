@@ -184,7 +184,7 @@ class AiAssistantService
                 'scope' => $access['scope_value'],
                 'headcount' => $this->analytics->headcount($employees),
                 'attendance_today' => $this->analytics->attendanceSummary($employees),
-                'tasks' => $this->analytics->taskStats($employees),
+                'tasks' => $this->analytics->taskStats($employees, exclusive: true),
                 'leaves' => $this->analytics->leaveStats($employees),
             ];
         }
@@ -195,20 +195,15 @@ class AiAssistantService
             ->whereDate('date', today())
             ->first();
 
-        $ownTasks = Task::query()
-            ->whereHas('assignments', fn ($q) => $q->where('employee_id', $asker->id))
-            ->selectRaw('status, count(*) as cnt')
-            ->groupBy('status')
-            ->pluck('cnt', 'status');
-
         return [
             'scope' => 'own',
-            'my_attendance_today' => $ownToday === null ? 'нет отметки' : [
+            'my_attendance_today' => $ownToday === null ? __('нет отметки') : [
                 'status' => $ownToday->status->value,
                 'clock_in_at' => $ownToday->clock_in_at?->format('H:i'),
                 'late_minutes' => $ownToday->late_minutes,
             ],
-            'my_tasks' => $ownTasks->all(),
+            'my_tasks' => $this->analytics->taskStats(collect([$asker]), exclusive: true),
+            'leaves' => $this->analytics->leaveStats(collect([$asker])),
         ];
     }
 
@@ -319,6 +314,7 @@ class AiAssistantService
 
         $toolCalls = is_array($message['tool_calls'] ?? null) ? $message['tool_calls'] : [];
         if ($toolCalls === [] || $tools === [] || $asker === null) {
+            unset($message['source_items']);
             return $message;
         }
 
@@ -329,12 +325,17 @@ class AiAssistantService
             'tool_calls' => $toolCalls,
         ];
 
+        $sourceItems = [];
         foreach ($toolCalls as $call) {
             $name = (string) data_get($call, 'function.name', '');
             $rawArguments = data_get($call, 'function.arguments', []);
             $arguments = is_string($rawArguments) ? json_decode($rawArguments, true) : $rawArguments;
 
             $result = $this->tools->execute($asker, $name, is_array($arguments) ? $arguments : []);
+
+            if ($result['ok'] && is_array($result['result'])) {
+                array_push($sourceItems, ...BumiSources::toolItems($name, $result['result']));
+            }
 
             $messages[] = [
                 'role' => 'tool',
@@ -361,7 +362,7 @@ class AiAssistantService
 
         $final = $response->json('choices.0.message');
 
-        return is_array($final) ? $final : null;
+        return is_array($final) ? ['source_items' => $sourceItems] + $final : null;
     }
 
     /* -------------------- D3: потолок ожидания и повтор в очереди -------------------- */
@@ -468,7 +469,7 @@ class AiAssistantService
         $q = mb_strtolower($question);
         $lines = [];
 
-        if ($this->mentions($q, ['опоздан', 'посещаем', 'приход', 'на месте', 'присутст'])) {
+        if ($this->mentions($q, [__('опоздан'), __('посещаем'), __('приход'), __('на месте'), __('присутст')])) {
             $a = $facts['attendance_today'] ?? null;
             if (is_array($a)) {
                 $lines[] = sprintf(
@@ -479,15 +480,15 @@ class AiAssistantService
                 $me = $facts['my_attendance_today'];
                 $lines[] = sprintf('Ваша отметка сегодня: %s (приход %s, опоздание %d мин).', $me['status'], $me['clock_in_at'] ?? '—', $me['late_minutes']);
             } else {
-                $lines[] = 'Сегодня у вас нет отметок.';
+                $lines[] = __('Сегодня у вас нет отметок.');
             }
         }
 
-        if ($this->mentions($q, ['задач', 'таск', 'поручен'])) {
+        if ($this->mentions($q, [__('задач'), __('таск'), __('поручен')])) {
             $tasks = $facts['tasks'] ?? $facts['my_tasks'] ?? [];
             if ($tasks !== []) {
                 $parts = [];
-                foreach (['new' => 'новых', 'in_progress' => 'в работе', 'review' => 'на проверке', 'overdue' => 'просрочено', 'completed' => 'завершено'] as $k => $label) {
+                foreach (['new' => __('новых'), 'in_progress' => __('в работе'), 'review' => __('на проверке'), 'overdue' => __('просрочено'), 'completed' => __('завершено')] as $k => $label) {
                     if (($tasks[$k] ?? 0) > 0) {
                         $parts[] = $label.': '.$tasks[$k];
                     }
@@ -495,23 +496,23 @@ class AiAssistantService
                 if ($parts !== []) {
                     $lines[] = 'Задачи — '.implode(', ', $parts).'.';
                 } else {
-                    $lines[] = 'Открытых задач нет.';
+                    $lines[] = __('Открытых задач нет.');
                 }
             } else {
-                $lines[] = 'Открытых задач нет.';
+                $lines[] = __('Открытых задач нет.');
             }
         }
 
-        if ($this->mentions($q, ['отпуск', 'отпуска', 'vacation'])) {
+        if ($this->mentions($q, [__('отпуск'), __('отпуска'), 'vacation'])) {
             $leaves = $facts['leaves'] ?? [];
             if ($leaves !== []) {
                 $lines[] = sprintf('Заявки на отпуск: ожидает %d, согласовано %d, отклонено %d.', $leaves['pending'] ?? 0, $leaves['approved'] ?? 0, $leaves['rejected'] ?? 0);
             } else {
-                $lines[] = 'Заявок на отпуск нет.';
+                $lines[] = __('Заявок на отпуск нет.');
             }
         }
 
-        if ($this->mentions($q, ['сотрудник', 'числен', 'штат', 'людей', 'человек', 'работников'])) {
+        if ($this->mentions($q, [__('сотрудник'), __('числен'), __('штат'), __('людей'), __('человек'), __('работников')])) {
             $headcount = $facts['headcount'] ?? null;
             if (is_array($headcount)) {
                 $lines[] = sprintf('Численность: активных %d из %d в области доступа.', $headcount['active'], $headcount['total']);
@@ -519,12 +520,7 @@ class AiAssistantService
         }
 
         if ($lines === []) {
-            // общий обзор
-            $headcount = $facts['headcount'] ?? null;
-            if (is_array($headcount)) {
-                $lines[] = sprintf('Численность: %d активных сотрудников. Сегодня на месте %d, опоздали %d.', $headcount['active'], $facts['attendance_today']['present'] ?? 0, $facts['attendance_today']['late'] ?? 0);
-            }
-            $lines[] = 'Уточните вопрос: посещаемость, задачи, отпуска или численность.';
+            $lines[] = 'Какой результат вам нужен? Могу найти документ на подпись, подготовить задачу с дедлайном или построить диаграмму. Укажите название документа, условия задачи или данные для графика.';
         }
 
         return implode(' ', $lines);

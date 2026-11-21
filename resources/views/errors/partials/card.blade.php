@@ -36,11 +36,11 @@
                     <div class="d-flex gap-2 justify-content-center">
                         @if (! $loggedIn)
                             <a href="{{ route('login') }}" class="btn btn-primary">
-                                <i class="ti ti-login me-1"></i>Войти
+                                <i class="ti ti-login me-1"></i>{{ __('Войти') }}
                             </a>
                         @endif
                         <a href="{{ url('/') }}" class="btn btn-ghost-secondary">
-                            <i class="ti ti-home me-1"></i>На главную
+                            <i class="ti ti-home me-1"></i>{{ __('На главную') }}
                         </a>
                     </div>
                 </div>

@@ -16,7 +16,7 @@ class SecurityHeadersHttpTest extends TestCase
         'X-Content-Type-Options' => 'nosniff',
         'X-Frame-Options' => 'SAMEORIGIN',
         'Referrer-Policy' => 'strict-origin-when-cross-origin',
-        'Permissions-Policy' => 'camera=(), microphone=(), geolocation=()',
+        'Permissions-Policy' => 'camera=(self), microphone=(self), display-capture=(self), geolocation=()',
     ];
 
     public function test_security_headers_present_on_responses(): void

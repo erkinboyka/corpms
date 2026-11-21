@@ -78,7 +78,7 @@ class AttendanceCorrectionController extends Controller
             // тенант-проверка до scope: чужая компания — 403 независимо от scope
             TenantGuard::ensureEmployee($target, $me);
             if ($this->canTouch($request->user(), $target, 'attendance.correct') === false) {
-                abort(403, 'Нет прав на корректировку этого сотрудника');
+                abort(403, __('Нет прав на корректировку этого сотрудника'));
             }
         }
 
@@ -98,7 +98,7 @@ class AttendanceCorrectionController extends Controller
 
         return redirect()
             ->route('attendance.corrections')
-            ->with('status', 'Заявка №'.$correction->id.' отправлена на согласование');
+            ->with('status', __('Заявка №').$correction->id.' отправлена на согласование');
     }
 
     public function approve(Request $request, AttendanceCorrection $correction): RedirectResponse
@@ -121,16 +121,16 @@ class AttendanceCorrectionController extends Controller
         \assert($me !== null);
 
         if ($this->canTouch($request->user(), $correction->employee, 'attendance.corrections.approve') === false) {
-            abort(403, 'Нет прав на согласование');
+            abort(403, __('Нет прав на согласование'));
         }
 
         try {
-            $this->corrections->decide($me, $correction, $approve, $comment ?? 'Согласовано');
+            $this->corrections->decide($me, $correction, $approve, $comment ?? __('Согласовано'));
         } catch (LogicException $e) {
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', $approve ? 'Корректировка согласована, табель обновлён' : 'Корректировка отклонена');
+        return back()->with('status', $approve ? __('Корректировка согласована, табель обновлён') : __('Корректировка отклонена'));
     }
 
     /** Scope-проверка права на конкретного сотрудника. */

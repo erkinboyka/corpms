@@ -72,7 +72,7 @@ class AccountingDocumentController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['number' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['number' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -86,7 +86,7 @@ class AccountingDocumentController extends Controller
             'counterparty' => ['nullable', 'string', 'max:255'],
             'entry_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['number' => 'номер', 'kind' => 'вид', 'document_date' => 'дата']);
+        ], [], ['number' => __('номер'), 'kind' => __('вид'), 'document_date' => __('дата')]);
 
         $entryId = $validated['entry_id'] ?? null;
 

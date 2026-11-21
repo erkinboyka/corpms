@@ -109,7 +109,7 @@ class CrmClientController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $this->validateClient($request);
@@ -127,7 +127,7 @@ class CrmClientController extends Controller
             'kind' => $client->kind->value,
         ]);
 
-        return redirect()->route('crm.clients.show', $client)->with('status', 'Клиент «'.$client->name.'» создан');
+        return redirect()->route('crm.clients.show', $client)->with('status', __('Клиент «').$client->name.__('» создан'));
     }
 
     /** Изменение карточки клиента. */
@@ -148,7 +148,7 @@ class CrmClientController extends Controller
             'status' => $client->status->value,
         ]);
 
-        return back()->with('status', 'Клиент «'.$client->name.'» обновлён');
+        return back()->with('status', __('Клиент «').$client->name.__('» обновлён'));
     }
 
     /** Архивация/возврат клиента (без удаления — история сделок сохраняется). */
@@ -167,9 +167,9 @@ class CrmClientController extends Controller
             'status' => $client->status->value,
         ]);
 
-        $verb = $client->status === CrmClientStatus::Active ? 'возвращён в работу' : 'архивирован';
+        $verb = $client->status === CrmClientStatus::Active ? __('возвращён в работу') : __('архивирован');
 
-        return back()->with('status', 'Клиент «'.$client->name.'» '.$verb);
+        return back()->with('status', __('Клиент «').$client->name.'» '.$verb);
     }
 
     /** Добавление контакта клиента. */
@@ -186,7 +186,7 @@ class CrmClientController extends Controller
             'phone' => ['nullable', 'string', 'max:32'],
             'email' => ['nullable', 'email', 'max:255'],
             'is_primary' => ['nullable', 'boolean'],
-        ], [], ['first_name' => 'имя']);
+        ], [], ['first_name' => __('имя')]);
 
         if ($request->boolean('is_primary')) {
             $client->contacts()->update(['is_primary' => false]);
@@ -203,7 +203,7 @@ class CrmClientController extends Controller
             'name' => $contact->fullName(),
         ]);
 
-        return back()->with('status', 'Контакт «'.$contact->fullName().'» добавлен');
+        return back()->with('status', __('Контакт «').$contact->fullName().__('» добавлен'));
     }
 
     /** Удаление контакта клиента. */
@@ -215,7 +215,7 @@ class CrmClientController extends Controller
         TenantGuard::ensure($contact, $me);
 
         if ((int) $contact->client_id !== (int) $client->id) {
-            abort(404, 'Контакт не относится к клиенту');
+            abort(404, __('Контакт не относится к клиенту'));
         }
 
         $contact->delete();
@@ -224,7 +224,7 @@ class CrmClientController extends Controller
             'client_id' => $client->id,
         ]);
 
-        return back()->with('status', 'Контакт удалён');
+        return back()->with('status', __('Контакт удалён'));
     }
 
     /**
@@ -242,7 +242,7 @@ class CrmClientController extends Controller
             'address' => ['nullable', 'string', 'max:1000'],
             'owner_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['name' => 'название', 'kind' => 'вид клиента']);
+        ], [], ['name' => __('название'), 'kind' => __('вид клиента')]);
     }
 
     /**

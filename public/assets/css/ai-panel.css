@@ -6,6 +6,18 @@
     --mini-accent-disabled: #463064;
     --mini-ink: #fafafa;
 }
+
+/* Панель ассистента на странице /ai должна следовать теме приложения.
+   Плавающий виджет .bm-pet остаётся тёмным в обеих темах намеренно. */
+[data-bs-theme="light"] .bm-assistant {
+    --mini-surface: var(--crm-surface-solid);
+    --mini-control: rgba(var(--crm-accent-rgb), .10);
+    --mini-accent: var(--crm-accent);
+    --mini-accent-hover: var(--crm-accent-strong);
+    --mini-accent-disabled: rgba(var(--crm-accent-rgb), .35);
+    --mini-ink: var(--crm-text);
+}
+
 .bm-pet {
     position: fixed;
     z-index: 1043;
@@ -613,6 +625,39 @@
 .bm-assistant__keys, .bm-assistant__error { color: var(--mini-muted); font-size: .75rem; margin: .45rem .2rem 0; }
 .bm-assistant__keys { text-align: center; }
 .bm-assistant__error { color: #ffaaaa; margin-bottom: .45rem; }
+
+/* Светлая тема: точечные переопределения жёстко заданных тёмных цветов. */
+[data-bs-theme="light"] .bm-assistant__workspace :is(button, [data-ai-history]):focus-visible { outline-color: var(--crm-accent); outline-offset: 2px; }
+[data-bs-theme="light"] .bm-assistant__conversation {
+    --mini-line: var(--crm-border);
+    --mini-muted: var(--crm-text-muted);
+    --mini-panel: var(--crm-bg);
+    color-scheme: light;
+    box-shadow: var(--crm-shadow-1);
+}
+[data-bs-theme="light"] .bm-assistant__badge,
+[data-bs-theme="light"] .bm-assistant__mascot,
+[data-bs-theme="light"] .bm-assistant__messages .ai-msg__avatar {
+    border-color: var(--crm-border);
+    background: rgba(var(--crm-accent-rgb), .10);
+}
+[data-bs-theme="light"] .bm-assistant__latest:hover,
+[data-bs-theme="light"] .bm-assistant__copy:hover,
+[data-bs-theme="light"] .bm-assistant__composer .ai-panel__mic:hover:not(:disabled) {
+    background: rgba(var(--crm-accent-rgb), .16);
+    color: var(--crm-text);
+}
+[data-bs-theme="light"] .bm-assistant__messages .ai-msg--me .ai-msg__bubble {
+    border-color: rgba(var(--crm-accent-rgb), .32);
+    background: rgba(var(--crm-accent-rgb), .10);
+}
+[data-bs-theme="light"] .bm-assistant__prompts button:hover:not(:disabled) { border-color: var(--crm-accent); background: rgba(var(--crm-accent-rgb), .10); }
+[data-bs-theme="light"] .bm-assistant__prompts button :first-child { color: var(--crm-accent); }
+[data-bs-theme="light"] .bm-assistant__composer { box-shadow: none; }
+[data-bs-theme="light"] .bm-assistant__composer:focus-within { border-color: var(--crm-accent); }
+[data-bs-theme="light"] .bm-assistant__send:disabled { color: var(--crm-text-muted); }
+[data-bs-theme="light"] .bm-assistant__error { color: var(--crm-danger); }
+
 @media (max-width: 560px) {
     .bm-assistant__prompts { grid-template-columns: 1fr; gap: .35rem; }
     .bm-assistant__prompts button { grid-template-columns: auto 1fr auto; padding: .52rem .7rem; }

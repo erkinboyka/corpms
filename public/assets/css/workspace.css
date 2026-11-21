@@ -500,15 +500,22 @@ body.crm-app:not(.crm-auth) {
     .crm-app .collapsing { transition-duration: var(--crm-motion-panel); }
 
     @supports (interpolate-size: allow-keywords) and selector(details::details-content) {
-        .crm-app :is(.bm-dock, main) details:not(.crm-org__branch) { interpolate-size: allow-keywords; }
-        .crm-app :is(.bm-dock, main) details:not(.crm-org__branch)::details-content {
+        .crm-app :is(.bm-dock, main) details:is(:not(.crm-org__branch), .crm-org__branch--compact) {
+            interpolate-size: allow-keywords;
+        }
+        .crm-app :is(.bm-dock, main) details:is(:not(.crm-org__branch), .crm-org__branch--compact)::details-content {
             block-size: 0;
             opacity: 0;
             overflow: clip;
-            transition: block-size var(--crm-motion-panel) var(--crm-ease-out),
-                opacity var(--crm-motion-surface) ease, content-visibility var(--crm-motion-panel) allow-discrete;
+            transition: block-size var(--bm-details-motion, var(--crm-motion-panel)) var(--crm-ease-out),
+                opacity var(--bm-details-motion, var(--crm-motion-surface)) ease,
+                content-visibility var(--bm-details-motion, var(--crm-motion-panel)) allow-discrete;
         }
-        .crm-app :is(.bm-dock, main) details[open]:not(.crm-org__branch)::details-content { block-size: auto; opacity: 1; }
+        .crm-app :is(.bm-dock, main) details[open]:is(:not(.crm-org__branch), .crm-org__branch--compact)::details-content {
+            block-size: auto;
+            opacity: 1;
+        }
+        .crm-org__branch--compact { --bm-details-motion: var(--crm-motion-feedback); }
 
     }
 }
@@ -516,3 +523,27 @@ body.crm-app:not(.crm-auth) {
     body.crm-app,
     .crm-app:not(.crm-auth) :is(.card, .crm-form__section, .page-header) { background: #fff; box-shadow: none; }
 }
+
+.bm-dock__brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 8px;
+}
+.bm-dock__brand-link:hover, .bm-auth-brand-link:hover { color: var(--bm-link); text-decoration: none; }
+.bm-auth-brand-link { color: inherit; text-decoration: none; }
+
+.crm-app .bm-nav-home {
+    display: grid;
+    place-items: center;
+    align-self: center;
+    width: 38px;
+    height: 38px;
+    margin-inline-end: 8px;
+    border-radius: 7px;
+    color: var(--bm-muted);
+}
+.crm-app .bm-nav-home:hover { color: var(--bm-link); background: var(--bm-selected); }

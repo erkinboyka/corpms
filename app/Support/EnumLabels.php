@@ -233,6 +233,30 @@ final class EnumLabels
         'bi_widget_kind' => [
             'kpi' => 'KPI', 'trend' => 'Тренд',
         ],
+
+        // --- Обучение (LMS) ---
+        'lms_course_status' => [
+            'draft' => 'Черновик', 'published' => 'Опубликован', 'archived' => 'В архиве',
+        ],
+        'lms_enrollment_status' => [
+            'enrolled' => 'Записан', 'in_progress' => 'В процессе', 'completed' => 'Завершён',
+        ],
+        'lms_progress_status' => [
+            'not_started' => 'Не начат', 'in_progress' => 'В работе', 'completed' => 'Пройден',
+        ],
+        'lms_assignment_status' => [
+            'draft' => 'Черновик', 'open' => 'Открыто', 'closed' => 'Закрыто',
+        ],
+        'lms_submission_status' => [
+            'draft' => 'Черновик', 'submitted' => 'Сдано', 'reviewed' => 'Проверено', 'returned' => 'Возвращено',
+        ],
+        'lms_meeting_status' => [
+            'scheduled' => 'Запланирован', 'live' => 'Идёт', 'ended' => 'Завершён',
+        ],
+        'lms_element_type' => [
+            'path' => 'Линия', 'rect' => 'Прямоугольник', 'ellipse' => 'Круг',
+            'text' => 'Текст', 'sticky' => 'Заметка',
+        ],
     ];
 
     public static function label(string $group, ?string $value, ?string $fallback = null): string

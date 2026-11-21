@@ -112,7 +112,7 @@ class AttendanceController extends Controller
             ])->values(),
             'events' => $events->map(static fn (BiometricEvent $e) => [
                 'direction' => (string) $e->direction,
-                'employee' => $e->employee?->last_name ?? 'не опознан',
+                'employee' => $e->employee?->last_name ?? __('не опознан'),
                 'device' => $e->device?->name ?? '—',
                 'time' => $e->occurred_at->format('H:i:s'),
                 'status' => $e->processing_status->value,
@@ -193,7 +193,7 @@ class AttendanceController extends Controller
         \assert($me !== null);
 
         $scope = $this->permissions->can($request->user(), 'attendance.timesheet.view');
-        \assert($scope !== false, 'маршрут уже проверяет право');
+        \assert($scope !== false, __('маршрут уже проверяет право'));
 
         $year = (int) ($request->input('year') ?? now()->year);
         $month = (int) ($request->input('month') ?? now()->month);
@@ -231,11 +231,11 @@ class AttendanceController extends Controller
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM для Excel
 
-            $header = ['Таб.№', 'ФИО'];
+            $header = [__('Таб.№'), __('ФИО')];
             for ($d = 1; $d <= $daysInMonth; $d++) {
                 $header[] = (string) $d;
             }
-            $header[] = 'Итого (ч)';
+            $header[] = __('Итого (ч)');
             fputcsv($out, $header, ';');
 
             foreach ($employees as $employee) {
@@ -305,6 +305,6 @@ class AttendanceController extends Controller
             'description' => $anomaly->description.' | Решение: '.$validated['resolution'],
         ]);
 
-        return back()->with('status', 'Аномалия разобрана (п.30 ТЗ)');
+        return back()->with('status', __('Аномалия разобрана (п.30 ТЗ)'));
     }
 }

@@ -83,7 +83,7 @@ class CrmActivityController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['subject' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['subject' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
@@ -95,7 +95,7 @@ class CrmActivityController extends Controller
             'lead_id' => ['nullable', 'integer'],
             'owner_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ], [], ['kind' => 'вид активности', 'subject' => 'тема']);
+        ], [], ['kind' => __('вид активности'), 'subject' => __('тема')]);
 
         foreach (['deal_id' => 'crm_deals', 'client_id' => 'crm_clients', 'lead_id' => 'crm_leads', 'owner_id' => 'employees'] as $field => $table) {
             $value = $validated[$field] ?? null;
@@ -123,7 +123,7 @@ class CrmActivityController extends Controller
             'kind' => $activity->kind->value,
         ]);
 
-        return back()->with('status', 'Активность «'.$activity->subject.'» добавлена');
+        return back()->with('status', __('Активность «').$activity->subject.__('» добавлена'));
     }
 
     /** Отметить выполненной. */
@@ -139,7 +139,7 @@ class CrmActivityController extends Controller
             'subject' => $activity->subject,
         ]);
 
-        return back()->with('status', 'Активность «'.$activity->subject.'» выполнена');
+        return back()->with('status', __('Активность «').$activity->subject.__('» выполнена'));
     }
 
     /** Вернуть в работу. */
@@ -155,7 +155,7 @@ class CrmActivityController extends Controller
             'subject' => $activity->subject,
         ]);
 
-        return back()->with('status', 'Активность «'.$activity->subject.'» возвращена в работу');
+        return back()->with('status', __('Активность «').$activity->subject.__('» возвращена в работу'));
     }
 
     /** @return Collection<int, CrmDeal> */

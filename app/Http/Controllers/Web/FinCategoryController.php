@@ -53,13 +53,13 @@ class FinCategoryController extends Controller
         \assert($me !== null);
 
         if ($me->company_id === null) {
-            return back()->withErrors(['name' => 'У сотрудника не указана компания'])->withInput();
+            return back()->withErrors(['name' => __('У сотрудника не указана компания')])->withInput();
         }
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'direction' => ['required', Rule::enum(FinDirection::class)],
-        ], [], ['name' => 'название', 'direction' => 'направление']);
+        ], [], ['name' => __('название'), 'direction' => __('направление')]);
 
         $exists = FinCategory::query()
             ->where('company_id', $me->company_id)
@@ -68,7 +68,7 @@ class FinCategoryController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['name' => 'Статья с таким названием уже есть'])->withInput();
+            return back()->withErrors(['name' => __('Статья с таким названием уже есть')])->withInput();
         }
 
         $category = FinCategory::query()->create([
@@ -83,7 +83,7 @@ class FinCategoryController extends Controller
             'direction' => $category->direction->value,
         ]);
 
-        return back()->with('status', 'Статья «'.$category->name.'» создана');
+        return back()->with('status', __('Статья «').$category->name.__('» создана'));
     }
 
     /** Включение/выключение статьи. */
@@ -100,6 +100,6 @@ class FinCategoryController extends Controller
             'is_active' => $category->is_active,
         ]);
 
-        return back()->with('status', 'Статья «'.$category->name.'» '.($category->is_active ? 'включена' : 'выключена'));
+        return back()->with('status', __('Статья «').$category->name.'» '.($category->is_active ? __('включена') : __('выключена')));
     }
 }

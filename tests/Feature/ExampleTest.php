@@ -2,15 +2,22 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    public function test_the_application_redirects_root_to_login(): void
+    public function test_the_root_shows_the_public_landing_page(): void
     {
-        $response = $this->get('/');
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Рабочий день компании')
+            ->assertSee(route('login'), false)
+            ->assertSee('data-landing-canvas', false);
+    }
 
-        $response->assertStatus(302);
+    public function test_landing_aliases_redirect_to_the_root(): void
+    {
+        $this->get('/welcome')->assertRedirect(route('welcome'));
+        $this->get('/landing')->assertRedirect(route('welcome'));
     }
 }

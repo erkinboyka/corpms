@@ -7,7 +7,7 @@
     $bmItems = $bmItems ?? [];
 @endphp
 @if (count($bmItems) > 0)
-    <nav class="bm-crumbs" aria-label="Хлебные крошки">
+    <nav class="bm-crumbs" aria-label="{{ __("Хлебные крошки") }}">
         @foreach ($bmItems as $bmIndex => $bmCrumb)
             @if ($bmIndex > 0)
                 <i class="ti ti-chevron-right bm-crumbs__sep" aria-hidden="true"></i>

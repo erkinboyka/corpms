@@ -26,7 +26,7 @@ class BiometricEventController extends Controller
 {
     public function __construct(protected AttendanceService $attendance) {}
 
-    /** Приём события "лицо распознано". */
+    /** Приём события __("лицо распознано"). */
     public function store(Request $request): JsonResponse
     {
         $device = $request->attributes->get('biometric_device');
@@ -131,7 +131,7 @@ class BiometricEventController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return response()->json(['message' => 'Ошибка обработки события'], 500);
+            return response()->json(['message' => __('Ошибка обработки события')], 500);
         }
 
         if ($data === null) {
@@ -144,7 +144,7 @@ class BiometricEventController extends Controller
         if ($data['status'] === 'employee_unknown') {
             return response()->json([
                 'status' => 'employee_unknown',
-                'message' => 'Сотрудник не опознан',
+                'message' => __('Сотрудник не опознан'),
             ], 422);
         }
 

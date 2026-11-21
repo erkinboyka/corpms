@@ -36,7 +36,7 @@ class RfidController extends Controller
         $user = $request->user();
         $me = $this->permissions->employee($user);
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $scope = $this->permissions->can($user, 'biometry.rfid.view');
@@ -119,7 +119,7 @@ class RfidController extends Controller
 
         $owner = Employee::query()->findOrFail($validated['employee_id']);
         if ((int) $owner->company_id !== (int) $me->company_id) {
-            abort(403, 'Сотрудник другой компании');
+            abort(403, __('Сотрудник другой компании'));
         }
 
         try {
@@ -150,11 +150,11 @@ class RfidController extends Controller
         \assert($me !== null);
 
         if ((int) $card->employee->company_id !== (int) $me->company_id) {
-            abort(403, 'Карта другой компании');
+            abort(403, __('Карта другой компании'));
         }
 
         if ($card->status === RfidCardStatus::Disabled) {
-            return back()->withErrors(['card_uid' => 'Карта уже отозвана']);
+            return back()->withErrors(['card_uid' => __('Карта уже отозвана')]);
         }
 
         $this->rfid->revokeCard($card);

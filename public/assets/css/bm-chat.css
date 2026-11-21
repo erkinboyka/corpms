@@ -221,8 +221,8 @@
     align-items: flex-start;
     max-width: 78%;
     position: relative;
-    animation: bm-msg-in var(--crm-motion-surface) both;
 }
+.bm-chat__msg.bm-enter { animation: bm-msg-in var(--crm-motion-surface) var(--crm-ease-out) both; }
 
 .bm-chat__msg.is-mine { align-self: flex-end; flex-direction: row-reverse; }
 .bm-chat__msg.is-pending { opacity: .6; }
@@ -312,6 +312,8 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
 }
 
 .bm-chat__reaction:hover { transform: translateY(-1px); background: var(--crm-table-hover, rgba(0, 0, 0, .05)); }
+.bm-chat__reaction:active { transform: scale(.94); transition-duration: var(--crm-motion-feedback); }
+.bm-chat__reaction.is-new { animation: bm-scale-in var(--crm-motion-control) var(--crm-ease-out) both; }
 
 .bm-chat__reaction.is-mine {
     border-color: var(--tblr-primary, #206bc4);
@@ -342,7 +344,7 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
     position: absolute;
     top: -12px;
     right: 8px;
-    display: none;
+    display: flex;
     gap: 2px;
     padding: 3px;
     background: var(--tblr-bg-surface, #fff);
@@ -353,8 +355,6 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
 }
 
 .bm-chat__msg.is-mine .bm-chat__msg-tools { right: auto; left: 8px; }
-.bm-chat__msg:hover .bm-chat__msg-tools,
-.bm-chat__msg:focus-within .bm-chat__msg-tools { display: flex; }
 
 .bm-chat__tool {
     border: 0;
@@ -414,18 +414,48 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
     gap: 8px;
 }
 
-.bm-chat__composer-row { display: flex; align-items: flex-end; gap: 8px; }
-
-.bm-chat__input {
+.bm-chat__composer-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--crm-space-2, 8px);
+    padding: 6px;
+    border: 1px solid var(--bm-line, var(--tblr-border-color, rgba(0, 0, 0, .1)));
+    border-radius: var(--crm-radius-lg, 16px);
+    background: var(--bm-sheet, var(--tblr-bg-surface, #fff));
+    box-shadow: var(--crm-shadow-1);
+    transition:
+        border-color var(--crm-motion-control) var(--crm-ease-standard),
+        box-shadow var(--crm-motion-control) var(--crm-ease-standard);
+}
+.bm-chat__composer-row:focus-within { border-color: var(--bm-link); box-shadow: var(--crm-focus-ring); }
+.bm-chat__composer-row .bm-chat__input {
+    flex: 1 1 auto;
+    min-width: 0;
     resize: none;
     max-height: 160px;
-    border-radius: 12px;
+    padding: 10px 12px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: var(--crm-radius-md, 12px);
     font-size: 14px;
     line-height: 1.45;
 }
+.bm-chat__composer-row .bm-chat__input:focus { box-shadow: none; }
 
 .bm-chat__icon-btn { flex: 0 0 auto; width: 38px; height: 38px; padding: 0; }
-.bm-chat__send { flex: 0 0 auto; width: 38px; height: 38px; padding: 0; }
+.bm-chat__send {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--crm-radius-md, 12px);
+    transition: transform var(--crm-motion-feedback) var(--crm-ease-out), background-color var(--crm-motion-control) var(--crm-ease-standard);
+}
+.bm-chat__send:not(:disabled):active { transform: scale(.96); }
+.bm-chat__send:disabled { opacity: .55; cursor: not-allowed; }
 
 .bm-chat__reply-bar {
     display: flex;
@@ -664,11 +694,7 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
 .bm-chat__msg-main { border-radius: 3px 15px 15px; }
 .bm-chat__msg.is-mine .bm-chat__msg-main { background: var(--bm-selected); border-radius: 15px 3px 15px 15px; }
 .bm-chat__composer { background: var(--bm-sheet); }
-.bm-chat__composer-row { align-items: flex-end; }
-.bm-chat__composer-row .bm-chat__input { min-width: 0; border-radius: 16px; }
-.bm-chat__send { border-radius: 13px; }
 .bm-chat__context {
-    display: none;
     position: absolute;
     inset: 62px 0 0 auto;
     width: min(20rem, 100%);
@@ -676,11 +702,35 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
     overflow-y: auto;
     background: var(--bm-sheet);
     box-shadow: -16px 0 28px #0b211b26;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(var(--crm-shift-panel, 24px));
+    transition:
+        opacity var(--crm-motion-panel) var(--crm-ease-out),
+        transform var(--crm-motion-panel) var(--crm-ease-emphasized),
+        visibility 0s linear var(--crm-motion-panel);
 }
-.bm-chat__context.is-open { display: flex; }
+.bm-chat__context.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition-delay: 0s;
+}
+#chat-context-toggle[aria-expanded="true"] { color: var(--bm-link); background: var(--bm-selected); }
 .bm-chat__list [hidden] { display: none; }
-.bm-chat__msg-tools { display: flex; opacity: 0; pointer-events: none; }
-.bm-chat__msg:is(:hover,:focus-within) .bm-chat__msg-tools { opacity: 1; pointer-events: auto; }
+.bm-chat__msg-tools {
+    display: flex;
+    opacity: 0;
+    transform: translateY(var(--crm-shift-1, 4px));
+    pointer-events: none;
+    transition:
+        opacity var(--crm-motion-control) var(--crm-ease-out),
+        transform var(--crm-motion-control) var(--crm-ease-out);
+}
+.bm-chat__msg:is(:hover, :focus-within) .bm-chat__msg-tools { opacity: 1; transform: none; pointer-events: auto; }
+.bm-chat__tool:active { transform: scale(.94); transition-duration: var(--crm-motion-feedback); }
 
 @media (max-width: 767px) {
     .bm-chat { grid-template-columns: minmax(0,1fr); height: max(24rem, calc(100dvh - 8rem)); }
@@ -697,6 +747,7 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
         grid-column: 2;
         justify-self: start;
         opacity: 1;
+        transform: none;
         pointer-events: auto;
         padding: 0;
         border: 0;
@@ -711,5 +762,17 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
 }
 
 .bm-chat__header-actions { display: flex; align-items: center; gap: .45rem; }
+#chat-latest {
+    transition:
+        opacity var(--crm-motion-control) var(--crm-ease-out),
+        transform var(--crm-motion-control) var(--crm-ease-out),
+        visibility 0s linear var(--crm-motion-control);
+}
+#chat-latest.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(calc(-1 * var(--crm-shift-1, 4px))) scale(var(--crm-scale-out, .96));
+    pointer-events: none;
+}
 .bm-chat [hidden] { display: none !important; }
 @media (pointer: coarse) { .bm-chat__input { font-size: 16px; } }

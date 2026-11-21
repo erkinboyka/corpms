@@ -124,11 +124,11 @@ class FinanceService
         return DB::transaction(function () use ($invoice): FinInvoice {
             $invoice = FinInvoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             if ($invoice->status !== FinInvoiceStatus::Draft) {
-                throw new LogicException('Выставить можно только черновик счёта');
+                throw new LogicException(__('Выставить можно только черновик счёта'));
             }
 
             if ((float) $invoice->amount <= 0) {
-                throw new LogicException('Сумма счёта должна быть больше нуля');
+                throw new LogicException(__('Сумма счёта должна быть больше нуля'));
             }
 
             $invoice->status = FinInvoiceStatus::Issued;
@@ -146,11 +146,11 @@ class FinanceService
         return DB::transaction(function () use ($invoice): FinInvoice {
             $invoice = FinInvoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             if ($invoice->status->isClosed()) {
-                throw new LogicException('Счёт уже закрыт: оплачен или отменён');
+                throw new LogicException(__('Счёт уже закрыт: оплачен или отменён'));
             }
 
             if ($invoice->payments()->exists()) {
-                throw new LogicException('По счёту есть платежи — отмена невозможна');
+                throw new LogicException(__('По счёту есть платежи — отмена невозможна'));
             }
 
             $invoice->status = FinInvoiceStatus::Cancelled;
@@ -172,13 +172,13 @@ class FinanceService
         return DB::transaction(function () use ($invoice, $data, $actorUserId): FinPayment {
             $invoice = FinInvoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             if ($invoice->status !== FinInvoiceStatus::Issued) {
-                throw new LogicException('Оплатить можно только выставленный счёт');
+                throw new LogicException(__('Оплатить можно только выставленный счёт'));
             }
 
             $amount = round((float) $data['amount'], 2);
 
             if (! is_finite($amount) || $amount <= 0) {
-                throw new LogicException('Сумма платежа должна быть больше нуля');
+                throw new LogicException(__('Сумма платежа должна быть больше нуля'));
             }
 
             $remaining = $invoice->remainingAmount();
@@ -189,11 +189,11 @@ class FinanceService
 
             $account = FinAccount::query()->where('company_id', $invoice->company_id)->whereKey($data['account_id'])->active()->first();
             if ($account === null) {
-                throw new LogicException('Активный счёт не найден в компании');
+                throw new LogicException(__('Активный счёт не найден в компании'));
             }
             if (! empty($data['category_id']) && ! FinCategory::query()->where('company_id', $invoice->company_id)
                 ->where('direction', 'income')->active()->whereKey($data['category_id'])->exists()) {
-                throw new LogicException('Активная статья дохода не найдена в компании');
+                throw new LogicException(__('Активная статья дохода не найдена в компании'));
             }
             $transaction = FinTransaction::query()->create([
                 'company_id' => $invoice->company_id,

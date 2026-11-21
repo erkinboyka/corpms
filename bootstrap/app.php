@@ -31,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             NoCacheHtml::class,
             \App\Http\Middleware\EnsureActiveEmployee::class,
+            \App\Http\Middleware\SetLocale::class,
+            \App\Http\Middleware\EnsureOnboarded::class,
             // Межтенантная изоляция: после SubstituteBindings (ТЗ, анти-IDOR)
             EnsureTenantIsolation::class,
         ]);

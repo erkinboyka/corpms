@@ -467,11 +467,12 @@ class TenantIsolationHttpTest extends TestCase
 
     public function test_ai_panel_search_scoped_to_own_company(): void
     {
-        $this->postJson('/ai/message', ['question' => 'найди сводка'])
+        $response = $this->postJson('/ai/message', ['question' => 'найди сводка'])
             ->assertOk()
-            ->assertJsonPath('ok', true)
-            ->assertJsonFragment(['label' => 'Задача: сводка Алфа'])
-            ->assertJsonMissing(['label' => 'Задача: сводка Бета']);
+            ->assertJsonPath('ok', true);
+        $labels = collect($response->json('blocks.0.items') ?? [])->pluck('label');
+        $this->assertTrue($labels->contains(fn ($label) => str_contains((string) $label, 'сводка Алфа')));
+        $this->assertFalse($labels->contains(fn ($label) => str_contains((string) $label, 'сводка Бета')));
     }
 
     /* ---------------- корректировки табеля ---------------- */

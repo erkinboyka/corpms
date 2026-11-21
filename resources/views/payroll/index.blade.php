@@ -1,19 +1,19 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'ledger')
 
-@section('title', 'Зарплата — Ведомости')
+@section('title', __('Зарплата — Ведомости'))
 
 @section('content')
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Зарплата</div>
-            <h1 class="page-title mt-1">Расчётные ведомости</h1>
-            <div class="text-secondary mt-1">Детерминированный расчёт из табеля и окладов: черновик → расчёт → согласование → выплата</div>
+            <div class="crm-eyebrow">{{ __('Зарплата') }}</div>
+            <h1 class="page-title mt-1">{{ __('Расчётные ведомости') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Детерминированный расчёт из табеля и окладов: черновик → расчёт → согласование → выплата') }}</div>
         </div>
         <div class="col-auto d-print-none">
             @if ($canManage)
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newPeriod"><i class="ti ti-plus me-1"></i>Новый период</button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newPeriod"><i class="ti ti-plus me-1"></i>{{ __('Новый период') }}</button>
             @endif
         </div>
     </div>
@@ -21,39 +21,39 @@
 
 <div class="crm-metrics">
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-wallet"></i>Начислено всего</div>
+        <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-wallet"></i>{{ __('Начислено всего') }}</div>
         <div class="crm-metric__value">{{ $showAmounts ? number_format($totals['gross'], 2, ',', ' ') : '—' }}</div>
-        <div class="crm-metric__hint">{{ $showAmounts ? 'по всем ведомостям' : 'суммы скрыты вашим доступом' }}</div>
+        <div class="crm-metric__hint">{{ $showAmounts ? __('по всем ведомостям') : __('суммы скрыты вашим доступом') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>К выплате</div>
+        <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-cash-banknote"></i>{{ __('К выплате') }}</div>
         <div class="crm-metric__value">{{ $showAmounts ? number_format($totals['net'], 2, ',', ' ') : '—' }}</div>
-        <div class="crm-metric__hint">{{ $showAmounts ? 'после удержаний' : 'только ваш отдел' }}</div>
+        <div class="crm-metric__hint">{{ $showAmounts ? __('после удержаний') : __('только ваш отдел') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-calendar-stats"></i>Периодов</div>
+        <div class="crm-metric__label"><i class="ti ti-calendar-stats"></i>{{ __('Периодов') }}</div>
         <div class="crm-metric__value">{{ $totals['periods'] }}</div>
-        <div class="crm-metric__hint">создано ведомостей</div>
+        <div class="crm-metric__hint">{{ __('создано ведомостей') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-coins"></i>Окладов оформлено</div>
+        <div class="crm-metric__label"><i class="ti ti-coins"></i>{{ __('Окладов оформлено') }}</div>
         <div class="crm-metric__value">{{ $totals['salaries'] }}<small> / {{ $totals['components'] }}</small></div>
-        <div class="crm-metric__hint">окладов / компонентов</div>
+        <div class="crm-metric__hint">{{ __('окладов / компонентов') }}</div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h2 class="card-title bm-section-title">Ведомости</h2>
-        <span class="crm-chip ms-auto">{{ $periods->count() }} всего</span>
+        <h2 class="card-title bm-section-title">{{ __('Ведомости') }}</h2>
+        <span class="crm-chip ms-auto">{{ $periods->count() }} {{ __('всего') }}</span>
     </div>
     <div class="table-responsive">
         <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th scope="col">Период</th><th scope="col">Статус</th><th scope="col" class="text-end">Сотрудников</th>
-                    <th scope="col" class="text-end">Начислено</th><th scope="col" class="text-end">Удержано</th><th scope="col" class="text-end">К выплате</th>
-                    <th scope="col" class="text-end">Обновлено</th>
+                    <th scope="col">{{ __('Период') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col" class="text-end">{{ __('Сотрудников') }}</th>
+                    <th scope="col" class="text-end">{{ __('Начислено') }}</th><th scope="col" class="text-end">{{ __('Удержано') }}</th><th scope="col" class="text-end">{{ __('К выплате') }}</th>
+                    <th scope="col" class="text-end">{{ __('Обновлено') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,10 +85,9 @@
                         <td colspan="7">
                             @include('partials.empty-state', [
                                 'icon' => 'wallet',
-                                'title' => 'Ведомостей нет',
-                                'text' => 'Создайте расчётный период — ведомость соберётся из табеля и окладов сотрудников.',
-                                'actionUrl' => $canManage ? '#newPeriod' : route('payroll.salaries'),
-                                'actionLabel' => $canManage ? 'Новый период' : 'Оклады и компоненты',
+                                'title' => __('Ведомостей нет'),
+                                'text' => __('Создайте расчётный период — ведомость соберётся из табеля и окладов сотрудников.'), 'actionUrl' => $canManage ? '#newPeriod' : route('payroll.salaries'),
+                                'actionLabel' => $canManage ? __('Новый период') : __('Оклады и компоненты'),
                             ])
                         </td>
                     </tr>
@@ -103,20 +102,20 @@
     <div class="modal-dialog" role="document">
         <form class="modal-content" method="post" action="{{ route('payroll.store') }}" data-submit-guard>
             @csrf
-            <div class="modal-header"><h5 class="modal-title">Новый расчётный период</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{{ __('Новый расчётный период') }}</h5></div>
             <div class="modal-body">
                 <div class="crm-form__section mb-0">
-                    <h3>Месяц расчёта</h3>
-                    <div class="crm-form__desc">Период создаётся на весь месяц: с первого по последнее число. Повторное создание того же месяца блокируется.</div>
+                    <h3>{{ __('Месяц расчёта') }}</h3>
+                    <div class="crm-form__desc">{{ __('Период создаётся на весь месяц: с первого по последнее число. Повторное создание того же месяца блокируется') }}</div>
                     <div class="crm-form__field">
-                        <label class="form-label" for="np-month">Месяц<span class="req">*</span></label>
+                        <label class="form-label" for="np-month">{{ __('Месяц') }}<span class="req">*</span></label>
                         <input type="month" id="np-month" name="month" class="form-control" required value="{{ now()->format('Y-m') }}">
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-bs-dismiss="modal">Отмена</button>
-                <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i>Создать</button>
+                <button type="button" class="btn" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i>{{ __('Создать') }}</button>
             </div>
         </form>
     </div>

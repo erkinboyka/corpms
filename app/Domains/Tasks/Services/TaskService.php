@@ -60,7 +60,7 @@ class TaskService
                 'task_id' => $task->id,
                 'employee_id' => $author->id,
                 'to_status' => $task->status->value,
-                'comment' => 'Задача создана',
+                'comment' => __('Задача создана'),
             ]);
 
             $this->audit->log($author->user()->first(), 'task.created', 'task', $task->id, null, [
@@ -99,7 +99,7 @@ class TaskService
 
         // Межтенантная изоляция (P0): отдел обязан принадлежать компании задачи.
         if ((int) $department->company_id !== (int) $task->company_id) {
-            abort(403, 'Отдел принадлежит другой компании');
+            abort(403, __('Отдел принадлежит другой компании'));
         }
 
         $assigneeId = $department->director_id
@@ -120,7 +120,7 @@ class TaskService
 
         // Межтенантная изоляция (P0): исполнитель из компании задачи.
         if ((int) $employee->company_id !== (int) $task->company_id) {
-            abort(403, 'Сотрудник принадлежит другой компании');
+            abort(403, __('Сотрудник принадлежит другой компании'));
         }
 
         return TaskAssignment::create([
@@ -262,7 +262,7 @@ class TaskService
                 'employee_id' => null,
                 'from_status' => $previousStatus->value,
                 'to_status' => TaskStatus::Review->value,
-                'comment' => 'Все части департаментских задач приняты — сводка готова',
+                'comment' => __('Все части департаментских задач приняты — сводка готова'),
             ]);
         }
     }
@@ -276,7 +276,7 @@ class TaskService
                 'submitted_by' => $employee->id,
             ]);
 
-            $this->changeStatus($employee, $task, TaskStatus::Review, 'Отправлена на проверку');
+            $this->changeStatus($employee, $task, TaskStatus::Review, __('Отправлена на проверку'));
         });
     }
 

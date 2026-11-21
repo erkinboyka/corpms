@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'stream')
 
-@section('title', 'Аномалии')
+@section('title', __('Аномалии'))
 
 @php
     $typeMeta = [
@@ -17,20 +17,20 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Посещаемость</div>
-            <h1 class="page-title mt-1">Аномалии</h1>
-            <div class="text-secondary mt-1">Очередь обнаруженных проблем — приоритет и обработка</div>
+            <div class="crm-eyebrow">{{ __('Посещаемость') }}</div>
+            <h1 class="page-title mt-1">{{ __('Аномалии') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Очередь обнаруженных проблем — приоритет и обработка') }}</div>
         </div>
     </div>
 </div>
 
 <div class="crm-toolbar">
-    <span class="crm-toolbar__count"><i class="ti ti-filter me-1"></i>Фильтр статуса:</span>
-    <a class="btn btn-sm {{ !$statusFilter ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies') }}">Все</a>
-    <a class="btn btn-sm {{ $statusFilter === 'open' ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies', ['status' => 'open']) }}">Открытые</a>
-    <a class="btn btn-sm {{ $statusFilter === 'resolved' ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies', ['status' => 'resolved']) }}">Разобранные</a>
+    <span class="crm-toolbar__count"><i class="ti ti-filter me-1"></i>{{ __('Фильтр статуса') }}</span>
+    <a class="btn btn-sm {{ !$statusFilter ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies') }}">{{ __('Все') }}</a>
+    <a class="btn btn-sm {{ $statusFilter === 'open' ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies', ['status' => 'open']) }}">{{ __('Открытые') }}</a>
+    <a class="btn btn-sm {{ $statusFilter === 'resolved' ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies', ['status' => 'resolved']) }}">{{ __('Разобранные') }}</a>
     <div class="crm-toolbar__spacer"></div>
-    <span class="crm-chip {{ ($statusFilter ?? 'open') === 'open' ? 'crm-chip--orange' : 'crm-chip--grey' }}">{{ $anomalies->count() }} в выборке</span>
+    <span class="crm-chip {{ ($statusFilter ?? 'open') === 'open' ? 'crm-chip--orange' : 'crm-chip--grey' }}">{{ $anomalies->count() }} {{ __('в выборке') }}</span>
 </div>
 
 <div class="crm-queue">
@@ -66,8 +66,8 @@
             @if ($canManage && $isOpen)
                 <form method="post" action="{{ route('attendance.anomalies.resolve', $anomaly) }}" class="d-flex gap-1 align-items-center" data-submit-guard>
                     @csrf @method('PUT')
-                    <input type="text" name="resolution" class="form-control form-control-sm" placeholder="Что сделано" required aria-label="Решение по аномалии">
-                    <button class="btn btn-sm btn-primary" title="Закрыть аномалию"><i class="ti ti-check"></i></button>
+                    <input type="text" name="resolution" class="form-control form-control-sm" placeholder="{{ __("Что сделано") }}" required aria-label="{{ __("Решение по аномалии") }}">
+                    <button class="btn btn-sm btn-primary" title="{{ __("Закрыть аномалию") }}"><i class="ti ti-check"></i></button>
                 </form>
             @endif
         </div>
@@ -75,8 +75,8 @@
         <div class="crm-queue__item" style="--c: var(--crm-success);">
             <span class="crm-entity__logo" style="width:38px;height:38px;font-size:15px;border-radius:11px;"><i class="ti ti-circle-check"></i></span>
             <div class="crm-queue__body">
-                <div class="crm-queue__title">Аномалий нет</div>
-                <div class="crm-queue__sub">По выбранному фильтру проблем не обнаружено.</div>
+                <div class="crm-queue__title">{{ __('Аномалий нет') }}</div>
+                <div class="crm-queue__sub">{{ __('По выбранному фильтру проблем не обнаружено') }}</div>
             </div>
         </div>
     @endforelse

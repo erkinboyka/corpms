@@ -40,7 +40,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ], [], [
             'email' => 'Email',
-            'password' => 'Пароль',
+            'password' => __('Пароль'),
         ]);
 
         // Брутфорс одного аккаунта: после FAIL_LIMIT неудач блокируем даже
@@ -51,7 +51,7 @@ class AuthController extends Controller
             $minutes = max(1, (int) ceil(RateLimiter::availableIn($key) / 60));
 
             throw ValidationException::withMessages([
-                'email' => "Слишком много неудачных попыток входа. Попробуйте через {$minutes} мин.",
+                'email' => __("Слишком много неудачных попыток входа. Попробуйте через {$minutes} мин."),
             ]);
         }
 
@@ -74,13 +74,25 @@ class AuthController extends Controller
             );
 
             throw ValidationException::withMessages([
-                'email' => 'Неверный email или пароль.',
+                'email' => __('Неверный email или пароль.'),
             ]);
         }
 
         RateLimiter::clear($key);
 
         $user = $request->user();
+
+        // 2FA: если включена, завершаем вход только после проверки кода.
+        if ($user && $user->two_factor_confirmed_at && $user->two_factor_secret) {
+            $remember = $request->boolean('remember');
+            Auth::logout();
+            $request->session()->put('2fa:user_id', $user->id);
+            $request->session()->put('2fa:remember', $remember);
+            $request->session()->regenerate();
+
+            return redirect()->route('login.2fa');
+        }
+
         $this->audit->log($user, 'auth.login', 'user', $user?->id);
 
         $request->session()->regenerate();

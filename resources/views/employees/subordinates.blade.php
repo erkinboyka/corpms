@@ -1,7 +1,7 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'record')
 
-@section('title', 'Подчинённые — ' . $employee->last_name)
+@section('title', __('Подчинённые') . ' — ' . $employee->last_name)
 
 @section('content')
 <div class="page-header d-print-none mb-3">
@@ -9,16 +9,16 @@
         <div class="col">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('employees.index') }}">Сотрудники</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('employees.index') }}">{{ __('Сотрудники') }}</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('employees.show', $employee) }}">{{ $employee->last_name }} {{ $employee->first_name }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Подчинённые</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ __('Подчинённые') }}</li>
                 </ol>
             </nav>
-            <h1 class="page-title mt-1">Прямые подчинённые</h1>
-            <div class="text-secondary mt-1">{{ $employee->last_name }} {{ $employee->first_name }} · {{ $employee->position?->name ?? 'должность не назначена' }}</div>
+            <h1 class="page-title mt-1">{{ __('Прямые подчинённые') }}</h1>
+            <div class="text-secondary mt-1">{{ $employee->last_name }} {{ $employee->first_name }} · {{ $employee->position?->name ?? __('должность не назначена') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <span class="crm-chip">{{ $direct->count() }} чел.</span>
+            <span class="crm-chip">{{ $direct->count() }} {{ __('чел') }}</span>
         </div>
     </div>
 </div>
@@ -31,7 +31,7 @@
                     <span class="crm-entity__logo">{{ mb_strtoupper(mb_substr($subordinate->first_name, 0, 1) . mb_substr($subordinate->last_name, 0, 1)) }}</span>
                     <div class="min-w-0">
                         <div class="crm-entity__name">{{ $subordinate->last_name }} {{ $subordinate->first_name }}</div>
-                        <div class="crm-entity__sub">{{ $subordinate->position?->name ?? 'должность не назначена' }}</div>
+                        <div class="crm-entity__sub">{{ $subordinate->position?->name ?? __('должность не назначена') }}</div>
                     </div>
                 </div>
                 <div class="crm-entity__meta">
@@ -46,7 +46,7 @@
         </div>
     @empty
         <div class="col-12">
-            @include('partials.empty-state', ['icon' => 'users', 'title' => 'Подчинённых нет', 'text' => 'У этого сотрудника нет прямых подчинённых в вашем scope.'])
+            @include('partials.empty-state', ['icon' => 'users', 'title' => __('Подчинённых нет'), 'text' => __('У этого сотрудника нет прямых подчинённых в вашем scope.')])
         </div>
     @endforelse
 </div>

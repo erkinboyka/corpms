@@ -39,8 +39,8 @@ final class EnsureActiveEmployee
             $request->session()->regenerateToken();
 
             return $request->expectsJson()
-                ? response()->json(['message' => 'Доступ к учётной записи отключён'], 403)
-                : redirect()->route('login')->withErrors(['email' => 'Доступ к учётной записи отключён']);
+                ? response()->json(['message' => __('Доступ к учётной записи отключён')], 403)
+                : redirect()->route('login')->withErrors(['email' => __('Доступ к учётной записи отключён')]);
         }
 
         return $next($request);

@@ -133,7 +133,7 @@ class SearchController extends Controller
                 ->get()
                 ->map(static fn (Task $t) => [
                     'title' => $t->title,
-                    'meta' => $t->number ?? ('Задача #'.$t->id),
+                    'meta' => $t->number ?? (__('Задача #').$t->id),
                     'url' => route('tasks.show', $t),
                 ])->all();
         }
@@ -155,7 +155,7 @@ class SearchController extends Controller
                 ->get()
                 ->map(static fn (Document $d) => [
                     'title' => $d->title,
-                    'meta' => $d->reg_number ?? $d->document_number ?? ('Документ #'.$d->id),
+                    'meta' => $d->reg_number ?? $d->document_number ?? (__('Документ #').$d->id),
                     'url' => route('documents.show', $d),
                 ])->all();
         }

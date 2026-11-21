@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Web\AccountingChartController;
@@ -9,6 +10,8 @@ use App\Http\Controllers\Web\AccountingEntryController;
 use App\Http\Controllers\Web\AccountingReportController;
 use App\Http\Controllers\Web\AiController;
 use App\Http\Controllers\Web\AnalyticsController;
+use App\Http\Controllers\Web\BackupController;
+use App\Http\Controllers\Web\CertificateController;
 use App\Http\Controllers\Web\AttendanceController;
 use App\Http\Controllers\Web\AttendanceCorrectionController;
 use App\Http\Controllers\Web\AuditController;
@@ -30,7 +33,11 @@ use App\Http\Controllers\Web\FinBudgetController;
 use App\Http\Controllers\Web\FinCategoryController;
 use App\Http\Controllers\Web\FinInvoiceController;
 use App\Http\Controllers\Web\FinTransactionController;
+use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\IntegrationController;
+use App\Http\Controllers\Web\LocaleController;
+use App\Http\Controllers\Web\LmsController;
+use App\Http\Controllers\Web\OnboardingController;
 use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\PayrollController;
@@ -44,6 +51,7 @@ use App\Http\Controllers\Web\ScheduleController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SettingsController;
 use App\Http\Controllers\Web\TaskController;
+use App\Http\Controllers\Web\TwoFactorController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WorkflowController;
 use Illuminate\Support\Facades\Route;
@@ -59,18 +67,46 @@ Route::middleware('guest')->group(function () {
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:10,1')->name('password.email');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:10,1')->name('password.update');
+
+    Route::get('/login/2fa', [TwoFactorController::class, 'showChallenge'])->name('login.2fa');
+    Route::post('/login/2fa', [TwoFactorController::class, 'verifyChallenge'])->middleware('throttle:10,1')->name('login.2fa.verify');
+
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('google.redirect');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+Route::view('/', 'welcome')->name('welcome');
+Route::redirect('/welcome', '/');
+Route::redirect('/landing', '/')->name('landing');
+
+Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
+
+Route::view('/privacy', 'legal.privacy')->name('privacy');
+Route::view('/terms', 'legal.terms')->name('terms');
+Route::view('/cookies', 'legal.cookies')->name('cookies');
+Route::get('/sitemap.xml', function () {
+    $urls = ['/', '/privacy', '/terms', '/cookies'];
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    foreach ($urls as $u) {
+        $xml .= '<url><loc>'.e(url($u)).'</loc></url>';
+    }
+    $xml .= '</urlset>';
+    return response($xml, 200)->header('Content-Type', 'application/xml');
+})->name('sitemap');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
+    Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
     Route::get('/profile', [UserController::class, 'profile'])->name('profile.show');
     Route::put('/profile/password', [UserController::class, 'changePassword'])->name('profile.password');
+    Route::get('/profile/2fa', [TwoFactorController::class, 'index'])->name('profile.2fa');
+    Route::post('/profile/2fa/confirm', [TwoFactorController::class, 'confirm'])->name('profile.2fa.confirm');
+    Route::post('/profile/2fa/disable', [TwoFactorController::class, 'disable'])->name('profile.2fa.disable');
     Route::put('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/photo', [UserController::class, 'uploadPhoto'])->name('profile.photo');
     Route::post('/profile/ai-fill', [UserController::class, 'aiFillProfile'])->middleware('throttle:10,1')->name('profile.ai-fill');
@@ -315,12 +351,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('permission:settings.view@company')->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->middleware('permission:settings.manage@company')->name('settings.update');
 
+    Route::get('/backups', [BackupController::class, 'index'])->middleware('permission:settings.view@company')->name('backups.index');
+
+    Route::get('/certificates', [CertificateController::class, 'index'])->middleware('permission:settings.view@company')->name('certificates.index');
+    Route::post('/certificates', [CertificateController::class, 'store'])->middleware('permission:settings.manage@company')->name('certificates.store');
+    Route::delete('/certificates/{certificate}', [CertificateController::class, 'destroy'])->middleware('permission:settings.manage@company')->name('certificates.destroy');
+
+    Route::get('/imports', [ImportController::class, 'index'])->middleware('permission:employees.manage@company')->name('imports.index');
+    Route::post('/imports/upload', [ImportController::class, 'upload'])->middleware('permission:employees.manage@company')->name('imports.upload');
+    Route::get('/imports/{job}', [ImportController::class, 'show'])->middleware('permission:employees.manage@company')->name('imports.show');
+    Route::post('/imports/{job}/run', [ImportController::class, 'run'])->middleware('permission:employees.manage@company')->name('imports.run');
+    Route::post('/backups/db', [BackupController::class, 'runDb'])->middleware('permission:settings.manage@company')->name('backups.db');
+    Route::post('/backups/files', [BackupController::class, 'runFiles'])->middleware('permission:settings.manage@company')->name('backups.files');
+    Route::get('/backups/{file}', [BackupController::class, 'download'])->middleware('permission:settings.view@company')->name('backups.download');
+
     Route::get('/search', [SearchController::class, 'index'])->middleware(['permission:search.global', 'throttle:60,1'])->name('search.index');
     Route::get('/search/hint', [SearchController::class, 'hint'])->middleware(['permission:search.global', 'throttle:120,1'])->name('search.hint');
 
     Route::get('/ai', [AiController::class, 'index'])->middleware(['permission:analytics.ai.use', 'throttle:30,1'])->name('ai.index');
     Route::post('/ai', [AiController::class, 'ask'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.ask');
     Route::post('/ai/message', [AiController::class, 'message'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.message');
+    Route::get('/ai/files/{file}', [AiController::class, 'download'])->where('file', '[0-9A-Za-z]{26}\.(?:png|svg|csv|html|txt|pptx)')->middleware('permission:analytics.ai.use')->name('ai.files.download');
 
     /* ---------- BM Chat ---------- */
     Route::get('/chat', [ChatController::class, 'index'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.index');
@@ -364,6 +415,47 @@ Route::middleware('auth')->group(function () {
     Route::post('/tasks/{task}/attachments', [TaskController::class, 'storeAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.store');
     Route::get('/tasks/{task}/attachments/{attachment}', [TaskController::class, 'downloadAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.download');
     Route::delete('/tasks/{task}/attachments/{attachment}', [TaskController::class, 'destroyAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.destroy');
+
+    /* ---------- LMS: обучение, доска, задания, WebRTC и Пульс Бumi ---------- */
+    Route::prefix('lms')->group(function (): void {
+        Route::middleware(['permission:lms.view', 'throttle:180,1'])->group(function (): void {
+            Route::get('/', [LmsController::class, 'index'])->name('lms.index');
+            Route::get('/courses/{course}', [LmsController::class, 'course'])->name('lms.courses.show');
+            Route::get('/lessons/{lesson}', [LmsController::class, 'lesson'])->name('lms.lessons.show');
+            Route::get('/whiteboards/{whiteboard}', [LmsController::class, 'whiteboard'])->name('lms.whiteboards.show');
+            Route::get('/meetings/{meeting}', [LmsController::class, 'meeting'])->name('lms.meetings.show');
+            Route::get('/assignments', [LmsController::class, 'assignments'])->name('lms.assignments.index');
+            Route::get('/pulse', [LmsController::class, 'pulse'])->name('lms.pulse');
+        });
+
+        Route::middleware(['permission:lms.manage', 'throttle:60,1'])->group(function (): void {
+            Route::post('/courses', [LmsController::class, 'storeCourse'])->name('lms.courses.store');
+            Route::post('/courses/{course}/lessons', [LmsController::class, 'storeLesson'])->name('lms.lessons.store');
+            Route::post('/assignments', [LmsController::class, 'storeAssignment'])->name('lms.assignments.store');
+            Route::post('/assignments/{submission}/review', [LmsController::class, 'reviewAssignment'])->name('lms.assignments.review');
+        });
+
+        Route::middleware(['permission:lms.join', 'throttle:240,1'])->group(function (): void {
+            Route::post('/courses/{course}/enroll', [LmsController::class, 'enroll'])->name('lms.enroll');
+            Route::post('/lessons/{lesson}/progress', [LmsController::class, 'completeLesson'])->name('lms.lessons.progress');
+
+            Route::get('/whiteboards/{whiteboard}/elements', [LmsController::class, 'whiteboardElements'])->name('lms.whiteboards.elements');
+            Route::post('/whiteboards/{whiteboard}/elements', [LmsController::class, 'draw'])->name('lms.whiteboards.draw');
+            Route::delete('/whiteboards/{whiteboard}/elements/{element}', [LmsController::class, 'erase'])->name('lms.whiteboards.erase');
+            Route::get('/whiteboards/{whiteboard}/presence', [LmsController::class, 'presenceList'])->name('lms.whiteboards.presence');
+            Route::post('/whiteboards/{whiteboard}/presence', [LmsController::class, 'presence'])->name('lms.whiteboards.presence.store');
+
+            Route::post('/meetings', [LmsController::class, 'createMeeting'])->name('lms.meetings.store');
+            Route::post('/meetings/{meeting}/join', [LmsController::class, 'joinMeeting'])->name('lms.meetings.join');
+            Route::post('/meetings/{meeting}/leave', [LmsController::class, 'leaveMeeting'])->name('lms.meetings.leave');
+            Route::get('/meetings/{meeting}/signals', [LmsController::class, 'signals'])->name('lms.meetings.signals');
+            Route::post('/meetings/{meeting}/signals', [LmsController::class, 'signal'])->name('lms.meetings.signal');
+            Route::get('/meetings/{meeting}/participants', [LmsController::class, 'participants'])->name('lms.meetings.participants');
+
+            Route::post('/assignments/{assignment}/submit', [LmsController::class, 'submitAssignment'])->name('lms.assignments.submit');
+            Route::get('/pulse/events', [LmsController::class, 'pulseEvents'])->name('lms.pulse.events');
+        });
+    });
 
     /* ---------- уведомления ---------- */
     Route::get('/notifications', [NotificationController::class, 'index'])->middleware('permission:attendance.view')->name('notifications.index');

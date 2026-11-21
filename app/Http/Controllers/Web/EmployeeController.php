@@ -117,7 +117,7 @@ class EmployeeController extends Controller
             'work_schedule_id' => ['nullable', 'exists:work_schedules,id'],
             'status' => ['required', 'in:active,inactive'],
         ], [
-            'phone.regex' => 'Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).',
+            'phone.regex' => __('Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).'),
         ]);
 
         $validated['company_id'] = $me->company_id;
@@ -182,7 +182,7 @@ class EmployeeController extends Controller
             'position_id' => ['nullable', 'exists:positions,id'],
             'work_schedule_id' => ['nullable', 'exists:work_schedules,id'],
         ], [
-            'phone.regex' => 'Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).',
+            'phone.regex' => __('Формат: международный номер, начинается с +7/+992/… (например +7 (999) 123-45-67).'),
         ]);
 
         // справочники в поле ввода — только из компании текущего пользователя (анти-перенос)
@@ -199,14 +199,14 @@ class EmployeeController extends Controller
             abort_unless((int) ($validated['department_id'] ?? 0) === (int) ($employee->department_id ?? 0), 403);
         }
         if ($validated['fired_at'] !== null && $employee->hired_at !== null && $validated['fired_at'] < $employee->hired_at->toDateString()) {
-            throw ValidationException::withMessages(['fired_at' => 'Дата увольнения не может быть раньше даты приёма']);
+            throw ValidationException::withMessages(['fired_at' => __('Дата увольнения не может быть раньше даты приёма')]);
         }
         $old = $employee->only(array_keys($validated));
         $employee->update($validated);
 
         $this->audit->log($request->user(), 'employee.updated', 'employee', $employee->id, $old, $validated);
 
-        return redirect()->route('employees.show', $employee)->with('status', 'Профиль обновлён');
+        return redirect()->route('employees.show', $employee)->with('status', __('Профиль обновлён'));
     }
 
     /** Роли сотрудника (п.9, 50: управление ролями). */
@@ -255,7 +255,7 @@ class EmployeeController extends Controller
         $blocked = array_diff($requestedIds, $allowedRoleIds);
         if ($blocked !== []) {
             return back()->withErrors([
-                'role_ids' => 'Недостаточно прав для назначения одной из выбранных ролей (эскалация запрещена).',
+                'role_ids' => __('Недостаточно прав для назначения одной из выбранных ролей (эскалация запрещена).'),
             ]);
         }
 
@@ -275,7 +275,7 @@ class EmployeeController extends Controller
 
         $this->audit->log($request->user(), 'employee.roles_changed', 'employee', $employee->id, ['roles' => $old], ['roles' => $new]);
 
-        return back()->with('status', 'Роли обновлены');
+        return back()->with('status', __('Роли обновлены'));
     }
 
     /** Организационная карусель подчиненности: диаграммы строит view. */

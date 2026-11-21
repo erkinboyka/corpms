@@ -45,7 +45,7 @@ class DocumentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $scope = $this->permissions->can($request->user(), 'documents.view');
@@ -102,10 +102,10 @@ class DocumentController extends Controller
             ->pluck('total', 'status');
 
         $metrics = [
-            ['label' => 'Всего документов', 'value' => (int) $byStatus->sum(), 'icon' => 'file-text', 'tone' => '#0b9b72'],
-            ['label' => 'На согласовании', 'value' => (int) ($byStatus['submitted'] ?? 0) + (int) ($byStatus['review'] ?? 0) + (int) ($byStatus['revision'] ?? 0), 'icon' => 'checklist', 'tone' => '#f76707'],
-            ['label' => 'Подписано и зарегистрировано', 'value' => (int) ($byStatus['signed'] ?? 0) + (int) ($byStatus['registered'] ?? 0), 'icon' => 'signature', 'tone' => '#4299e1'],
-            ['label' => 'В архиве', 'value' => (int) ($byStatus['archived'] ?? 0), 'icon' => 'archive', 'tone' => '#6c7a91'],
+            ['label' => __('Всего документов'), 'value' => (int) $byStatus->sum(), 'icon' => 'file-text', 'tone' => '#0b9b72'],
+            ['label' => __('На согласовании'), 'value' => (int) ($byStatus['submitted'] ?? 0) + (int) ($byStatus['review'] ?? 0) + (int) ($byStatus['revision'] ?? 0), 'icon' => 'checklist', 'tone' => '#f76707'],
+            ['label' => __('Подписано и зарегистрировано'), 'value' => (int) ($byStatus['signed'] ?? 0) + (int) ($byStatus['registered'] ?? 0), 'icon' => 'signature', 'tone' => '#4299e1'],
+            ['label' => __('В архиве'), 'value' => (int) ($byStatus['archived'] ?? 0), 'icon' => 'archive', 'tone' => '#6c7a91'],
         ];
 
         $documents = $query->orderByDesc('id')->paginate(25)->withQueryString();
@@ -130,7 +130,7 @@ class DocumentController extends Controller
 
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
@@ -180,7 +180,7 @@ class DocumentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
 
         $validated = $request->validate([
@@ -207,13 +207,13 @@ class DocumentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
         if ((int) $document->author_id !== (int) $me->id
             && $this->permissions->check($request->user(), 'documents.edit') === false) {
-            throw new LogicException('Новую версию может загрузить автор или документы.edit');
+            throw new LogicException(__('Новую версию может загрузить автор или документы.edit'));
         }
 
         $validated = $request->validate([
@@ -225,7 +225,7 @@ class DocumentController extends Controller
 
         $this->documents->addVersion($document, $me, $request->file('file'), $validated['body'] ?? null, $validated['change_note'] ?? null);
 
-        return back()->with('status', 'Новая версия добавлена');
+        return back()->with('status', __('Новая версия добавлена'));
     }
 
     /* -------------------- согласование -------------------- */
@@ -234,7 +234,7 @@ class DocumentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
@@ -244,14 +244,14 @@ class DocumentController extends Controller
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Документ отправлен на согласование');
+        return back()->with('status', __('Документ отправлен на согласование'));
     }
 
     public function decide(Request $request, Document $document): RedirectResponse
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
@@ -263,17 +263,17 @@ class DocumentController extends Controller
         try {
             if ($validated['decision'] === 'approved') {
                 $this->documents->approve($me, $document, $validated['comment'] ?? null);
-                $message = 'Шаг согласования пройден';
+                $message = __('Шаг согласования пройден');
             } else {
                 // отказ — отдельное право (documents.reject), маршрут гейтит только approve
                 if (app(PermissionService::class)->check($request->user(), 'documents.reject') === false) {
-                    abort(403, 'Нет права отказа в согласовании');
+                    abort(403, __('Нет права отказа в согласовании'));
                 }
                 if ($validated['comment'] === null || trim($validated['comment']) === '') {
-                    return back()->withErrors(['comment' => 'Отказ требует комментария']);
+                    return back()->withErrors(['comment' => __('Отказ требует комментария')]);
                 }
                 $this->documents->reject($me, $document, $validated['comment']);
-                $message = 'Документ отклонён — отправлен автору на доработку';
+                $message = __('Документ отклонён — отправлен автору на доработку');
             }
         } catch (LogicException $e) {
             return back()->withErrors(['field' => $e->getMessage()]);
@@ -286,7 +286,7 @@ class DocumentController extends Controller
     {
         $me = auth()->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
@@ -296,14 +296,14 @@ class DocumentController extends Controller
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Документ зарегистрирован');
+        return back()->with('status', __('Документ зарегистрирован'));
     }
 
     public function archive(Document $document): RedirectResponse
     {
         $me = auth()->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
@@ -313,7 +313,7 @@ class DocumentController extends Controller
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Документ в архиве');
+        return back()->with('status', __('Документ в архиве'));
     }
 
     /* -------------------- подписи -------------------- */
@@ -322,7 +322,7 @@ class DocumentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
 
@@ -334,7 +334,7 @@ class DocumentController extends Controller
 
         // подписанты — только сотрудники своей компании
         foreach (array_map('intval', $validated['signer_ids']) as $signerId) {
-            TenantGuard::ensureReference('employees', $signerId, $me, 'Подписант из другой компании');
+            TenantGuard::ensureReference('employees', $signerId, $me, __('Подписант из другой компании'));
         }
 
         try {
@@ -343,14 +343,14 @@ class DocumentController extends Controller
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Запросы подписи созданы');
+        return back()->with('status', __('Запросы подписи созданы'));
     }
 
-    public function sign(Request $request, Document $document, DocumentSignatureRequest $signatureRequest): RedirectResponse
+    public function sign(Request $request, Document $document, DocumentSignatureRequest $signatureRequest): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
         TenantGuard::ensureSignatureRequest($signatureRequest, $document, $me);
@@ -358,19 +358,25 @@ class DocumentController extends Controller
         $otp = $signatureRequest->requires_otp ? $request->input('otp_code') : null;
 
         try {
-            $this->signatures->sign($me, $signatureRequest, $otp);
+            $signature = $this->signatures->sign($me, $signatureRequest, $otp);
         } catch (LogicException|\RuntimeException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Документ подписан');
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Документ подписан. Номер подписи: '.$signature->signature_id]);
+        }
+        return back()->with('status', __('Документ подписан'));
     }
 
     public function declineSignature(Request $request, Document $document, DocumentSignatureRequest $signatureRequest): RedirectResponse
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
         TenantGuard::ensureSignatureRequest($signatureRequest, $document, $me);
@@ -385,14 +391,14 @@ class DocumentController extends Controller
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Подпись отклонена — документ ушёл на доработку');
+        return back()->with('status', __('Подпись отклонена — документ ушёл на доработку'));
     }
 
     public function verifySignature(DocumentSignature $signature): RedirectResponse
     {
         $me = auth()->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureSignature($signature, $me);
 
@@ -405,13 +411,13 @@ class DocumentController extends Controller
     {
         $me = auth()->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureSignature($signature, $me);
 
-        $this->signatures->revoke($me, $signature, 'Отзыв из панели');
+        $this->signatures->revoke($me, $signature, __('Отзыв из панели'));
 
-        return back()->with('status', 'Подпись отозвана');
+        return back()->with('status', __('Подпись отозвана'));
     }
 
     /**
@@ -421,7 +427,7 @@ class DocumentController extends Controller
     protected function ensureVisible(Request $request, Document $document, Employee $me): void
     {
         $scope = $this->permissions->can($request->user(), 'documents.view');
-        \assert($scope !== false, 'маршрут уже проверяет право');
+        \assert($scope !== false, __('маршрут уже проверяет право'));
 
         if ($scope->value === 'own') {
             $visible = (int) $document->author_id === (int) $me->id
@@ -446,7 +452,7 @@ class DocumentController extends Controller
     {
         $me = $request->user()->employee;
         if ($me === null) {
-            abort(403, 'Нет карточки сотрудника');
+            abort(403, __('Нет карточки сотрудника'));
         }
         TenantGuard::ensureDocument($document, $me);
         $this->ensureVisible($request, $document, $me);
@@ -455,7 +461,7 @@ class DocumentController extends Controller
 
         $path = $version->file_path;
         if ($path === null || $path === '') {
-            abort(404, 'У этой версии нет файла');
+            abort(404, __('У этой версии нет файла'));
         }
 
         $disk = Storage::disk('local');

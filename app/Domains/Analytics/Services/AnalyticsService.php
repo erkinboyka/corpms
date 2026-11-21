@@ -39,7 +39,7 @@ class AnalyticsService
     public function accessibleEmployees(User $user, string $permission): array
     {
         $scope = $this->permissions->can($user, $permission);
-        \assert($scope !== false, 'право нужно проверить до вызова');
+        \assert($scope !== false, __('право нужно проверить до вызова'));
 
         $me = $this->permissions->employee($user);
         \assert($me !== null);
@@ -119,7 +119,7 @@ class AnalyticsService
             $trend[] = [
                 'date' => $day,
                 'present' => $records->filter(fn ($r) => $r->late_minutes > 0 || $r->status->value === 'late' ? false : $r->clock_in_at !== null && $r->status->value !== 'remote')->count(),
-                'late' => $records->filter(fn ($r) => $r->late_minutes > 0 || $r->status->value === 'late')->count(),
+                'late' => $records->filter(fn ($r) => $r->status->value !== 'remote' && ($r->late_minutes > 0 || $r->status->value === 'late'))->count(),
                 'remote' => $records->filter(fn ($r) => $r->status->value === 'remote')->count(),
             ];
         }
@@ -128,22 +128,27 @@ class AnalyticsService
     }
 
     /** Задачи по статусам в scope. */
-    public function taskStats(Collection $employees): array
+    public function taskStats(Collection $employees, bool $exclusive = false): array
     {
         $ids = $employees->pluck('id')->all();
         if ($ids === []) {
             return [];
         }
 
-        $rows = Task::query()
-            ->selectRaw('status, count(*) as cnt')
-            ->whereHas('assignments', fn ($q) => $q->whereIn('employee_id', $ids))
+        $query = Task::query()->whereIn('company_id', $employees->pluck('company_id')->unique())
+            ->whereHas('assignments', fn ($q) => $q->whereIn('employee_id', $ids));
+        if ($exclusive) {
+            // Each task contributes to one bar, including tasks overdue by deadline alone.
+            return $query->selectRaw("CASE WHEN deadline < ? AND status NOT IN ('completed','cancelled') THEN 'overdue' ELSE status END AS bucket, COUNT(*) AS cnt", [now()])
+                ->groupBy('bucket')->pluck('cnt', 'bucket')->map(fn ($value) => (int) $value)->all();
+        }
+
+        $rows = (clone $query)->selectRaw('status, count(*) as cnt')
             ->groupBy('status')
             ->pluck('cnt', 'status');
 
         // SVG-статистика без ленивой связи: overdue — статус, просрочка без статуса тоже стата
-        $overdue = Task::query()
-            ->whereHas('assignments', fn ($q) => $q->whereIn('employee_id', $ids))
+        $overdue = $query
             ->where('deadline', '<', now())
             ->whereNotIn('status', ['completed', 'cancelled', 'overdue'])
             ->count();
@@ -191,7 +196,7 @@ class AnalyticsService
             $departament = $departaments->get($deptId);
             $result[] = [
                 'department' => $departament,
-                'name' => $departament?->name ?? 'Без подразделения',
+                'name' => $departament?->name ?? __('Без подразделения'),
                 'headcount' => $group->count(),
                 'director' => $departament?->director?->last_name,
             ];
@@ -345,11 +350,11 @@ class AnalyticsService
     /** Стажевые группы сотрудников scope (по дате приёма). */
     public function tenureStats(Collection $employees): array
     {
-        $buckets = ['<1 года' => 0, '1–3 года' => 0, '3–5 лет' => 0, '5+ лет' => 0, 'не указан' => 0];
+        $buckets = ['<1 года' => 0, __('1–3 года') => 0, __('3–5 лет') => 0, __('5+ лет') => 0, __('не указан') => 0];
 
         foreach ($employees as $employee) {
             if ($employee->hired_at === null) {
-                $buckets['не указан']++;
+                $buckets[__('не указан')]++;
 
                 continue;
             }
@@ -357,11 +362,11 @@ class AnalyticsService
             if ($years < 1) {
                 $buckets['<1 года']++;
             } elseif ($years < 3) {
-                $buckets['1–3 года']++;
+                $buckets[__('1–3 года')]++;
             } elseif ($years < 5) {
-                $buckets['3–5 лет']++;
+                $buckets[__('3–5 лет')]++;
             } else {
-                $buckets['5+ лет']++;
+                $buckets[__('5+ лет')]++;
             }
         }
 

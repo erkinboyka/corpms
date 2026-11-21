@@ -36,12 +36,12 @@ class NotificationController extends Controller
 
         // чужое уведомление (даже сотрудника своей компании) — 403, не 500
         if ((int) $notification->recipient_id !== (int) $me->id) {
-            abort(403, 'Чужое уведомление');
+            abort(403, __('Чужое уведомление'));
         }
 
         $this->notifications->markRead($notification);
         $notification->refresh();
 
-        return back()->with('status', 'Отмечено прочитанным');
+        return back()->with('status', __('Отмечено прочитанным'));
     }
 }

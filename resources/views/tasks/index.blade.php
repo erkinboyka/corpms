@@ -1,18 +1,18 @@
 @extends('layouts.tabler')
 @section('workspace_layout', 'overview')
 
-@section('title', 'Задачи')
+@section('title', __('Задачи'))
 
 @php
     $statusCols = [
-        'new' => ['label' => 'Новые', 'icon' => 'circle-plus', 'chip' => 'crm-chip--grey'],
-        'planned' => ['label' => 'Запланированы', 'icon' => 'calendar-event', 'chip' => 'crm-chip--cyan'],
-        'in_progress' => ['label' => 'В работе', 'icon' => 'player-play', 'chip' => 'crm-chip'],
-        'review' => ['label' => 'На проверке', 'icon' => 'eye', 'chip' => 'crm-chip--orange'],
-        'returned' => ['label' => 'Возвращены', 'icon' => 'rotate', 'chip' => 'crm-chip--orange'],
-        'completed' => ['label' => 'Готово', 'icon' => 'circle-check', 'chip' => 'crm-chip--green'],
-        'cancelled' => ['label' => 'Отменены', 'icon' => 'circle-x', 'chip' => 'crm-chip--grey'],
-        'overdue' => ['label' => 'Просрочены', 'icon' => 'alarm', 'chip' => 'crm-chip--red'],
+        'new' => ['label' => __('Новые'), 'icon' => 'circle-plus', 'chip' => 'crm-chip--grey'],
+        'planned' => ['label' => __('Запланированы'), 'icon' => 'calendar-event', 'chip' => 'crm-chip--cyan'],
+        'in_progress' => ['label' => __('В работе'), 'icon' => 'player-play', 'chip' => 'crm-chip'],
+        'review' => ['label' => __('На проверке'), 'icon' => 'eye', 'chip' => 'crm-chip--orange'],
+        'returned' => ['label' => __('Возвращены'), 'icon' => 'rotate', 'chip' => 'crm-chip--orange'],
+        'completed' => ['label' => __('Готово'), 'icon' => 'circle-check', 'chip' => 'crm-chip--green'],
+        'cancelled' => ['label' => __('Отменены'), 'icon' => 'circle-x', 'chip' => 'crm-chip--grey'],
+        'overdue' => ['label' => __('Просрочены'), 'icon' => 'alarm', 'chip' => 'crm-chip--red'],
     ];
     $prioChips = ['critical' => 'crm-chip--red', 'high' => 'crm-chip--orange', 'medium' => 'crm-chip--cyan', 'low' => 'crm-chip--grey'];
 
@@ -38,31 +38,31 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">Работа</div>
-            <h1 class="page-title mt-1">Задачи</h1>
-            <div class="text-secondary mt-1">Список · всего {{ $tasks->total() }} · показаны {{ $tasks->firstItem() ?? 0 }}–{{ $tasks->lastItem() ?? 0 }}</div>
+            <div class="crm-eyebrow">{{ __('Работа') }}</div>
+            <h1 class="page-title mt-1">{{ __('Задачи') }}</h1>
+            <div class="text-secondary mt-1">{{ __('Список · всего') }} {{ $tasks->total() }} {{ __('показаны') }} {{ $tasks->firstItem() ?? 0 }}–{{ $tasks->lastItem() ?? 0 }}</div>
         </div>
     </div>
 </div>
 
 <form method="get" class="crm-toolbar">
-    <select name="status" class="form-select" aria-label="Статус" onchange="this.form.submit()">
-        <option value="">Все статусы</option>
+    <select name="status" class="form-select" aria-label="{{ __("Статус") }}" onchange="this.form.submit()">
+        <option value="">{{ __('Все статусы') }}</option>
         @foreach (array_keys($statusCols) as $statusOption)
             <option value="{{ $statusOption }}" @selected($status === $statusOption)>{{ $crm_label('task_status', $statusOption) }}</option>
         @endforeach
     </select>
-    <select name="priority" class="form-select" aria-label="Приоритет" onchange="this.form.submit()">
-        <option value="">Любой приоритет</option>
+    <select name="priority" class="form-select" aria-label="{{ __("Приоритет") }}" onchange="this.form.submit()">
+        <option value="">{{ __('Любой приоритет') }}</option>
         @foreach (['low', 'medium', 'high', 'critical'] as $p)
             <option value="{{ $p }}" @selected(request('priority') === $p)>{{ $crm_label('task_priority', $p) }}</option>
         @endforeach
     </select>
     <div class="crm-toolbar__spacer"></div>
-    <div class="crm-switch" data-crm-switch="tasks" role="group" aria-label="Вид задач">
-        <button type="button" data-view="list"><i class="ti ti-list"></i>Список</button>
+    <div class="crm-switch" data-crm-switch="tasks" role="group" aria-label="{{ __("Вид задач") }}">
+        <button type="button" data-view="list"><i class="ti ti-list"></i>{{ __('Список') }}</button>
         <button type="button" data-view="kanban"><i class="ti ti-layout-kanban"></i>Kanban</button>
-        <button type="button" data-view="calendar"><i class="ti ti-calendar"></i>Календарь</button>
+        <button type="button" data-view="calendar"><i class="ti ti-calendar"></i>{{ __('Календарь') }}</button>
     </div>
 </form>
 
@@ -72,7 +72,7 @@
         <div class="card">
             <div class="table-responsive">
                 <table data-record-key="1" class="table table-hover table-vcenter card-table crm-thead-sticky">
-                    <thead><tr><th scope="col">№</th><th scope="col">Заголовок</th><th scope="col">Автор</th><th scope="col">Отдел</th><th scope="col">Приоритет</th><th scope="col">Дедлайн</th><th scope="col">Статус</th><th scope="col"></th></tr></thead>
+                    <thead><tr><th scope="col">№</th><th scope="col">{{ __('Заголовок') }}</th><th scope="col">{{ __('Автор') }}</th><th scope="col">{{ __('Отдел') }}</th><th scope="col">{{ __('Приоритет') }}</th><th scope="col">{{ __('Дедлайн') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col"></th></tr></thead>
                     <tbody>
                         @forelse ($tasks as $task)
                             @php
@@ -91,17 +91,17 @@
                                     @if ($isOverdue)<i class="ti ti-alert-circle me-1"></i>@endif{{ $task->deadline?->format('d.m.Y') ?? '—' }}
                                 </td>
                                 <td><span class="crm-chip {{ $statusClass }}">{{ $crm_label('task_status', $st) }}</span></td>
-                                <td class="text-end"><a class="btn btn-sm btn-ghost-secondary crm-row-actions" href="{{ route('tasks.show', $task) }}" title="Открыть"><i class="ti ti-chevron-right"></i></a></td>
+                                <td class="text-end"><a class="btn btn-sm btn-ghost-secondary crm-row-actions" href="{{ route('tasks.show', $task) }}" title="{{ __("Открыть") }}"><i class="ti ti-chevron-right"></i></a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="8">@include('partials.empty-state', ['icon' => 'list-check', 'title' => 'Задач нет', 'text' => 'По выбранным фильтрам задач не найдено. Снимите фильтр или создайте задачу.'])</td></tr>
+                            <tr><td colspan="8">@include('partials.empty-state', ['icon' => 'list-check', 'title' => __('Задач нет'), 'text' => __('По выбранным фильтрам задач не найдено. Снимите фильтр или создайте задачу.')])</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             @if ($tasks->hasPages())
                 <div class="card-footer d-flex align-items-center">
-                    <div class="text-secondary me-auto">Страница {{ $tasks->currentPage() }} из {{ $tasks->lastPage() }}</div>
+                    <div class="text-secondary me-auto">{{ __('Страница') }} {{ $tasks->currentPage() }} {{ __('из') }} {{ $tasks->lastPage() }}</div>
                     {{ $tasks->links('pagination::tabler') }}
                 </div>
             @endif
@@ -122,8 +122,8 @@
                             {{-- C4: тач-альтернатива drag&drop — меню «переместить в колонку» --}}
                             <button type="button" class="crm-kanban__move" data-kanban-move
                                     aria-haspopup="menu" aria-expanded="false"
-                                    aria-label="Переместить задачу «{{ $task->title }}» в другую колонку"
-                                    title="Переместить в колонку">
+                                    aria-label="{{ __('Переместить задачу') }} «{{ $task->title }}» {{ __('в другую колонку') }}"
+                                    title="{{ __("Переместить в колонку") }}">
                                 <i class="ti ti-arrows-move"></i>
                             </button>
                             <a class="k-title text-reset text-decoration-none" href="{{ route('tasks.show', $task) }}">{{ $task->title }}</a>
@@ -133,7 +133,7 @@
                                     <i class="ti ti-calendar-event me-1"></i>{{ $task->deadline?->format('d.m') ?? '—' }}
                                 </span>
                             </div>
-                            <div class="crm-kanban__menu" hidden role="menu" aria-label="Переместить в колонку">
+                            <div class="crm-kanban__menu" hidden role="menu" aria-label="{{ __("Переместить в колонку") }}">
                                 @foreach ($statusCols as $colKey => $colMeta)
                                     @continue($colKey === $stKey)
                                     <button type="button" role="menuitem" data-move-to="{{ $colKey }}">
@@ -143,21 +143,21 @@
                             </div>
                         </div>
                     @empty
-                        <div class="crm-kanban__empty">Пусто</div>
+                        <div class="crm-kanban__empty">{{ __('Пусто') }}</div>
                     @endforelse
                 </div>
             @endforeach
         </div>
-        <div class="text-secondary small mt-2"><i class="ti ti-hand-move me-1"></i>Перетащите карточку в другую колонку или нажмите <i class="ti ti-arrows-move"></i> на карточке и выберите колонку (тач-устройства).</div>
+        <div class="text-secondary small mt-2"><i class="ti ti-hand-move me-1"></i>{{ __('Перетащите карточку в другую колонку или нажмите') }} <i class="ti ti-arrows-move"></i> {{ __('на карточке и выберите колонку (тач-устройства)') }}</div>
     </div>
 
     {{-- ===== Вид: календарь ===== --}}
     <div data-view-only="calendar">
         <div class="row g-3">
-            <div class="col-xl-8" data-crm-sec="cal" data-crm-sec-label="Календарь">
+            <div class="col-xl-8" data-crm-sec="cal" data-crm-sec-label="{{ __("Календарь") }}">
                 <div class="crm-cal">
                     <div class="crm-cal__head">
-                        @foreach (['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as $dow)
+                        @foreach ([__('Пн'), __('Вт'), __('Ср'), __('Чт'), __('Пт'), __('Сб'), __('Вс')] as $dow)
                             <div>{{ $dow }}</div>
                         @endforeach
                     </div>
@@ -180,10 +180,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-4" data-crm-sec="upcoming" data-crm-sec-label="Ближайшие сроки">
+            <div class="col-xl-4" data-crm-sec="upcoming" data-crm-sec-label="{{ __("Ближайшие сроки") }}">
                 <div class="crm-form__section">
-                    <h3>Ближайшие сроки</h3>
-                    <div class="crm-form__desc">Незакрытые задачи с дедлайном впереди.</div>
+                    <h3>{{ __('Ближайшие сроки') }}</h3>
+                    <div class="crm-form__desc">{{ __('Незакрытые задачи с дедлайном впереди') }}</div>
                     <div class="crm-queue">
                         @forelse ($upcoming as $task)
                             <a class="crm-queue__item text-reset text-decoration-none" style="--c: {{ $task->deadline->isPast() ? 'var(--crm-danger)' : 'var(--crm-success)' }};" href="{{ route('tasks.show', $task) }}">
@@ -191,13 +191,13 @@
                                     <div class="crm-queue__title">{{ $task->title }}</div>
                                     <div class="crm-queue__sub">
                                         {{ $task->deadline->format('d.m.Y') }}
-                                        @if ($task->deadline->isPast())· <span class="text-danger fw-semibold">просрочено</span>@endif
+                                        @if ($task->deadline->isPast())· <span class="text-danger fw-semibold">{{ __('просрочено') }}</span>@endif
                                     </div>
                                 </div>
                                 <span class="crm-chip {{ $prioChips[$task->priority->value] ?? 'crm-chip--grey' }}">{{ $crm_label('task_priority', $task->priority->value) }}</span>
                             </a>
                         @empty
-                            <div class="crm-queue__sub">Сроков в этом месяце нет.</div>
+                            <div class="crm-queue__sub">{{ __('Сроков в этом месяце нет') }}</div>
                         @endforelse
                     </div>
                 </div>

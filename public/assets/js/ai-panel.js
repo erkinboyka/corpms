@@ -135,10 +135,120 @@
         face.setAttribute('aria-description', emotions[next]);
     });
 
+    function thinkingBubble(container) {
+        const pending = document.createElement('div');
+        pending.className = 'bumi-thinking';
+        pending.setAttribute('role', 'status');
+        pending.innerHTML = '<span class="visually-hidden">Бими обрабатывает запрос</span><i></i><i></i><i></i>';
+        const face = document.querySelector('[data-bumi-face] svg, [data-ai-toggle] svg');
+        if (face) {
+            const portrait = document.createElement('span');
+            portrait.className = 'bumi-thinking__face';
+            portrait.dataset.bumiEmotion = 'thinking';
+            portrait.setAttribute('aria-hidden', 'true');
+            portrait.append(face.cloneNode(true));
+            pending.prepend(portrait);
+        }
+        container.append(pending);
+        return pending;
+    }
+
+    document.addEventListener('submit', async event => {
+        const form = event.target;
+        if (!form.matches('[data-bumi-sign]')) return;
+        event.preventDefault();
+        const button = form.querySelector('button');
+        if (button.disabled) return;
+        button.disabled = true;
+        const status = form.querySelector('[role=status]');
+        status.textContent = 'Подписываю…';
+        try {
+            const response = await fetch(form.action, {method:'POST', headers:{Accept:'application/json'}, body:new FormData(form)});
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Подпись не выполнена.');
+            form.replaceChildren(status);
+            status.textContent = data.message;
+        } catch (error) {
+            status.textContent = error instanceof SyntaxError || error instanceof TypeError ? 'Проверьте состояние документа и соединение.' : error.message;
+            button.disabled = false;
+        }
+    });
+
+    let pointerBadge;
+    let markedElement;
+    let guideTimeout;
+    function pointAt(target, origin) {
+        if (!target) return;
+        clearTimeout(guideTimeout);
+        markedElement?.classList.remove('bumi-target');
+        pointerBadge?.remove();
+        target.scrollIntoView({block:'nearest', inline:'nearest', behavior:'instant'});
+        markedElement = target;
+        target.classList.add('bumi-target');
+        const rect = target.getBoundingClientRect();
+        const x = Math.max(4, Math.min(innerWidth-50, rect.right-30));
+        const y = rect.top > 58 ? rect.top-48 : Math.min(innerHeight-50, rect.bottom+4);
+        const face = document.querySelector('[data-bumi-face] svg, [data-ai-toggle] svg');
+        if (face) {
+            pointerBadge = document.createElement('span');
+            pointerBadge.className = 'bumi-guide-pointer';
+            pointerBadge.setAttribute('aria-hidden', 'true');
+            pointerBadge.append(face.cloneNode(true));
+            pointerBadge.style.left = x+'px';
+            pointerBadge.style.top = y+'px';
+            document.body.append(pointerBadge);
+            if (origin && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                const from = origin.getBoundingClientRect();
+                pointerBadge.animate([{transform:'translate('+(from.left-x)+'px,'+(from.top-y)+'px)'},{transform:'none'}], {duration:450,easing:'ease-out'});
+            }
+        }
+        guideTimeout = setTimeout(() => {
+            target.classList.remove('bumi-target');
+            pointerBadge?.remove();
+        }, 3800);
+    }
+
+    function guideReply(bubble) {
+        const result = bubble.querySelector('a[data-bumi-guide], form.bumi-tool :is(input:not([type=hidden]),select,textarea), a[download]');
+        if (result) requestAnimationFrame(() => pointAt(result, document.querySelector('[data-ai-toggle], .bm-assistant__badge')));
+    }
+
+    const guideKey = 'bumi-guide-destination';
+    document.addEventListener('click', event => {
+        const link = event.target.closest('a[data-bumi-guide]');
+        if (!link || link.origin !== location.origin || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        try { sessionStorage.setItem(guideKey, JSON.stringify({path:link.pathname+link.search, until:Date.now()+30000})); } catch {}
+    });
+
+    document.addEventListener('click', event => {
+        const control = event.target.closest('[data-bumi-templates], [data-template-use]');
+        if (!control) return;
+        const composer = control.closest('[data-ai-companion]')?.querySelector('#ai-form') || document.querySelector('.bm-assistant__composer');
+        if (!composer) return;
+        const entry = composer.elements.question;
+        if (entry.readOnly || composer.querySelector('[type=submit]').getAttribute('aria-label') === 'Отправка вопроса') return;
+        let command = 'Покажи шаблоны';
+        if (control.hasAttribute('data-template-use')) {
+            const library = control.closest('[data-bumi-library]');
+            command = library.querySelector('[data-template-command]').value+' '+library.querySelector('[data-template-topic]').value.trim();
+        }
+        if (control.closest('#mini-actions')) {
+            control.closest('#mini-actions').hidden = true;
+            composer.querySelector('[data-mini-actions]').setAttribute('aria-expanded','false');
+        }
+        // A catalog action sends its own message. Preserve any unfinished question.
+        const draft = entry.value;
+        entry.value = command;
+        entry.dispatchEvent(new Event('input'));
+        composer.requestSubmit();
+        entry.value = draft;
+        entry.dispatchEvent(new Event('input'));
+    });
+
     const workspace = document.querySelector('[data-ai-workspace]');
     if (workspace) {
         const history = workspace.querySelector('[data-ai-history]');
-        const form = workspace.querySelector('form');
+        const form = workspace.querySelector('.bm-assistant__composer');
         const send = form.querySelector('button[type=submit]');
         const input = form.elements.question;
         const mic = form.querySelector('[data-ai-voice]');
@@ -169,8 +279,9 @@
                 input.focus({ preventScroll: true });
             });
         });
-        workspace.querySelectorAll('[data-ai-copy]').forEach(button => {
-            button.addEventListener('click', async () => {
+        workspace.addEventListener('click', async event => {
+                const button = event.target.closest('[data-ai-copy]');
+                if (!button) return;
                 const answer = button.closest('.ai-msg__bubble').querySelector('.bm-assistant__answer');
                 try {
                     if (navigator.clipboard && window.isSecureContext) {
@@ -194,25 +305,54 @@
                 } catch {
                     copyStatus.textContent = 'Не удалось скопировать ответ.';
                 }
-            });
         });
-        form.addEventListener('submit', event => {
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
             if (send.disabled) {
-                event.preventDefault();
                 return;
             }
+            const question = input.value.trim();
             submitting = true;
+            input.value = '';
+            history.querySelector('.bm-assistant__empty')?.remove();
+            const row = document.createElement('div');
+            row.className = 'ai-msg ai-msg--me';
+            row.innerHTML = '<div class="ai-msg__bubble"></div>';
+            row.firstChild.textContent = question;
+            history.append(row);
+            const pending = thinkingBubble(history);
+            scrollToLatest();
             mic.disabled = true;
             send.setAttribute('aria-label', 'Отправка вопроса');
             send.querySelector('i').className = 'ti ti-loader-2';
             updateComposer();
-        });
-        window.addEventListener('pageshow', () => {
-            submitting = false;
-            mic.disabled = false;
-            send.setAttribute('aria-label', 'Отправить вопрос');
-            send.querySelector('i').className = 'ti ti-arrow-up';
-            updateComposer();
+            const answer = document.createElement('div');
+            answer.className = 'ai-msg ai-msg--ai';
+            const bubble = document.createElement('div');
+            bubble.className = 'ai-msg__bubble';
+            answer.append(bubble);
+            try {
+                const body = new FormData(form);
+                body.set('question', question);
+                const response = await fetch(form.dataset.messageUrl,{method:'POST',headers:{Accept:'application/json'},body});
+                const data = await response.json();
+                if(!response.ok || !data.ok) throw new Error(data.reply || responseError(response,data));
+                bubble.innerHTML = '<div class="bm-assistant__answer ai-markdown">'+data.reply_html+'</div>'+(data.blocks_html || '')+
+                    '<button type="button" class="bm-assistant__copy" data-ai-copy aria-label="Скопировать ответ"><i class="ti ti-copy"></i></button>';
+            } catch(error) {
+                answer.classList.add('ai-msg--error');
+                bubble.textContent = error instanceof SyntaxError || error instanceof TypeError ? 'Связь с сервером прервалась. Повторите запрос.' : error.message;
+                if(!input.value) input.value=question;
+            } finally {
+                pending.replaceWith(answer);
+                submitting = false;
+                mic.disabled = false;
+                send.setAttribute('aria-label', 'Отправить вопрос');
+                send.querySelector('i').className = 'ti ti-arrow-up';
+                updateComposer();
+                scrollToLatest();
+                if (!answer.classList.contains('ai-msg--error')) guideReply(bubble);
+            }
         });
     }
 
@@ -324,6 +464,27 @@
         placePet();
     }
 
+    try {
+        const destination = JSON.parse(sessionStorage.getItem(guideKey));
+        sessionStorage.removeItem(guideKey);
+        if (destination?.path === location.pathname+location.search && destination.until >= Date.now()) {
+            requestAnimationFrame(() => {
+                const target = document.querySelector('main h1, main .page-title') || document.querySelector('main h2');
+                if (!target) return;
+                target.scrollIntoView({block:'nearest', behavior:'instant'});
+                const rect = target.getBoundingClientRect();
+                companion.setAttribute('data-guiding','');
+                movePet(rect.left > 100 ? rect.left-companion.offsetWidth-8 : rect.right+8, rect.top);
+                target.classList.add('bumi-target');
+                showReaction('Вот здесь', 3500);
+                setTimeout(() => {
+                    companion.removeAttribute('data-guiding');
+                    target.classList.remove('bumi-target');
+                }, 3500);
+            });
+        }
+    } catch { /* Session storage is optional. */ }
+
     function savePosition() {
         try { localStorage.setItem(positionKey, JSON.stringify(position)); } catch { /* private mode */ }
     }
@@ -355,7 +516,7 @@
     function showAssistantState(state) {
         companion.dataset.state = state;
         status.textContent = stateLines[state];
-        showReaction(stateLines[state], state === 'thinking' ? 0 : 3300);
+        showReaction(state === 'thinking' ? '' : stateLines[state], 3300);
     }
 
     function setActions(open) {
@@ -626,6 +787,7 @@
         bubble.innerHTML = html;
         wrap.append(bubble);
         messages.append(wrap);
+        if (side === 'ai' && !isError) guideReply(bubble);
         placeBubble();
         scrollDown();
     }
@@ -662,8 +824,12 @@
         thread.hidden = false;
         input.placeholder = 'Сообщение для Bumi';
         addMessage('me', formatText(question));
+        if (fromInput) input.value = '';
         setBusy(true);
         showAssistantState('thinking');
+        const pending = thinkingBubble(messages);
+        placeBubble();
+        scrollDown();
 
         let success = false;
         try {
@@ -689,11 +855,12 @@
             const replyHtml = reply && typeof data.reply_html === 'string'
                 ? data.reply_html
                 : formatText(reply || 'Bumi пока не смог ответить. Попробуйте ещё раз.');
-            addMessage('ai', '<div class="ai-markdown">' + replyHtml + '</div>' + renderBlocks(blocks), !success);
+            addMessage('ai', '<div class="ai-markdown">' + replyHtml + '</div>' + (data.blocks_html ?? renderBlocks(blocks)), !success);
         } catch (error) {
             addMessage('ai', formatText('Связь с сервером оборвалась. Попробуйте ещё раз.'), true);
         } finally {
-            if (success && fromInput) input.value = '';
+            pending.remove();
+            if (!success && fromInput && !input.value) input.value = question;
             setBusy(false);
             showAssistantState(success ? 'ready' : 'error');
             if (!panel.hidden && form.contains(document.activeElement)) input.focus();

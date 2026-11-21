@@ -14,7 +14,7 @@ use App\Models\BiometricDevice;
  */
 interface BiometricDeviceContract
 {
-    /** Захват события с устройства ("лицо распознано") */
+    /** Захват события с устройства (__("лицо распознано")) */
     public function receiveAttendanceEvent(BiometricDevice $device): ?array;
 
     /** Опрос статуса: online/offline + last seen */
