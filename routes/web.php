@@ -98,6 +98,12 @@ Route::get('/sitemap.xml', function () {
     return response($xml, 200)->header('Content-Type', 'application/xml');
 })->name('sitemap');
 
+/* Публичная подпись по QR: достаточно одноразового токена из ссылки (без входа). */
+Route::get('/sign/{token}', [DocumentController::class, 'showQrSign'])
+    ->middleware('throttle:30,1')->name('signature.qr.show');
+Route::post('/sign/{token}', [DocumentController::class, 'signByQr'])
+    ->middleware('throttle:10,1')->name('signature.qr.sign');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
@@ -300,6 +306,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/documents/{document}/decide', [DocumentController::class, 'decide'])->middleware('permission:documents.approve')->name('documents.decide');
     Route::post('/documents/{document}/register', [DocumentController::class, 'register'])->middleware('permission:documents.approve')->name('documents.register');
     Route::post('/documents/{document}/archive', [DocumentController::class, 'archive'])->middleware('permission:documents.archive')->name('documents.archive');
+    Route::post('/documents/{document}/signature-qr', [DocumentController::class, 'prepareQrSignature'])->middleware('permission:signatures.sign')->name('documents.signature.qr');
     Route::post('/documents/{document}/signatures/request', [DocumentController::class, 'requestSignatures'])->middleware('permission:signatures.request')->name('documents.signature.request');
     Route::post('/documents/{document}/signatures/{signatureRequest}/sign', [DocumentController::class, 'sign'])->middleware('permission:signatures.sign')->name('documents.signature.sign');
     Route::post('/documents/{document}/signatures/{signatureRequest}/decline', [DocumentController::class, 'declineSignature'])->middleware('permission:signatures.sign')->name('documents.signature.decline');

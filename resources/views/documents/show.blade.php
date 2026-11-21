@@ -3,6 +3,13 @@
 
 @section('title', $document->title)
 
+@push('styles')
+    <style>
+        .signature-qr-panel { border: 1px dashed var(--tblr-primary, #206bc4); border-radius: 12px; padding: 14px; background: var(--tblr-bg-surface-secondary, rgba(32, 107, 196, .04)); }
+        .signature-qr-panel svg { max-width: 100%; height: auto; background: #fff; border-radius: 8px; padding: 6px; }
+    </style>
+@endpush
+
 @php
     $statusChip = [
         'draft' => 'crm-chip--grey',
@@ -243,6 +250,32 @@
             <h3>{{ __('Электронная подпись') }}</h3>
             <div class="crm-form__desc">{{ __('Запросы подписи и ваша подпись по документу') }}</div>
 
+            {{-- Быстрая подпись: QR с одноразовой ссылкой, достаточно телефона --}}
+            @if ($canSign)
+                <div class="mt-3 pt-3 border-top">
+                    <form method="post" action="{{ route('documents.signature.qr', $document) }}" data-submit-guard>
+                        @csrf
+                        <button class="btn btn-primary w-100 justify-content-center" type="submit">
+                            <i class="ti ti-qrcode me-1"></i>{{ __('Подписать по QR') }}
+                        </button>
+                    </form>
+                    <div class="crm-form__desc mt-2">{{ __('Сгенерируйте код, отсканируйте телефоном и подтвердите подпись') }}</div>
+
+                    @if (session('signature_qr'))
+                        @php $qr = session('signature_qr'); @endphp
+                        <div class="signature-qr-panel mt-3 text-center">
+                            <div class="d-flex justify-content-between align-items-center mb-2 gap-2 text-start">
+                                <strong class="small">{{ __('QR-код подписи') }}</strong>
+                                <span class="text-secondary small">{{ $qr['expires_at'] }}</span>
+                            </div>
+                            {!! $qr['svg'] !!}
+                            <a class="small text-break d-block mt-2" href="{{ $qr['url'] }}" target="_blank" rel="noopener">{{ $qr['url'] }}</a>
+                            <div class="text-secondary small mt-1">{{ __('Или откройте ссылку на телефоне') }}</div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             @if ($mySignatureRequest !== null && in_array($mySignatureRequest->status->value, ['pending', 'partial'], true))
                 <div class="alert alert-primary d-flex align-items-center gap-2">
                     <span class="crm-live-dot"></span>
@@ -307,7 +340,7 @@
                                         <span class="crm-chip {{ [
                                             'valid' => 'crm-chip--green',
                                             'revoked' => 'crm-chip--orange',
-                                        ][$signature->status->value] ?? 'crm-chip--red' }}">{{ $crm_label('signature_request_status', $signature->status->value) }}</span>
+                                        ][$signature->status->value] ?? 'crm-chip--red' }}">{{ $crm_label('signature_status', $signature->status->value) }}</span>
                                     </td>
                                     <td class="text-secondary crm-table-num">{{ $signature->signed_at?->format('d.m H:i') }}</td>
                                     <td class="text-end text-nowrap">
@@ -317,7 +350,7 @@
                                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Проверить подпись") }}"><i class="ti ti-shield-check"></i></button>
                                             </form>
                                         @endif
-                                        @if ($canSign && $signature->status->value === 'valid')
+                                        @if ($canRevoke && $signature->status->value === 'valid')
                                             <form method="post" action="{{ route('documents.signature.revoke', $signature) }}" class="d-inline" data-submit-guard>
                                                 @csrf
                                                 <button class="btn btn-sm btn-ghost-danger" title="{{ __("Отозвать подпись") }}"><i class="ti ti-x"></i></button>

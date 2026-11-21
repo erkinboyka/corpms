@@ -240,6 +240,149 @@ class SignatureService
         return $signature;
     }
 
+    /**
+     * Быстрая подпись по QR: готовит запрос на самого себя и выпускает одноразовый токен.
+     *
+     * Обычный запрос подписи доступен только после согласования (п.59 ТЗ), поэтому
+     * здесь делается явное исключение: черновик/отклонённая версия переводится в
+     * `signing` отдельным действием quick_qr_signature с записью в журнал переходов и аудит.
+     *
+     * @return array{0: DocumentSignatureRequest, 1: string} запрос и открытый токен
+     */
+    public function prepareQrSignature(Employee $signer, Document $document): array
+    {
+        if (in_array($document->status->value, ['signed', 'archived'], true)) {
+            throw new LogicException(__('Документ уже подписан'));
+        }
+
+        $version = $document->currentVersion;
+        if ($version === null) {
+            throw new LogicException(__('В документе нет текущей версии'));
+        }
+
+        return DB::transaction(function () use ($signer, $document, $version) {
+            // Переиспользуем уже ожидающий запрос этого подписанта, чтобы не
+            // плодить дубли. QR сам является подтверждением — OTP не нужен.
+            $request = $document->signatureRequests()
+                ->where('signer_id', $signer->id)
+                ->whereIn('status', ['pending', 'partial'])
+                ->latest()
+                ->first();
+
+            if ($request === null) {
+                $request = DocumentSignatureRequest::create([
+                    'document_id' => $document->id,
+                    'document_version_id' => $version->id,
+                    'driver' => 'qr_approval',
+                    'requested_by' => $signer->id,
+                    'signer_id' => $signer->id,
+                    'order_index' => (int) $document->signatureRequests()->max('order_index') + 1,
+                    'requires_otp' => false,
+                    'status' => 'pending',
+                ]);
+            } else {
+                $request->update(['requires_otp' => false, 'driver' => 'qr_approval']);
+            }
+
+            $from = $document->status->value;
+            if (! in_array($from, ['approved', 'signing'], true)) {
+                $document->update(['status' => 'signing']);
+                $this->engine->record(
+                    WorkflowEngine::SUBJECT_DOCUMENT,
+                    $document->id,
+                    $from,
+                    'signing',
+                    'quick_qr_signature',
+                    $signer->user,
+                    __('Быстрая подпись по QR'),
+                );
+            }
+
+            // Старые неиспользованные QR этого запроса больше не действуют:
+            // в любой момент валиден только последний выданный код.
+            QrToken::query()
+                ->where('purpose', 'sign')
+                ->where('subject_type', $request::class)
+                ->where('subject_id', $request->id)
+                ->where('created_by', $signer->id)
+                ->whereNull('used_at')
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now()]);
+
+            $plain = Str::random(48);
+            $ttlHours = max(1, (int) app(SettingsService::class)->get('corpms.signature.qr_token_ttl_hours', 24));
+
+            QrToken::create([
+                'token_hash' => hash('sha256', $plain),
+                'subject_type' => $request::class,
+                'subject_id' => $request->id,
+                'purpose' => 'sign',
+                'one_time' => true,
+                'expires_at' => now()->addHours($ttlHours),
+                'created_by' => $signer->id,
+                'meta' => ['document_id' => $document->id, 'driver' => 'qr_approval'],
+            ]);
+
+            $this->audit->log($signer->user, 'signature.qr_prepared', 'document', $document->id, null, [
+                'signature_request_id' => $request->id,
+                'ttl_hours' => $ttlHours,
+            ]);
+
+            return [$request, $plain];
+        });
+    }
+
+    /**
+     * Проверяет токен для показа экрана подписи (не расходует его).
+     *
+     * @return array{token: QrToken, signer: Employee, request: DocumentSignatureRequest, document: Document}|null
+     */
+    public function resolveQrSignToken(string $plainToken): ?array
+    {
+        if ($plainToken === '') {
+            return null;
+        }
+
+        $token = QrToken::query()->where('token_hash', hash('sha256', $plainToken))->first();
+        if ($token === null
+            || $token->purpose !== 'sign'
+            || $token->subject_type !== DocumentSignatureRequest::class
+            || $token->revoked_at !== null
+            || ($token->expires_at !== null && now()->gt($token->expires_at))
+            || ($token->one_time && $token->used_at !== null)
+        ) {
+            return null;
+        }
+
+        $signer = $token->createdBy;
+        if ($signer === null || $signer->status->value !== 'active') {
+            return null;
+        }
+
+        $request = DocumentSignatureRequest::query()->find($token->subject_id);
+        if ($request === null || $request->signer_id !== $signer->id) {
+            return null;
+        }
+
+        $document = Document::query()->find($request->document_id);
+        if ($document === null || (int) $document->company_id !== (int) $signer->company_id) {
+            return null;
+        }
+
+        return ['token' => $token, 'signer' => $signer, 'request' => $request, 'document' => $document];
+    }
+
+    /** Подпись по токену из QR без входа в систему: владелец токена — подписант. */
+    public function signWithQrToken(string $plainToken, ?string $ip = null, ?string $userAgent = null): DocumentSignature
+    {
+        $resolved = $this->resolveQrSignToken($plainToken);
+        if ($resolved === null) {
+            throw new RuntimeException(__('QR-код подписи недействителен или истёк'));
+        }
+
+        return $this->signByQrToken($resolved['signer'], $resolved['request'], $plainToken, $ip, $userAgent);
+    }
+
     public function decline(Employee $signer, DocumentSignatureRequest $request, string $reason): DocumentSignatureRequest
     {
         if ($request->signer_id !== $signer->id) {

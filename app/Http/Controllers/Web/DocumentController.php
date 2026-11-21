@@ -14,8 +14,10 @@ use App\Models\DocumentSignature;
 use App\Models\DocumentSignatureRequest;
 use App\Models\DocumentVersion;
 use App\Models\Employee;
+use App\Models\QrToken;
 use App\Shared\Enums\DocumentType;
 use App\Support\PermissionService;
+use App\Support\QrCodeGenerator;
 use App\Support\SettingsService;
 use App\Support\TenantGuard;
 use Illuminate\Http\RedirectResponse;
@@ -143,6 +145,7 @@ class DocumentController extends Controller
         $canSign = $this->permissions->check($request->user(), 'signatures.sign');
         $canArchive = $this->permissions->check($request->user(), 'documents.archive');
         $canVerify = $this->permissions->check($request->user(), 'signatures.verify');
+        $canRevoke = $this->permissions->check($request->user(), 'signatures.revoke');
 
         $mySignatureRequest = $document->signatureRequests
             ->firstWhere('signer_id', $me->id)
@@ -169,7 +172,7 @@ class DocumentController extends Controller
 
         return view('documents.show', compact(
             'document', 'canSubmit', 'canDecide', 'canRegister', 'canRequestSignature',
-            'canSign', 'canArchive', 'canVerify', 'mySignatureRequest', 'signatures', 'employees', 'me',
+            'canSign', 'canArchive', 'canVerify', 'canRevoke', 'mySignatureRequest', 'signatures', 'employees', 'me',
             'canViewSignatures', 'history',
         ));
     }
@@ -418,6 +421,84 @@ class DocumentController extends Controller
         $this->signatures->revoke($me, $signature, __('Отзыв из панели'));
 
         return back()->with('status', __('Подпись отозвана'));
+    }
+
+    /* -------------------- быстрая подпись по QR -------------------- */
+
+    /**
+     * Выпускает одноразовый QR для подписи документа текущим сотрудником.
+     * Снимает «блокировку» черновика: QR сам служит подтверждением подписи.
+     */
+    public function prepareQrSignature(Request $request, Document $document): RedirectResponse
+    {
+        $me = $request->user()->employee;
+        if ($me === null) {
+            abort(403, __('Нет карточки сотрудника'));
+        }
+        TenantGuard::ensureDocument($document, $me);
+
+        try {
+            [$qrRequest, $plainToken] = $this->signatures->prepareQrSignature($me, $document);
+        } catch (LogicException|\RuntimeException $e) {
+            return back()->withErrors(['field' => $e->getMessage()]);
+        }
+
+        $ttlHours = max(1, (int) app(SettingsService::class)->get('corpms.signature.qr_token_ttl_hours', 24));
+
+        return back()->with([
+            'status' => __('QR-код для подписи готов — отсканируйте его телефоном'),
+            'signature_qr' => [
+                'svg' => QrCodeGenerator::svg(route('signature.qr.show', $plainToken), 240, 'signature-qr__svg'),
+                'url' => route('signature.qr.show', $plainToken),
+                'expires_at' => now()->addHours($ttlHours)->format('d.m.Y H:i'),
+                'document' => $document->title,
+                'request_id' => $qrRequest->id,
+            ],
+        ]);
+    }
+
+    /** Публичная страница подписи по QR: открывается с телефона по ссылке из кода. */
+    public function showQrSign(string $token): View
+    {
+        $resolved = $this->signatures->resolveQrSignToken($token);
+
+        if ($resolved !== null) {
+            return view('signatures.qr-sign', [
+                'token' => $token,
+                'signer' => $resolved['signer'],
+                'document' => $resolved['document'],
+                'request' => $resolved['request'],
+                'version' => $resolved['document']->currentVersion,
+                'expiresAt' => $resolved['token']->expires_at,
+            ]);
+        }
+
+        // Код уже погашен — показываем результат, а не «недействителен».
+        $qrToken = QrToken::query()->where('token_hash', hash('sha256', $token))->first();
+        if ($qrToken !== null && $qrToken->used_at !== null) {
+            $signature = DocumentSignature::query()
+                ->where('signature_request_id', $qrToken->subject_id)
+                ->with(['signer', 'document'])
+                ->first();
+            if ($signature !== null) {
+                return view('signatures.qr-done', ['signature' => $signature]);
+            }
+        }
+
+        return view('signatures.qr-invalid');
+    }
+
+    /** Подтверждение подписи. Токен в URL — одноразовый высокоэнтропийный секрет. */
+    public function signByQr(Request $request, string $token): RedirectResponse
+    {
+        try {
+            $signature = $this->signatures->signWithQrToken($token, $request->ip(), $request->userAgent());
+        } catch (LogicException|\RuntimeException $e) {
+            return back()->withErrors(['field' => $e->getMessage()]);
+        }
+
+        return redirect()->route('signature.qr.show', $token)
+            ->with('status', __('Документ подписан').' · '.$signature->signature_id);
     }
 
     /**
