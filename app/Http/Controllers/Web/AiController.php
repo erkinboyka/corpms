@@ -6,17 +6,17 @@ namespace App\Http\Controllers\Web;
 
 use App\Domains\Ai\Services\AiAssistantService;
 use App\Domains\Ai\Services\AiPanelService;
+use App\Domains\Ai\Services\BumiActions;
 use App\Domains\Ai\Services\BumiFiles;
 use App\Http\Controllers\Controller;
+use App\Models\DocumentSignatureRequest;
 use App\Models\Employee;
-use App\Shared\Enums\PermissionScope;
 use App\Support\AssistantMarkdown;
-use App\Support\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -37,10 +37,11 @@ class AiController extends Controller
         $history = $this->assistant->historyFor($me);
         $requests = $history->flatMap(fn ($item) => collect($item->query_used['blocks'] ?? [])
             ->where('type', 'signature')->pluck('request'));
-        $signatureStates = \App\Models\DocumentSignatureRequest::query()->where('signer_id', $me->id)
+        $signatureStates = DocumentSignatureRequest::query()->where('signer_id', $me->id)
             ->whereIn('id', $requests)->whereHas('document', fn ($q) => $q->where('company_id', $me->company_id))
             ->get(['id', 'status'])->mapWithKeys(fn ($row) => [$row->id => $row->status->value]);
         $assignees = $this->taskAssignees($me, $history->contains(fn ($item) => collect($item->query_used['blocks'] ?? [])->contains('type', 'task_draft')));
+
         return view('ai.index', compact('history', 'signatureStates', 'assignees'));
     }
 
@@ -92,7 +93,8 @@ class AiController extends Controller
         if (! $needed) {
             return [];
         }
-        return app(\App\Domains\Ai\Services\BumiActions::class)->taskAssignees($me);
+
+        return app(BumiActions::class)->taskAssignees($me);
     }
 
     public function download(Request $request, string $file, BumiFiles $files): StreamedResponse
@@ -107,6 +109,7 @@ class AiController extends Controller
         if ($extension === 'png' && $request->boolean('preview')) {
             return $disk->response($path, 'bumi.png', ['Content-Type' => 'image/png'] + $headers);
         }
+
         return $disk->download($path, 'bumi-'.substr($file, 0, 10).'.'.$extension, $headers);
     }
 }

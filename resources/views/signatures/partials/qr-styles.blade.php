@@ -19,5 +19,10 @@
     }
     .signature-qr-meta dt { margin: 0; color: var(--tblr-muted, #7c8693); font-weight: 500; }
     .signature-qr-meta dd { margin: 0; text-align: right; word-break: break-all; }
+    .signature-qr-body {
+        border: 1px solid var(--tblr-border-color, #dce0e5); border-radius: 12px;
+        padding: 14px 16px; background: var(--tblr-bg-surface, transparent);
+    }
+    .signature-qr-body-text { max-height: 220px; overflow-y: auto; font-size: .875rem; }
     .signature-qr-hint { font-size: .8125rem; line-height: 1.45; }
 </style>

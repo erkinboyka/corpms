@@ -20,7 +20,7 @@
                             <input type="text" name="q" value="{{ request('q', '') }}" class="form-control crm-search-input" placeholder="{{ __("Поиск: сотрудники, задачи, документы…") }}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-haspopup="listbox" aria-controls="crm-search-panel" aria-label="{{ __("Поиск по системе") }}" />
                             <span class="input-icon-addon"><i class="ti ti-search"></i></span>
                         </form>
-                        <div class="crm-search-panel" id="crm-search-panel" aria-busy="false" hidden></div>
+                        <div class="crm-search-panel" id="crm-search-panel" role="listbox" aria-label="{{ __('Результаты поиска') }}" aria-busy="false" hidden></div>
                     </div>
                 @else
                     <div class="input-icon">

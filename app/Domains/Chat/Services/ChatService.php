@@ -11,7 +11,6 @@ use App\Models\Conversation;
 use App\Models\ConversationMember;
 use App\Models\Employee;
 use App\Models\Message;
-use App\Models\MessageAttachment;
 use App\Models\MessageEvent;
 use App\Models\MessageReaction;
 use App\Shared\Enums\ChatEventType;
@@ -44,8 +43,7 @@ class ChatService
     public function __construct(
         private readonly PermissionService $permissions,
         private readonly AuditService $audit,
-    ) {
-    }
+    ) {}
 
     /* ================================================================
        Доступ
@@ -120,6 +118,7 @@ class ChatService
         }
 
         $member = $this->memberRow($me, $conversation);
+
         return $member !== null && $member->isActive()
             && ($member->role === ConversationRole::Owner
                 || ($member->isAdmin() && $this->permissions->check($me->user, 'chat.manage')));
@@ -227,9 +226,36 @@ class ChatService
             ->sortByDesc(fn (Conversation $c) => $c->last_message_at?->getTimestamp() ?? 0)
             ->values();
 
-        return $merged->map(function (Conversation $c) use ($me): Conversation {
-            $c->setAttribute('unread_count', $this->unreadCount($me, $c));
-            $c->setAttribute('my_member_role', $this->memberRow($me, $c)?->role?->value);
+        // DB-09: один групповой запрос вместо 2N (unreadCount + memberRow)
+        // на каждый диалог. Граница прочитанного берётся из уже загруженных
+        // memberships — повторные запросы здесь больше не нужны.
+        $memberByConversation = $memberships->keyBy(
+            fn (ConversationMember $m): int => (int) $m->conversation_id,
+        );
+
+        $unread = collect();
+        if ($merged->isNotEmpty()) {
+            $unread = Message::query()
+                ->whereIn('conversation_id', $merged->pluck('id')->all())
+                ->whereNull('deleted_at')
+                ->where('employee_id', '!=', $me->id)
+                ->where(function ($query) use ($merged, $memberByConversation): void {
+                    foreach ($merged as $conversation) {
+                        $lastRead = (int) ($memberByConversation->get($conversation->id)?->last_read_message_id ?? 0);
+                        $query->orWhere(function ($q) use ($conversation, $lastRead): void {
+                            $q->where('conversation_id', $conversation->id)
+                                ->where('id', '>', $lastRead);
+                        });
+                    }
+                })
+                ->selectRaw('conversation_id, COUNT(*) as unread_count')
+                ->groupBy('conversation_id')
+                ->pluck('unread_count', 'conversation_id');
+        }
+
+        return $merged->map(function (Conversation $c) use ($unread, $memberByConversation): Conversation {
+            $c->setAttribute('unread_count', (int) ($unread->get($c->id) ?? 0));
+            $c->setAttribute('my_member_role', $memberByConversation->get($c->id)?->role?->value);
 
             return $c;
         });
@@ -267,7 +293,7 @@ class ChatService
 
         TenantGuard::ensureCompany($peer->company_id, $me);
 
-        if ($peer->trashed() || $peer->status !== \App\Shared\Enums\EmployeeStatus::Active) {
+        if ($peer->trashed() || $peer->status !== EmployeeStatus::Active) {
             throw ValidationException::withMessages([
                 'employee_id' => __('Сотрудник недоступен'),
             ]);
@@ -282,6 +308,7 @@ class ChatService
 
         if ($existing !== null) {
             $this->memberRow($me, $existing)?->update(['is_subscribed' => true]);
+
             return $existing;
         }
 
@@ -320,7 +347,7 @@ class ChatService
             ->where('company_id', $me->company_id)
             ->whereIn('id', $employeeIds)
             ->whereNull('deleted_at')
-            ->where('status', \App\Shared\Enums\EmployeeStatus::Active)
+            ->where('status', EmployeeStatus::Active)
             ->pluck('id')
             ->all();
 
@@ -362,8 +389,8 @@ class ChatService
     }
 
     /**
-     * @param array<int> $employeeIds
-     * @param array<string, mixed> $data
+     * @param  array<int>  $employeeIds
+     * @param  array<string, mixed>  $data
      */
     public function createChannel(Employee $me, array $data): Conversation
     {
@@ -562,7 +589,7 @@ class ChatService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function send(Employee $me, Conversation $conversation, array $data): Message
     {
@@ -604,7 +631,7 @@ class ChatService
             }
         }
 
-        $message = DB::transaction(function () use ($me, $conversation, $body, $clientId, $replyTo, $data): Message {
+        $message = DB::transaction(function () use ($me, $conversation, $body, $clientId, $replyTo): Message {
             $message = Message::create([
                 'conversation_id' => $conversation->id,
                 'employee_id' => $me->id,
@@ -767,6 +794,18 @@ class ChatService
     public function markRead(Employee $me, Conversation $conversation, ?int $upToMessageId = null): int
     {
         $this->assertCanView($me, $conversation);
+
+        // DB-S5: граница прочитанного не может ссылаться на сообщение из
+        // другого диалога — иначе счётчик непрочитанных врёт.
+        if ($upToMessageId !== null && ! Message::query()
+            ->whereKey($upToMessageId)
+            ->where('conversation_id', $conversation->id)
+            ->whereNull('deleted_at')
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'up_to_message_id' => __('Указанное сообщение не принадлежит этому диалогу.'),
+            ]);
+        }
 
         $member = $this->memberRow($me, $conversation);
 

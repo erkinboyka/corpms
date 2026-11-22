@@ -239,8 +239,26 @@
                 });
         });
 
-        load();
-        window.setInterval(load, pollMs);
+        /* UX-06: опрос живёт только когда вкладка и секция чата видимы. */
+        var pollTimer = null;
+        function chatVisible() {
+            if (document.hidden) { return false; }
+            var section = root.closest('[data-lms-section]');
+            return !section || !section.hidden;
+        }
+        function stopPolling() {
+            if (pollTimer !== null) { window.clearInterval(pollTimer); pollTimer = null; }
+        }
+        function syncPolling() {
+            if (!chatVisible()) { stopPolling(); return; }
+            if (pollTimer === null) {
+                if (!loaded) { load(); }
+                pollTimer = window.setInterval(load, pollMs);
+            }
+        }
+        document.addEventListener('visibilitychange', syncPolling);
+        document.addEventListener('lms:sectionchange', syncPolling);
+        syncPolling();
     })();
 
     /* Разделы доски и плавающее окно видеозвонка. */
@@ -263,6 +281,7 @@
                 if (button.getAttribute('data-section') === 'meeting') { return; }
                 button.classList.toggle('is-active', button.getAttribute('data-section') === name);
             });
+            document.dispatchEvent(new CustomEvent('lms:sectionchange', { detail: { section: name } }));
         }
 
         function setMinimized(minimized) {

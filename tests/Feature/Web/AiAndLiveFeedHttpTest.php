@@ -4,20 +4,26 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Domains\Documents\Services\DocumentService;
+use App\Domains\Documents\Services\SignatureService;
 use App\Models\AiConversation;
 use App\Models\AttendanceRecord;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEvent;
 use App\Models\Company;
+use App\Models\DocumentCategory;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Role;
 use App\Models\Task;
 use App\Models\User;
 use App\Shared\Enums\AttendanceStatus;
+use App\Support\UntrustedContext;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -78,9 +84,9 @@ class AiAndLiveFeedHttpTest extends TestCase
     {
         $ask = fn () => $this->postJson('/ai/message', ['question' => 'Подпиши документ'])->assertOk();
         $ask()->assertJsonPath('blocks', [])->assertJsonPath('reply', 'Сейчас у вас нет документов, ожидающих вашей подписи.');
-        $category = \App\Models\DocumentCategory::create(['name' => 'Акты', 'code' => 'act']);
-        $service = app(\App\Domains\Documents\Services\DocumentService::class);
-        $signatures = app(\App\Domains\Documents\Services\SignatureService::class);
+        $category = DocumentCategory::create(['name' => 'Акты', 'code' => 'act']);
+        $service = app(DocumentService::class);
+        $signatures = app(SignatureService::class);
         foreach ([$this->worker, $this->adminEmployee] as $signer) {
             $doc = $service->create($this->adminEmployee, ['title' => 'Акт '.$signer->id, 'category_id' => $category->id, 'body' => 'Текст версии']);
             $doc->update(['status' => 'approved']);
@@ -100,8 +106,8 @@ class AiAndLiveFeedHttpTest extends TestCase
 
     public function test_template_catalog_exports_all_layouts_with_their_values_and_sources(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        Storage::fake('local');
+        $this->withoutMiddleware(ThrottleRequests::class);
         $catalog = $this->postJson('/ai/message', ['question' => 'Покажи шаблоны'])->assertOk()->assertJsonPath('blocks.0.type', 'templates');
         self::assertStringContainsString('Брифинг руководства', $catalog->json('blocks_html'));
         $cases = ['Подготовь отчёт' => 'HTML', 'Создай презентацию' => 'PPTX', 'Построй диаграмму' => 'SVG'];
@@ -122,7 +128,7 @@ class AiAndLiveFeedHttpTest extends TestCase
                         self::assertGreaterThanOrEqual(4, count($list));
                         $content = '';
                         foreach ($list as $i => $slide) {
-                            $xml = $zip->getFromName('ppt/slides/slide'.($i+1).'.xml');
+                            $xml = $zip->getFromName('ppt/slides/slide'.($i + 1).'.xml');
                             self::assertNotFalse(simplexml_load_string($xml));
                             $content .= $xml;
                         }
@@ -145,23 +151,23 @@ class AiAndLiveFeedHttpTest extends TestCase
     public function test_bumi_proves_answers_and_fills_named_assignee(): void
     {
         $ask = fn ($question) => $this->postJson('/ai/message', compact('question'))->assertOk()->assertJsonPath('ok', true);
-        $task = Task::create(['company_id'=>$this->company->id, 'title'=>'Сверить смету', 'number'=>'BM-142',
-            'author_id'=>$this->adminEmployee->id, 'status'=>'overdue']);
+        $task = Task::create(['company_id' => $this->company->id, 'title' => 'Сверить смету', 'number' => 'BM-142',
+            'author_id' => $this->adminEmployee->id, 'status' => 'overdue']);
         $ask('Найди задачу BM-142')->assertJsonPath('blocks.0.items.0.url', route('tasks.show', $task, false));
         $ask('Какие задачи просрочены?')->assertJsonPath('blocks.0.type', 'sources');
         $ask('Создай задачу «Проверить счёт», исполнитель: Ольга Рядовая')->assertJsonPath('blocks.0.assignee', $this->worker->id);
         $ask('Создай задачу «Проверить счёт», исполнитель: Неизвестный')->assertJsonPath('blocks.0.assignee', null);
-        $ask('Заполни заявку на отгул завтра, причина: семейные дела')->assertJsonPath('blocks.0.reason','семейные дела');
+        $ask('Заполни заявку на отгул завтра, причина: семейные дела')->assertJsonPath('blocks.0.reason', 'семейные дела');
         $ask('Укажи где находятся документы')->assertJsonPath('blocks.0.guide', true);
-        AttendanceRecord::create(['employee_id'=>$this->worker->id, 'date'=>today()->toDateString(),
-            'clock_in_at'=>now(), 'late_minutes'=>12, 'status'=>AttendanceStatus::Late]);
-        $ask('Кто опоздал сегодня?')->assertJsonPath('blocks.0.rows.0.0','Рядовая Ольга')->assertJsonPath('blocks.1.items.0.url','/attendance');
-        $ask('Построй диаграмму, шаблон №6 по данным: А=0, Б=0')->assertJsonPath('blocks.0.type','templates');
+        AttendanceRecord::create(['employee_id' => $this->worker->id, 'date' => today()->toDateString(),
+            'clock_in_at' => now(), 'late_minutes' => 12, 'status' => AttendanceStatus::Late]);
+        $ask('Кто опоздал сегодня?')->assertJsonPath('blocks.0.rows.0.0', 'Рядовая Ольга')->assertJsonPath('blocks.1.items.0.url', '/attendance');
+        $ask('Построй диаграмму, шаблон №6 по данным: А=0, Б=0')->assertJsonPath('blocks.0.type', 'templates');
     }
 
     public function test_bumi_forms_and_private_exports(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
         $ask = fn (string $q) => $this->postJson('/ai/message', ['question' => $q])->assertOk()->assertJsonPath('ok', true);
         $draft = $ask('Создай задачу «Проверить смету» на завтра')->assertJsonPath('blocks.0.title', 'Проверить смету')->json('blocks.0');
         $this->post('/tasks', ['title' => $draft['title'], 'priority' => $draft['priority'], 'deadline' => $draft['deadline'], 'type' => 'task', 'employee_id' => $this->adminEmployee->id])->assertSessionHasNoErrors();
@@ -169,16 +175,16 @@ class AiAndLiveFeedHttpTest extends TestCase
         $leave = $ask('Заполни заявку на отпуск с 12.12.2026 по 19.12.2026')->assertJsonPath('blocks.0.start', '2026-12-12')->json('blocks.0');
         $this->post('/leaves', ['type' => $leave['kind'], 'from_date' => $leave['start'], 'to_date' => $leave['end']])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('leave_requests', ['employee_id' => $this->adminEmployee->id]);
-        $category = \App\Models\DocumentCategory::create(['name' => 'Записки', 'code' => 'note']);
+        $category = DocumentCategory::create(['name' => 'Записки', 'code' => 'note']);
         $doc = $ask('Подготовь документ: План инвентаризации')->assertJsonPath('blocks.0.type', 'document_draft')->json('blocks.0');
-        $this->post('/documents', ['title'=>$doc['title'], 'body'=>$doc['body'], 'category_id'=>$category->id])->assertSessionHasNoErrors();
+        $this->post('/documents', ['title' => $doc['title'], 'body' => $doc['body'], 'category_id' => $category->id])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('documents', ['title' => 'План инвентаризации']);
         $ask('Построй график опозданий за неделю')->assertJsonCount(7, 'blocks.0.data')->assertJsonPath('blocks.0.style', 'line');
         $ask('Построй круговую диаграмму: склад=3, офис=6')->assertJsonPath('blocks.0.style', 'donut');
-        foreach (['Создай файл с текстом: План встречи' => ['TXT','План встречи'],
-                  'Построй диаграмму: март=15, апрель=29' => ['SVG','апрель'],
-                  'Выгрузи таблицу: март=15, апрель=29' => ['CSV','апрель'],
-                  'Подготовь отчёт по посещаемости' => ['HTML','Посещаемость']] as $question => [$format,$sample]) {
+        foreach (['Создай файл с текстом: План встречи' => ['TXT', 'План встречи'],
+            'Построй диаграмму: март=15, апрель=29' => ['SVG', 'апрель'],
+            'Выгрузи таблицу: март=15, апрель=29' => ['CSV', 'апрель'],
+            'Подготовь отчёт по посещаемости' => ['HTML', 'Посещаемость']] as $question => [$format,$sample]) {
             $files = collect($ask($question)->json('blocks'));
             $file = $files->firstWhere('type', 'file');
             self::assertSame($format, $file['format']);
@@ -191,16 +197,25 @@ class AiAndLiveFeedHttpTest extends TestCase
 
     public function test_bumi_generates_an_image_and_interprets_a_free_form_request(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
         config(['corpms.ai.base_url' => 'https://ai.example.test/v1', 'corpms.ai.api_key' => 'test', 'corpms.ai.image_model' => 'test-image']);
         $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/WXkAAAAASUVORK5CYII=';
         Http::fake([
             'ai.example.test/v1/images/generations' => Http::response(['data' => [['b64_json' => $png]]]),
-            'ai.example.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => "\x60\x60\x60json\n".json_encode(['operation' => ['kind' => 'task','subject' => 'Проверить смету']])."\n\x60\x60\x60"]]]]),
+            'ai.example.test/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'content' => null,
+                    'tool_calls' => [[
+                        'id' => 'call_free_form',
+                        'type' => 'function',
+                        'function' => ['name' => 'task_stats', 'arguments' => '{}'],
+                    ]],
+                ]]]])
+                ->push(['choices' => [['message' => ['content' => "\x60\x60\x60json\n".json_encode(['operation' => ['kind' => 'task', 'subject' => 'Проверить смету']])."\n\x60\x60\x60"]]]]),
         ]);
         $file = $this->postJson('/ai/message', ['question' => 'Нарисуй постер для выставки'])->assertOk()->assertJsonPath('blocks.0.format', 'PNG')->json('blocks.0.file');
-        self::assertSame(base64_decode($png), $this->get(route('ai.files.download', ['file' => $file,'preview' => 1]))->assertOk()->assertHeader('Content-Type','image/png')->streamedContent());
-        $this->postJson('/ai/message', ['question' => 'Надо бы занести проверку сметы в список дел'])->assertOk()->assertJsonPath('blocks.0.type', 'task_draft')->assertJsonPath('blocks.0.title','Проверить смету');
+        self::assertSame(base64_decode($png), $this->get(route('ai.files.download', ['file' => $file, 'preview' => 1]))->assertOk()->assertHeader('Content-Type', 'image/png')->streamedContent());
+        $this->postJson('/ai/message', ['question' => 'Надо бы занести проверку сметы в список дел'])->assertOk()->assertJsonPath('blocks.0.type', 'task_draft')->assertJsonPath('blocks.0.title', 'Проверить смету');
         $this->assertDatabaseCount('tasks', 0);
     }
 
@@ -293,7 +308,7 @@ class AiAndLiveFeedHttpTest extends TestCase
 
     /* -------------------- AI: настроенный LLM -------------------- */
 
-    public function test_ai_uses_configured_llm_and_stays_grounded(): void
+    public function test_llm_text_without_sources_falls_back_to_local_answer(): void
     {
         config([
             'corpms.ai.base_url' => 'https://llm.example.com/v1',
@@ -311,8 +326,10 @@ class AiAndLiveFeedHttpTest extends TestCase
         $this->post('/ai', ['question' => 'Какая посещаемость?'])->assertRedirect();
 
         $conversation = AiConversation::query()->sole();
-        self::assertStringContainsString('По фактам', (string) $conversation->answer);
-        self::assertTrue((bool) $conversation->grounded);
+        self::assertFalse((bool) $conversation->grounded, 'Текст без источников не делает ответ grounded');
+        self::assertStringNotContainsString('По фактам', (string) $conversation->answer);
+        self::assertNotEmpty((string) $conversation->answer, 'Ожидается явный локальный фолбэк');
+        self::assertSame([], $conversation->query_used['source_items'] ?? null);
 
         // LLM получил факты в системном сообщении
         Http::assertSent(function ($request): bool {
@@ -344,24 +361,29 @@ class AiAndLiveFeedHttpTest extends TestCase
             'corpms.ai.api_key' => 'secret-key',
         ]);
 
+        // Оба ответа подтверждены источниками из tool calling — иначе текст LLM
+        // заменяется локальным фолбэком и в истории окажется не он.
+        $toolCall = static fn (string $id): array => [[
+            'id' => $id,
+            'type' => 'function',
+            'function' => ['name' => 'task_stats', 'arguments' => '{}'],
+        ]];
         Http::fake([
-            'llm.example.com/v1/chat/completions' => Http::response([
-                'choices' => [
-                    ['message' => ['content' => 'Первый ответ ассистента.']],
-                ],
-            ]),
+            'llm.example.com/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'content' => null,
+                    'tool_calls' => $toolCall('call_history_1'),
+                ]]]])
+                ->push(['choices' => [['message' => ['content' => 'Первый ответ ассистента.']]]])
+                ->push(['choices' => [['message' => [
+                    'content' => null,
+                    'tool_calls' => $toolCall('call_history_2'),
+                ]]]])
+                ->push(['choices' => [['message' => ['content' => 'Второй ответ с учётом контекста.']]]]),
         ]);
 
         // первый вопрос — история ещё пуста
         $this->post('/ai', ['question' => 'Сколько сотрудников в компании?'])->assertRedirect();
-
-        Http::fake([
-            'llm.example.com/v1/chat/completions' => Http::response([
-                'choices' => [
-                    ['message' => ['content' => 'Второй ответ с учётом контекста.']],
-                ],
-            ]),
-        ]);
 
         // второй вопрос: в контексте должны быть первая реплика и первый ответ
         $this->post('/ai', ['question' => 'А из них сколько опоздали?'])->assertRedirect();
@@ -371,12 +393,12 @@ class AiAndLiveFeedHttpTest extends TestCase
             $roles = array_column($messages, 'role');
             $contents = array_column($messages, 'content');
 
-            $hasFirstQuestion = in_array('Сколько сотрудников в компании?', $contents, true);
-            $hasFirstAnswer = in_array('Первый ответ ассистента.', $contents, true);
+            $hasFirstQuestion = in_array(UntrustedContext::wrap('history', 'Сколько сотрудников в компании?'), $contents, true);
+            $hasFirstAnswer = in_array(UntrustedContext::wrap('history', 'Первый ответ ассистента.'), $contents, true);
             $lastIsSecondQuestion = $messages[array_key_last($messages)]['content'] === 'А из них сколько опоздали?';
 
             // первая реплика идёт раньше второй (user → assistant → user)
-            $firstIdx = array_search('Сколько сотрудников в компании?', $contents, true);
+            $firstIdx = array_search(UntrustedContext::wrap('history', 'Сколько сотрудников в компании?'), $contents, true);
             $secondIdx = array_search('А из них сколько опоздали?', $contents, true);
             $orderOk = $firstIdx !== false && $secondIdx !== false && $firstIdx < $secondIdx;
             $rolesOk = $roles[$firstIdx] === 'user' && $roles[$secondIdx] === 'user';
@@ -404,7 +426,7 @@ class AiAndLiveFeedHttpTest extends TestCase
         self::assertFalse((bool) $conversation->grounded, 'При фолбэке с LLM grounded должен быть false');
     }
 
-    public function test_panel_message_grounded_flag_reflects_llm_or_fallback(): void
+    public function test_panel_message_grounded_flag_requires_sources(): void
     {
         // LLM не настроен → панель отвечает локально → grounded=false
         $this->postJson('/ai/message', ['question' => 'Сколько просроченных задач?'])
@@ -415,7 +437,7 @@ class AiAndLiveFeedHttpTest extends TestCase
         self::assertNotNull($conversation);
         self::assertFalse((bool) $conversation->grounded, 'Панель без LLM — локальный ответ, grounded=false');
 
-        // LLM настроен и ответил → grounded=true
+        // LLM ответил текстом без источников → по-прежнему локальный фолбэк
         config([
             'corpms.ai.base_url' => 'https://llm.example.com/v1',
             'corpms.ai.api_key' => 'secret-key',
@@ -431,8 +453,8 @@ class AiAndLiveFeedHttpTest extends TestCase
         $this->postJson('/ai/message', ['question' => 'Какая численность?'])->assertOk();
 
         $conversation = AiConversation::query()->orderByDesc('id')->first();
-        self::assertTrue((bool) $conversation->grounded, 'Ответ LLM — grounded=true');
-        self::assertSame('Ответ панели от LLM.', (string) $conversation->answer);
+        self::assertFalse((bool) $conversation->grounded, 'Текст LLM без источников не grounded');
+        self::assertStringNotContainsString('Ответ панели от LLM.', (string) $conversation->answer);
     }
 
     /* -------------------- Live-фид -------------------- */

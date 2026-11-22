@@ -309,8 +309,8 @@
                 var list = data[kind] || [];
                 if (list.length === 0) { return; }
                 html += '<div class="crm-search-group"><div class="crm-search-caption"><i class="ti ' + icons[kind] + '"></i>' + captions[kind] + '</div>';
-                list.forEach(function (item) {
-                    html += '<a class="crm-search-item" href="' + item.url + '">' +
+                list.forEach(function (item, index) {
+                    html += '<a class="crm-search-item" role="option" id="crm-search-option-' + index + '" aria-selected="false" href="' + escapeHtml(item.url || '') + '">' +
                         '<span class="crm-search-item-title">' + escapeHtml(item.title) + '</span>' +
                         '<span class="crm-search-item-meta">' + escapeHtml(item.meta || '') + '</span></a>';
                 });
@@ -322,6 +322,22 @@
             html += '<div class="crm-search-footer"><span>Enter — открыть полный поиск</span>' +
                 '<span><span class="crm-hint-key">↑↓</span> выбор</span></div>';
             return html;
+        }
+
+        /* FE-03: ошибки поиска (401/419/500/offline) должны быть видимы,
+           а не тихо закрывать панель. */
+        function showSearchError(status, requestSeq) {
+            if (requestSeq !== seq) { return; }
+            panel.removeAttribute('aria-busy');
+            var message = status === 401 || status === 419 || status === 403
+                ? 'Нет доступа или сессия истекла — обновите страницу'
+                : status === 429
+                    ? 'Слишком много запросов — повторите через минуту'
+                    : status >= 500
+                        ? 'Сервис поиска временно недоступен'
+                        : 'Не удалось выполнить поиск — проверьте соединение';
+            panel.innerHTML = '<div class="crm-search-error" role="alert">' + message + '</div>';
+            show();
         }
 
         function escapeHtml(text) {
@@ -343,19 +359,25 @@
             var url = hintURL + (hintURL.indexOf('?') === -1 ? '?' : '&') + 'q=' + encodeURIComponent(query);
             setLoading();
             fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
-                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (res) {
+                    if (mySeq !== seq) { return null; } /* устаревший ответ — игнорируем */
+                    if (!res.ok) {
+                        showSearchError(res.status, mySeq);
+                        return null;
+                    }
+                    return res.json().catch(function () { showSearchError(0, mySeq); return null; });
+                })
                 .then(function (data) {
-                    if (mySeq !== seq) { return; } /* устаревший ответ — игнорируем */
+                    if (mySeq !== seq || !data) { return; }
                     panel.removeAttribute('aria-busy');
-                    if (!data) { hide(); return; } /* ошибка/авторизация: закрываем панель */
                     panel.innerHTML = groupsHTML(data);
                     active = -1;
+                    input.removeAttribute('aria-activedescendant');
                     show();
                 })
                 .catch(function () {
                     if (mySeq !== seq) { return; }
-                    panel.removeAttribute('aria-busy');
-                    hide(); /* сеть/авторизация: панель просто закрывается */
+                    showSearchError(0, mySeq); /* offline: видимая ошибка вместо тихого закрытия */
                 });
         }
 
@@ -382,6 +404,7 @@
             panel.inert = true;
             input.setAttribute('aria-expanded', 'false');
             active = -1;
+            input.removeAttribute('aria-activedescendant');
             window.clearTimeout(hideTimer);
             hideTimer = window.setTimeout(function () {
                 if (panel.classList.contains('is-open')) { return; } /* успели открыть снова */
@@ -398,7 +421,11 @@
             var list = items();
             if (list.length === 0) { return; }
             active = (next + list.length) % list.length;
-            list.forEach(function (el, i) { el.classList.toggle('is-active', i === active); });
+            list.forEach(function (el, i) {
+                el.classList.toggle('is-active', i === active);
+                el.setAttribute('aria-selected', i === active ? 'true' : 'false');
+            });
+            input.setAttribute('aria-activedescendant', list[active].id);
         }
 
         input.addEventListener('input', function () {
@@ -496,15 +523,17 @@
             var html = '';
 
             // быстрый поиск по системе (если право search.global есть)
+            var offset = 0;
             if (searchURL && q.length >= 2) {
-                html += '<a class="crm-palette__item" role="option" href="' +
+                html += '<a class="crm-palette__item" role="option" aria-selected="false" id="crm-palette-option-0" href="' +
                     escapeHtml(searchURL + '?q=' + encodeURIComponent(q)) + '" data-palette-search="1">' +
                     '<i class="ti ti-search"></i><span class="crm-palette__title">Найти: ' + escapeHtml(q) + '</span>' +
                     '<span class="crm-palette__meta">поиск по системе</span></a>';
+                offset = 1;
             }
 
-            items.forEach(function (cmd) {
-                html += '<a class="crm-palette__item" role="option" href="' + escapeHtml(cmd.url) + '">' +
+            items.forEach(function (cmd, index) {
+                html += '<a class="crm-palette__item" role="option" aria-selected="false" id="crm-palette-option-' + (offset + index) + '" href="' + escapeHtml(cmd.url) + '">' +
                     '<i class="ti ti-' + escapeHtml(cmd.icon) + '"></i>' +
                     '<span class="crm-palette__title">' + escapeHtml(cmd.title) + '</span>' +
                     '<span class="crm-palette__meta">' + escapeHtml(cmd.section || '') + '</span></a>';
@@ -515,6 +544,7 @@
             }
             list.innerHTML = html;
             active = -1;
+            input.removeAttribute('aria-activedescendant');
         }
 
         function items() {
@@ -525,8 +555,51 @@
             var all = items();
             if (all.length === 0) { return; }
             active = (next + all.length) % all.length;
-            all.forEach(function (el, i) { el.classList.toggle('is-active', i === active); });
+            all.forEach(function (el, i) {
+                el.classList.toggle('is-active', i === active);
+                el.setAttribute('aria-selected', i === active ? 'true' : 'false');
+            });
+            input.setAttribute('aria-activedescendant', all[active].id);
             if (all[active].scrollIntoView) { all[active].scrollIntoView({ block: 'nearest' }); }
+        }
+
+        /* FE-01: пока палитра открыта, фон недоступен для фокуса (inert)
+           и Tab циклически остаётся внутри диалога — даже если inert
+           не поддерживается старым браузером. */
+        function background() {
+            return Array.prototype.slice.call(document.querySelectorAll('[data-crm-palette-background]'));
+        }
+
+        function setBackgroundInert(on) {
+            background().forEach(function (el) {
+                if (on) { el.setAttribute('inert', ''); } else { el.removeAttribute('inert'); }
+            });
+        }
+
+        function focusable() {
+            var selector = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+                'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+            return Array.prototype.slice.call(palette.querySelectorAll(selector)).filter(function (el) {
+                return ! el.hidden && el.getClientRects().length > 0;
+            });
+        }
+
+        function trapTab(event) {
+            var nodes = focusable();
+            if (nodes.length === 0) {
+                event.preventDefault();
+                input.focus({ preventScroll: true });
+                return;
+            }
+            var first = nodes[0];
+            var last = nodes[nodes.length - 1];
+            if (event.shiftKey && (document.activeElement === first || ! palette.contains(document.activeElement))) {
+                event.preventDefault();
+                last.focus({ preventScroll: true });
+            } else if (! event.shiftKey && (document.activeElement === last || ! palette.contains(document.activeElement))) {
+                event.preventDefault();
+                first.focus({ preventScroll: true });
+            }
         }
 
         var closeTimer = null;
@@ -561,6 +634,7 @@
             render();
             void palette.offsetWidth; /* закрытое состояние рисуется до класса */
             palette.classList.add('is-open');
+            setBackgroundInert(true);
             input.focus({ preventScroll: true });
             lockScroll(true);
         }
@@ -569,6 +643,8 @@
             if (!palette.classList.contains('is-open')) { return; }
             palette.classList.remove('is-open');
             palette.inert = true;
+            input.removeAttribute('aria-activedescendant');
+            setBackgroundInert(false);
             if (previousFocus && previousFocus.isConnected) {
                 previousFocus.focus({ preventScroll: true });
             }
@@ -616,7 +692,8 @@
             }
         });
         palette.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') { event.preventDefault(); close(); }
+            if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+            if (event.key === 'Tab') { trapTab(event); }
         });
 
         list.addEventListener('click', function (event) {
@@ -1077,6 +1154,19 @@
 
     var RICH_TARGETS = ['#nd-body', '#ntpl-body'];
 
+    /* UX-07: при смене темы редакторы пересоздаются. Храним ссылки на их
+       обработчики и снимаем их перед повторной инициализацией, иначе
+       submit-подписчики (и toast’ы) накапливаются. */
+    var richHandlers = new WeakMap();
+
+    function detachRichEditor(textarea) {
+        var stored = richHandlers.get(textarea);
+        if (!stored) { return; }
+        if (stored.form && stored.submit) { stored.form.removeEventListener('submit', stored.submit, true); }
+        if (stored.modal && stored.shown) { stored.modal.removeEventListener('shown.bs.modal', stored.shown); }
+        richHandlers.delete(textarea);
+    }
+
     /* iframe редактора имеет собственный белый фон (даже с тёмным скином) —
        гасим его цветом темы, иначе в тёмной теме виден белый блок */
     function ensureEditorThemeStyles() {
@@ -1159,6 +1249,7 @@
                 try { editor.save(); } catch (e) { /* нечего сохранять */ }
                 var modal = textarea.closest('.modal');
                 var visible = !modal || modal.classList.contains('show');
+                detachRichEditor(textarea);
                 editor.remove();
                 if (visible) {
                     window.tinymce.init(richEditorOptions(textarea));
@@ -1184,10 +1275,13 @@
 
     function attachRichEditor(textarea) {
         if (textarea.dataset.crmEditor === '1') { return; }
+        detachRichEditor(textarea);
         textarea.dataset.crmEditor = '1';
 
         var modal = textarea.closest('.modal');
         var started = false;
+        var stored = { form: null, submit: null, modal: modal, shown: null };
+        richHandlers.set(textarea, stored);
 
         function start() {
             if (started) { return; }
@@ -1205,6 +1299,7 @@
 
         /* в закрытой модалке TinyMCE считает нулевые размеры — стартуем после показа */
         if (modal) {
+            stored.shown = start;
             modal.addEventListener('shown.bs.modal', start);
             if (modal.classList.contains('show')) { start(); }
         } else {
@@ -1215,7 +1310,8 @@
            (скрытый TinyMCE-ом textarea не показывает нативную подсказку браузера) */
         var form = textarea.closest('form');
         if (form) {
-            form.addEventListener('submit', function (event) {
+            stored.form = form;
+            stored.submit = function (event) {
                 if (window.tinymce) { window.tinymce.triggerSave(); }
                 if (textarea.hasAttribute('required') && !textarea.value.trim()) {
                     event.preventDefault();
@@ -1225,7 +1321,8 @@
                     var editor = window.tinymce && window.tinymce.get(textarea.id);
                     if (editor) { editor.focus(); }
                 }
-            }, true);
+            };
+            form.addEventListener('submit', stored.submit, true);
         }
     }
 
@@ -1310,7 +1407,11 @@
                         language: 'ru',
                         allowClear: !select.hasAttribute('required') && !country,
                         placeholder: ph,
-                        dropdownParent: modal ? $(modal) : null,
+                        /* В модальном окне список нельзя вешать на .modal: у него
+                           overflow:auto, поэтому выпадающий список обрезается и
+                           колесо мыши не прокручивает варианты. Список живёт в body,
+                           а z-index ниже поднимается выше backdrop модалки. */
+                        dropdownParent: modal ? $(document.body) : null,
                         dropdownAutoWidth: country
                     };
                     if (select.dataset.chatEmployeeSelect) {

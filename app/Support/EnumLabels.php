@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Shared\Enums\BiometricDeviceType;
+
 /**
  * Русские подписи enum-ов для UI. Единственный источник подписей:
  * шаблоны вызывают {{ crm_label('task_status', $task->status->value) }}.
@@ -83,11 +85,6 @@ final class EnumLabels
         ],
         'device_status' => [
             'online' => 'Онлайн', 'offline' => 'Офлайн', 'disabled' => 'Отключён',
-        ],
-        'device_type' => [
-            'face_terminal' => 'Терминал лица', 'kiosk' => 'Киоск',
-            'fingerprint_gate' => 'Дактило-турникет', 'turnstile' => 'Турникет',
-            'qr_reader' => 'QR-считыватель',
         ],
         'device_direction' => [
             'in' => 'Вход', 'out' => 'Выход', 'both' => 'Вход/выход',
@@ -260,10 +257,102 @@ final class EnumLabels
         ],
     ];
 
+    /** Коды действий журнала, которые выводятся на дашборде аналитики. */
+    private const AUDIT_ACTIONS = [
+        'auth.login' => 'Вход в систему',
+        'auth.logout' => 'Выход из системы',
+        'auth.failed' => 'Неудачный вход',
+        'auth.password_reset_self' => 'Самостоятельная смена пароля',
+        'task.created' => 'Создание задачи',
+        'task.status_changed' => 'Изменение статуса задачи',
+        'task.assigned' => 'Назначение задачи',
+        'task.completed' => 'Завершение задачи',
+        'ai.asked' => 'Запрос к ИИ',
+        'ai.retried' => 'Повторный запрос к ИИ',
+        'ai.tool.called' => 'Вызов инструмента ИИ',
+        'report.exported' => 'Экспорт отчёта',
+        'signature.qr_prepared' => 'Подготовка QR-подписи',
+        'signature.signed' => 'Подписание документа',
+        'signature.requested' => 'Запрос подписи',
+        'signature.otp_failed' => 'Неудачная проверка OTP',
+        'signature.otp_blocked' => 'Блокировка OTP',
+        'signature.declined' => 'Отказ от подписи',
+        'signature.revoked' => 'Отзыв подписи',
+        'signature.tampered' => 'Нарушение целостности подписи',
+        'document.created' => 'Создание документа',
+        'document.submitted' => 'Отправка документа',
+        'document.registered' => 'Регистрация документа',
+        'document.version_added' => 'Добавление версии документа',
+        'chat.message.sent' => 'Отправка сообщения',
+        'chat.message.edited' => 'Редактирование сообщения',
+        'chat.message.deleted' => 'Удаление сообщения',
+        'lms.enrolled' => 'Запись на курс',
+        'lms.lesson.completed' => 'Прохождение урока',
+        'lms.assignment.submitted' => 'Сдача задания',
+        'attendance.correction.requested' => 'Запрос корректировки посещаемости',
+        'attendance.correction.approved' => 'Одобрение корректировки посещаемости',
+        'attendance.correction.rejected' => 'Отклонение корректировки посещаемости',
+        'backup.created' => 'Создание резервной копии',
+        'backup.downloaded' => 'Скачивание резервной копии',
+        'bi.rebuilt' => 'Перестроение BI-витрины',
+    ];
+
+    /** @var array<string, string> */
+    private const AUDIT_SEGMENTS = [
+        'accounting' => 'Бухгалтерия', 'activity' => 'Активность', 'added' => 'Добавление',
+        'approved' => 'Одобрение', 'archived' => 'Архивация', 'assignment' => 'Задание',
+        'auth' => 'Авторизация', 'backup' => 'Резервная копия', 'bi' => 'BI',
+        'biometry' => 'Биометрия', 'blocked' => 'Блокировка', 'called' => 'Вызов',
+        'changed' => 'Изменение', 'channel' => 'Канал', 'chart' => 'План счетов',
+        'client' => 'Клиент', 'company' => 'Компания', 'conversation' => 'Диалог',
+        'course' => 'Курс', 'created' => 'Создание', 'crm' => 'CRM', 'declined' => 'Отказ',
+        'deleted' => 'Удаление', 'department' => 'Отдел', 'device' => 'Устройство',
+        'document' => 'Документ', 'edited' => 'Редактирование', 'employee' => 'Сотрудник',
+        'enabled' => 'Включение', 'entry' => 'Проводка', 'exported' => 'Экспорт',
+        'failed' => 'Ошибка', 'final' => 'Итоговый', 'finance' => 'Финансы',
+        'generated' => 'Генерация', 'google' => 'Google', 'group' => 'Группа',
+        'import' => 'Импорт', 'lesson' => 'Урок', 'login' => 'Вход', 'logout' => 'Выход',
+        'meeting' => 'Созвон', 'member' => 'Участник', 'members' => 'Участники',
+        'message' => 'Сообщение', 'moved' => 'Перемещение', 'notification' => 'Уведомление',
+        'oauth' => 'OAuth', 'otp' => 'OTP', 'password' => 'Пароль', 'position' => 'Должность',
+        'prepared' => 'Подготовка', 'privacy' => 'Конфиденциальность', 'qr' => 'QR',
+        'registered' => 'Регистрация', 'rejected' => 'Отклонение', 'removed' => 'Удаление',
+        'reset' => 'Сброс', 'restored' => 'Восстановление', 'reviewed' => 'Проверка',
+        'revoked' => 'Отзыв', 'role' => 'Роль', 'schedule' => 'Расписание',
+        'self' => 'Самостоятельно', 'sent' => 'Отправка', 'setting' => 'Настройка',
+        'settings' => 'Настройки', 'signed' => 'Подписание', 'signature' => 'Подпись',
+        'status' => 'Статус', 'step' => 'Этап', 'submitted' => 'Отправка',
+        'synced' => 'Синхронизация', 'tampered' => 'Подмена', 'task' => 'Задача',
+        'template' => 'Шаблон', 'tool' => 'Инструмент', 'totp' => 'TOTP',
+        'updated' => 'Обновление', 'user' => 'Пользователь', 'verified' => 'Подтверждение',
+        'version' => 'Версия', 'ai' => 'ИИ', 'lms' => 'Обучение', 'report' => 'Отчёт',
+        'attendance' => 'Посещаемость', 'correction' => 'Корректировка', 'training' => 'Обучение',
+    ];
+
     public static function label(string $group, ?string $value, ?string $fallback = null): string
     {
         if ($value === null) {
             return '—';
+        }
+
+        if ($group === 'device_type') {
+            $type = BiometricDeviceType::tryFrom($value);
+
+            return $type?->label() ?? ($fallback ?? $value);
+        }
+
+        if ($group === 'audit_action' && isset(self::AUDIT_ACTIONS[$value])) {
+            return self::AUDIT_ACTIONS[$value];
+        }
+
+        if ($group === 'audit_action') {
+            $parts = array_filter(explode('.', $value), static fn (string $part): bool => $part !== '');
+            $words = [];
+            foreach ($parts as $part) {
+                $words[] = self::AUDIT_SEGMENTS[$part] ?? str_replace('_', ' ', $part);
+            }
+
+            return $words === [] ? $value : implode(' · ', $words);
         }
 
         return self::MAPS[$group][$value] ?? ($fallback ?? $value);

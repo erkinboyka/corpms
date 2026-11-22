@@ -11,6 +11,7 @@ class TwoFactorService
     public function generateSecret(): string
     {
         $bytes = random_bytes(20);
+
         return $this->base32Encode($bytes);
     }
 
@@ -24,6 +25,7 @@ class TwoFactorService
             'digits' => 6,
             'period' => 30,
         ]);
+
         return "otpauth://totp/{$label}?{$params}";
     }
 
@@ -39,6 +41,7 @@ class TwoFactorService
                 return true;
             }
         }
+
         return false;
     }
 
@@ -60,6 +63,7 @@ class TwoFactorService
         $offset = ord(substr($hash, -1)) & 0x0F;
         $truncated = unpack('N', substr($hash, $offset, 4))[1] & 0x7FFFFFFF;
         $otp = $truncated % 1000000;
+
         return str_pad((string) $otp, 6, '0', STR_PAD_LEFT);
     }
 
@@ -78,6 +82,7 @@ class TwoFactorService
             }
             $result .= $alphabet[bindec($chunk)];
         }
+
         return $result;
     }
 
@@ -99,6 +104,7 @@ class TwoFactorService
                 $bytes .= chr(bindec($byte));
             }
         }
+
         return $bytes;
     }
 }

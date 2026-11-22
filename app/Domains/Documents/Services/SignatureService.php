@@ -13,7 +13,10 @@ use App\Models\DocumentSignatureRequest;
 use App\Models\DocumentVersion;
 use App\Models\Employee;
 use App\Models\QrToken;
+use App\Models\User;
+use App\Support\NumberGenerator;
 use App\Support\SettingsService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -34,10 +37,14 @@ use Throwable;
  */
 class SignatureService
 {
+    /** BL-02/BL-06: единый лимит для публичного QR-кода и внутреннего OTP. */
+    private const OTP_MAX_ATTEMPTS = 5;
+
     public function __construct(
         protected AuditService $audit,
         protected WorkflowEngine $engine,
         protected NotificationService $notifications,
+        protected NumberGenerator $numbers,
     ) {}
 
     /* -------------------- запросы подписи -------------------- */
@@ -148,7 +155,13 @@ class SignatureService
 
     public function sign(Employee $signer, DocumentSignatureRequest $request, ?string $otp = null, ?string $ip = null, ?string $userAgent = null): DocumentSignature
     {
-        return DB::transaction(function () use ($signer, $request, $otp, $ip, $userAgent) {
+        // BL-02: неудачная попытка OTP должна сохраняться, даже если основная
+        // транзакция подписи позже откатится. Поэтому счётчик пишется до неё.
+        if ($request->requires_otp) {
+            $this->verifyOtp($request, $otp, $signer);
+        }
+
+        return DB::transaction(function () use ($signer, $request, $ip, $userAgent) {
             $document = Document::query()->lockForUpdate()->findOrFail($request->document_id);
             $request = DocumentSignatureRequest::query()->lockForUpdate()->findOrFail($request->id);
             if ($request->signer_id !== $signer->id) {
@@ -161,10 +174,6 @@ class SignatureService
 
             if (! in_array($document->status->value, ['approved', 'signing'], true)) {
                 throw new LogicException('Документ не готов к подписанию (статус '.$document->status->value.')');
-            }
-
-            if ($request->requires_otp) {
-                $this->verifyOtp($request, $otp);
             }
 
             $version = DocumentVersion::query()->findOrFail($request->document_version_id);
@@ -207,37 +216,45 @@ class SignatureService
     /** Подпись через QR (п.62): одноразовый токен, владелец = created_by, subject = запрос подписи. */
     public function signByQrToken(Employee $signer, DocumentSignatureRequest $request, string $plainToken, ?string $ip = null, ?string $userAgent = null): DocumentSignature
     {
-        $token = QrToken::query()->where('token_hash', hash('sha256', $plainToken))->first();
+        // DB-13/BL-01: токен «забирается» атомарно до подписи. Все изменения —
+        // в одной транзакции с sign(), поэтому ошибка подписи/аудита не оставляет
+        // погашенный токен, а два конкурентных запроса не создают две подписи.
+        return DB::transaction(function () use ($signer, $request, $plainToken, $ip, $userAgent) {
+            $hash = hash('sha256', $plainToken);
+            $claimed = QrToken::query()
+                ->where('token_hash', $hash)
+                ->where('created_by', $signer->id)
+                ->whereNull('used_at')
+                ->whereNull('revoked_at')
+                ->update(['used_at' => now()]);
 
-        if ($token === null || $token->created_by !== $signer->id) {
-            throw new RuntimeException(__('QR-токен не найден'));
-        }
+            $token = QrToken::query()->where('token_hash', $hash)->first();
+            if ($token === null) {
+                throw new RuntimeException(__('QR-токен не найден'));
+            }
 
-        if ($token->revoked_at !== null) {
-            throw new RuntimeException(__('QR-токен отозван'));
-        }
+            if ($claimed === 0) {
+                throw new RuntimeException($token->used_at !== null
+                    ? __('QR-токен уже использован')
+                    : __('QR-токен отозван'));
+            }
 
-        if ($token->expires_at !== null && now()->gt($token->expires_at)) {
-            throw new RuntimeException(__('QR-токен истёк'));
-        }
+            if ($token->expires_at !== null && now()->gt($token->expires_at)) {
+                throw new RuntimeException(__('QR-токен истёк'));
+            }
 
-        if ($token->used_at !== null && $token->one_time) {
-            throw new RuntimeException(__('QR-токен уже использован'));
-        }
+            if ($token->purpose !== 'sign' || $token->subject_type !== $request::class || (int) $token->subject_id !== (int) $request->id) {
+                throw new RuntimeException(__('QR-токен не относится к этому запросу подписи'));
+            }
 
-        if ($token->purpose !== 'sign' || $token->subject_type !== $request::class || (int) $token->subject_id !== (int) $request->id) {
-            throw new RuntimeException(__('QR-токен не относится к этому запросу подписи'));
-        }
+            $signature = $this->sign($signer, $request, null, $ip, $userAgent);
 
-        $signature = $this->sign($signer, $request, null, $ip, $userAgent);
+            $signature->forceFill([
+                'meta' => ['qr_token_id' => $token->id, 'driver_extra' => 'qr_approval'],
+            ])->save();
 
-        $token->forceFill(['used_at' => now()])->save();
-
-        $signature->forceFill([
-            'meta' => ['qr_token_id' => $token->id, 'driver_extra' => 'qr_approval'],
-        ])->save();
-
-        return $signature;
+            return $signature;
+        });
     }
 
     /**
@@ -285,6 +302,7 @@ class SignatureService
             }
 
             $from = $document->status->value;
+            $this->engine->assertQuickQrSignature($from);
             if (! in_array($from, ['approved', 'signing'], true)) {
                 $document->update(['status' => 'signing']);
                 $this->engine->record(
@@ -406,13 +424,13 @@ class SignatureService
             throw new RuntimeException(__('QR-код подписи недействителен или истёк'));
         }
 
-        $this->verifyQrCode($resolved['token'], $code);
+        $this->verifyQrCode($resolved['token'], $code, $resolved['signer']);
 
         return $this->signByQrToken($resolved['signer'], $resolved['request'], $plainToken, $ip, $userAgent);
     }
 
-    /** Проверка отправленного кода подтверждения (жёстко: 5 попыток). */
-    protected function verifyQrCode(QrToken $token, ?string $code): void
+    /** Проверка отправленного кода подтверждения (BL-02: 5 попыток, атомарно). */
+    protected function verifyQrCode(QrToken $token, ?string $code, ?Employee $signer = null): void
     {
         $meta = $token->meta ?? [];
         $stored = $meta['otp_code'] ?? null;
@@ -425,15 +443,26 @@ class SignatureService
             throw new RuntimeException(__('Код подтверждения истёк. Сгенерируйте новый QR-код'));
         }
 
-        $attempts = (int) ($meta['otp_attempts'] ?? 0) + 1;
-        $meta['otp_attempts'] = $attempts;
-        if ($attempts > 5) {
-            $token->forceFill(['meta' => $meta, 'revoked_at' => now()])->save();
+        [, $attempts, $blocked] = $this->recordOtpAttempt(
+            $token,
+            $signer?->user,
+            'qr',
+            ['revoked_at' => now()],
+        );
+
+        $valid = $code !== null && hash_equals((string) $stored, hash('sha256', $code));
+        if (! $valid) {
+            $this->audit->log($signer?->user, 'signature.otp_failed', class_basename($token), $token->id, null, [
+                'context' => 'qr',
+                'attempts' => $attempts,
+            ]);
+        }
+
+        if ($blocked) {
             throw new RuntimeException(__('Слишком много попыток. Сгенерируйте новый QR-код'));
         }
-        $token->forceFill(['meta' => $meta])->saveQuietly();
 
-        if ($code === null || ! hash_equals($stored, hash('sha256', $code))) {
+        if (! $valid) {
             throw new RuntimeException(__('Неверный код подтверждения'));
         }
     }
@@ -517,7 +546,7 @@ class SignatureService
 
     /* -------------------- внутренние -------------------- */
 
-    protected function verifyOtp(DocumentSignatureRequest $request, ?string $otp): void
+    protected function verifyOtp(DocumentSignatureRequest $request, ?string $otp, Employee $signer): void
     {
         $meta = $request->meta ?? [];
 
@@ -532,13 +561,67 @@ class SignatureService
             throw new RuntimeException(__('OTP-код истёк'));
         }
 
-        $attempts = (int) ($meta['otp_attempts'] ?? 0) + 1;
-        $request->forceFill(['meta' => array_merge($meta, ['otp_attempts' => $attempts])]);
-        $request->saveQuietly();
+        [, $attempts, $blocked] = $this->recordOtpAttempt($request, $signer->user, 'internal');
 
-        if ($otp === null || hash('sha256', $otp) !== $stored) {
+        $valid = $otp !== null && hash_equals((string) $stored, hash('sha256', $otp));
+        if (! $valid) {
+            $this->audit->log($signer->user, 'signature.otp_failed', class_basename($request), $request->id, null, [
+                'context' => 'internal',
+                'attempts' => $attempts,
+            ]);
+        }
+
+        if ($blocked) {
+            throw new RuntimeException(__('Слишком много попыток. Запрос подписи заблокирован'));
+        }
+
+        if (! $valid) {
             throw new RuntimeException(__('Неверный OTP-код'));
         }
+    }
+
+    /**
+     * BL-02/BL-06: атомарный инкремент попыток под row-level блокировкой.
+     * Счётчик фиксируется в отдельной транзакции, чтобы неверный код оставался
+     * учтённым даже при откате транзакции подписи. Пятая попытка блокирует объект.
+     *
+     * @param  array<string, mixed>  $blockAttributes  дополнительные поля модели при блокировке (например, revoked_at)
+     * @return array{0: array<string, mixed>, 1: int, 2: bool} meta, число попыток, признак блокировки
+     */
+    protected function recordOtpAttempt(
+        Model $model,
+        ?User $user,
+        string $context,
+        array $blockAttributes = [],
+    ): array {
+        return DB::transaction(function () use ($model, $user, $context, $blockAttributes) {
+            $locked = $model->newQuery()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
+            $meta = $locked->meta ?? [];
+            $attempts = (int) ($meta['otp_attempts'] ?? 0);
+
+            if (isset($meta['otp_blocked_at'])) {
+                return [$meta, $attempts, true];
+            }
+
+            $attempts++;
+            $meta['otp_attempts'] = $attempts;
+            $blocked = $attempts >= self::OTP_MAX_ATTEMPTS;
+            if ($blocked) {
+                $meta['otp_blocked_at'] = now()->toDateTimeString();
+            }
+
+            $locked->forceFill(array_merge(['meta' => $meta], $blocked ? $blockAttributes : []))
+                ->saveQuietly();
+
+            if ($blocked) {
+                $this->audit->log($user, 'signature.otp_blocked', class_basename($model), $model->getKey(), null, [
+                    'context' => $context,
+                    'attempts' => $attempts,
+                ]);
+            }
+
+            return [$meta, $attempts, $blocked];
+        });
     }
 
     /**
@@ -581,9 +664,16 @@ class SignatureService
     protected function nextSignatureId(): string
     {
         $year = now()->format('Y');
-        $count = DocumentSignature::query()->whereYear('signed_at', $year)->count() + 1;
+        $prefix = 'SIG-'.$year.'-';
 
-        return sprintf('SIG-%s-%06d', $year, $count);
+        $value = $this->numbers->next('signature.id', $year, fn () => $this->numbers->maxSuffix(
+            $prefix,
+            DocumentSignature::query()
+                ->where('signature_id', 'like', $prefix.'%')
+                ->pluck('signature_id'),
+        ));
+
+        return sprintf('%s%06d', $prefix, $value);
     }
 
     protected function requestIp(): ?string

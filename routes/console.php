@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Attendance\Services\AttendanceService;
+use App\Domains\Biometric\Services\BiometricRetentionService;
 use App\Domains\Tasks\Services\TaskService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schedule;
@@ -21,3 +22,8 @@ Schedule::command('files:backup')->dailyAt('03:40')->name('files.backup')->witho
 
 // Инфраструктура: алерт о нездоровом приложении (БД, миграции, очередь, storage)
 Schedule::command('corpms:health')->everyFifteenMinutes()->withoutOverlapping()->name('ops.health');
+
+// SEC-09: истёкшие raw_payload биометрии очищаются, сам журнал событий сохраняется.
+Schedule::call(function () {
+    app(BiometricRetentionService::class)->pruneRawPayloads();
+})->name('biometrics.prune-raw-payloads')->dailyAt('04:10')->withoutOverlapping();

@@ -155,6 +155,52 @@ class LmsHttpTest extends TestCase
         ]);
     }
 
+    public function test_course_without_required_lessons_finishes_only_after_all_lessons(): void
+    {
+        $course = LmsCourse::create([
+            'company_id' => $this->companyA->id,
+            'title' => 'Курс без обязательных уроков',
+            'status' => 'published',
+            'created_by' => $this->managerEmployee->id,
+        ]);
+        $first = LmsLesson::create([
+            'company_id' => $this->companyA->id,
+            'course_id' => $course->id,
+            'title' => 'Урок 1',
+            'sort_order' => 1,
+            'is_required' => false,
+        ]);
+        $second = LmsLesson::create([
+            'company_id' => $this->companyA->id,
+            'course_id' => $course->id,
+            'title' => 'Урок 2',
+            'sort_order' => 2,
+            'is_required' => false,
+        ]);
+
+        $this->actingAs($this->learner)
+            ->post('/lms/courses/'.$course->id.'/enroll')
+            ->assertRedirect();
+
+        $this->post('/lms/lessons/'.$first->id.'/progress')->assertRedirect();
+
+        $this->assertDatabaseHas('lms_enrollments', [
+            'course_id' => $course->id,
+            'employee_id' => $this->learnerEmployee->id,
+            'progress_percent' => 50,
+            'status' => 'in_progress',
+        ]);
+
+        $this->post('/lms/lessons/'.$second->id.'/progress')->assertRedirect();
+
+        $this->assertDatabaseHas('lms_enrollments', [
+            'course_id' => $course->id,
+            'employee_id' => $this->learnerEmployee->id,
+            'progress_percent' => 100,
+            'status' => 'completed',
+        ]);
+    }
+
     public function test_whiteboard_draw_poll_erase_and_presence(): void
     {
         $board = LmsWhiteboard::create([

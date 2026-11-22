@@ -28,6 +28,7 @@ use App\Models\Role;
 use App\Models\Task;
 use App\Models\TaskAssignment;
 use App\Models\TaskAttachment;
+use App\Models\TrustedCertificate;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use App\Shared\Enums\AssigneeType;
@@ -592,6 +593,95 @@ class TenantIsolationHttpTest extends TestCase
         $this->assertNotSame(403, $response->getStatusCode());
     }
 
+    public function test_anomaly_resolution_is_scoped_to_department(): void
+    {
+        $roleId = Role::query()->where('slug', 'department_director')->value('id');
+        $directorUser = User::factory()->create();
+        $director = Employee::create([
+            'company_id' => $this->companyA->id,
+            'user_id' => $directorUser->id,
+            'employee_no' => 'DIR-A',
+            'first_name' => 'Начальник',
+            'last_name' => 'Отдела',
+            'status' => 'active',
+            'department_id' => $this->departmentA->id,
+        ]);
+        EmployeeRole::create(['employee_id' => $director->id, 'role_id' => $roleId]);
+
+        $otherDepartment = Department::create([
+            'company_id' => $this->companyA->id,
+            'name' => 'Другой отдел',
+            'code' => 'dep-a-2',
+        ]);
+        $same = Employee::create([
+            'company_id' => $this->companyA->id,
+            'user_id' => User::factory()->create()->id,
+            'employee_no' => 'SAME-A',
+            'first_name' => 'Свой',
+            'last_name' => 'Отдел',
+            'status' => 'active',
+            'department_id' => $this->departmentA->id,
+        ]);
+        $foreign = Employee::create([
+            'company_id' => $this->companyA->id,
+            'user_id' => User::factory()->create()->id,
+            'employee_no' => 'OTHER-A',
+            'first_name' => 'Другой',
+            'last_name' => 'Отдел',
+            'status' => 'active',
+            'department_id' => $otherDepartment->id,
+        ]);
+
+        $foreignAnomaly = AttendanceAnomaly::create([
+            'employee_id' => $foreign->id,
+            'date' => '2026-11-04',
+            'type' => 'no_show',
+            'status' => 'open',
+        ]);
+        $sameAnomaly = AttendanceAnomaly::create([
+            'employee_id' => $same->id,
+            'date' => '2026-11-04',
+            'type' => 'no_show',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($directorUser)
+            ->put('/attendance/anomalies/'.$foreignAnomaly->id, ['resolution' => 'Чужой отдел'])
+            ->assertForbidden();
+
+        $response = $this->actingAs($directorUser)
+            ->put('/attendance/anomalies/'.$sameAnomaly->id, ['resolution' => 'Свой отдел']);
+        $this->assertNotSame(403, $response->getStatusCode());
+    }
+
+    public function test_global_certificate_can_be_deleted_only_by_platform_admin(): void
+    {
+        $certificate = TrustedCertificate::create([
+            'company_id' => null,
+            'type' => 'state',
+            'name' => 'Глобальный сертификат',
+            'fingerprint' => 'GLOBAL-'.uniqid(),
+            'pem' => 'dummy',
+        ]);
+
+        $directorUser = User::factory()->create();
+        $director = $this->employee($this->companyA, 'CERT-DIR', 'Директор', 'Сертификатов', $directorUser->id);
+        EmployeeRole::create([
+            'employee_id' => $director->id,
+            'role_id' => Role::query()->where('slug', 'company_director')->value('id'),
+        ]);
+
+        $this->actingAs($directorUser)
+            ->delete('/certificates/'.$certificate->id)
+            ->assertForbidden();
+        $this->assertNotNull(TrustedCertificate::find($certificate->id));
+
+        $this->actingAs($this->adminA)
+            ->delete('/certificates/'.$certificate->id)
+            ->assertRedirect();
+        $this->assertNull(TrustedCertificate::find($certificate->id));
+    }
+
     /* ---------------- биометрия ---------------- */
 
     public function test_biometric_device_cross_tenant_blocked(): void
@@ -824,19 +914,28 @@ class TenantIsolationHttpTest extends TestCase
         $service = app(TaskService::class);
         $year = now()->format('Y');
 
-        // в A одна задача из setUp (+2 → 3), в B одна → нумерация не «глобальная»
+        // BL-07/DB-08: последовательность продолжает максимальный суффикс
+        // существующих TSK-номеров и скоуплена по компании.
         foreach ([1, 2] as $i) {
             Task::create([
                 'company_id' => $this->companyA->id,
                 'title' => 'Нумерация А-'.$i,
-                'number' => 'NMX-A-'.$i.uniqid(),
+                'number' => sprintf('TSK-%s-%06d', $year, $i),
                 'type' => 'task',
                 'status' => 'new',
                 'author_id' => $this->adminEmployeeA->id,
             ]);
         }
+        Task::create([
+            'company_id' => $this->companyB->id,
+            'title' => 'Нумерация B',
+            'number' => sprintf('TSK-%s-%06d', $year, 1),
+            'type' => 'task',
+            'status' => 'new',
+            'author_id' => $this->workerB->id,
+        ]);
 
-        $this->assertSame(sprintf('TSK-%s-000004', $year), $service->nextNumber($this->companyA->id));
+        $this->assertSame(sprintf('TSK-%s-000003', $year), $service->nextNumber($this->companyA->id));
         $this->assertSame(sprintf('TSK-%s-000002', $year), $service->nextNumber($this->companyB->id));
     }
 

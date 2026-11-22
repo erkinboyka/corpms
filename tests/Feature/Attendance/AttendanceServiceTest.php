@@ -193,7 +193,52 @@ class AttendanceServiceTest extends TestCase
         $this->assertEquals($first[2], $record->late_minutes);
     }
 
+    /** BL-13/BL-14: нарушенный порядок событий не даёт положительных часов. */
+    public function test_direction_mismatch_never_produces_worked_minutes(): void
+    {
+        $this->clockOut('2026-10-29 12:00:00');
+        $this->clockIn('2026-10-29 13:00:00');
+
+        $record = $this->todayRecord();
+        $this->assertSame(0, (int) $record->worked_minutes);
+        $this->assertTrue(AttendanceAnomaly::query()
+            ->where('employee_id', $this->employee->id)
+            ->whereDate('date', '2026-10-29')
+            ->where('type', 'direction_mismatch')
+            ->exists());
+    }
+
+    public function test_out_before_in_creates_direction_mismatch(): void
+    {
+        $this->clockIn('2026-10-29 13:00:00');
+        $this->clockOut('2026-10-29 12:00:00');
+
+        $record = $this->todayRecord();
+        $this->assertSame(0, (int) $record->worked_minutes);
+        $this->assertSame(0, (int) $record->overtime_minutes);
+        $this->assertTrue(AttendanceAnomaly::query()
+            ->where('employee_id', $this->employee->id)
+            ->whereDate('date', '2026-10-29')
+            ->where('type', 'direction_mismatch')
+            ->exists());
+    }
+
     /* ---------------- helpers ---------------- */
+
+    /** H-BL-02: параллельные события одного дня дают upsert, а не 500/дубль. */
+    public function test_events_of_same_day_upsert_single_record(): void
+    {
+        $this->clockIn('2026-10-29 08:03:21');
+        $this->clockOut('2026-10-29 17:05:00');
+        $this->clockIn('2026-10-29 08:10:00'); // повтор — должен быть проигнорирован
+
+        self::assertSame(1, AttendanceRecord::query()->where('employee_id', $this->employee->id)->count());
+
+        $record = $this->todayRecord();
+        self::assertNotNull($record->clock_in_at);
+        self::assertNotNull($record->clock_out_at);
+        self::assertSame('08:03:21', $record->clock_in_at->format('H:i:s'));
+    }
 
     public function clockIn(string $time): void
     {

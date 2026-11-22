@@ -20,7 +20,8 @@ Route::get('/api/v1/kiosk/attendance/{deviceToken}/recent', [BiometricEventContr
     ->middleware(['device.token', 'throttle:60,1'])
     ->name('device.kiosk.recent');
 
-// Telegram webhook (п.66 ТЗ): секрет в пути + X-Telegram-Bot-Api-Secret-Token
-Route::post('/api/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
-    ->middleware('throttle:60,1')
+// Telegram webhook (п.66 ТЗ): секрет передаётся только в header
+// X-Telegram-Bot-Api-Secret-Token — в URL и access-логи не попадает.
+Route::post('/api/telegram/webhook', [TelegramWebhookController::class, 'handle'])
+    ->middleware('throttle:60,1,telegram.webhook')
     ->name('device.telegram.webhook');

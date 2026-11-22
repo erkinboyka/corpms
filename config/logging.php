@@ -1,7 +1,11 @@
 <?php
 
+use App\Logging\RedactContextProcessor;
+use Monolog\Handler\ErrorLogHandler;
 use Monolog\Handler\NullHandler;
+use Monolog\Handler\RotatingFileHandler;
 use Monolog\Handler\StreamHandler;
+use Monolog\Handler\SyslogHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
@@ -58,27 +62,48 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        // TEST-10: файловые каналы идут через monolog-драйвер, чтобы к ним
+        // применялся redaction-processor (drivers single/daily его не поддерживают).
         'single' => [
-            'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'replace_placeholders' => true,
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => storage_path('logs/laravel.log'),
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+                RedactContextProcessor::class,
+            ],
         ],
 
         'daily' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'max_files' => env('LOG_DAILY_DAYS', 14),
-            'replace_placeholders' => true,
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => RotatingFileHandler::class,
+            'handler_with' => [
+                'filename' => storage_path('logs/laravel.log'),
+                'maxFiles' => (int) env('LOG_DAILY_DAYS', 14),
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+                RedactContextProcessor::class,
+            ],
         ],
 
         'monthly' => [
-            'driver' => 'monthly',
-            'path' => storage_path('logs/laravel.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'max_files' => 3,
-            'replace_placeholders' => true,
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => RotatingFileHandler::class,
+            'handler_with' => [
+                'filename' => storage_path('logs/laravel.log'),
+                'maxFiles' => 3,
+                'dateFormat' => 'Y-m',
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+                RedactContextProcessor::class,
+            ],
         ],
 
         'slack' => [
@@ -92,38 +117,43 @@ return [
 
         'papertrail' => [
             'driver' => 'monolog',
-            'level' => env('LOG_LEVEL', 'debug'),
+            'level' => env('LOG_LEVEL', 'info'),
             'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
             'handler_with' => [
                 'host' => env('PAPERTRAIL_URL'),
                 'port' => env('PAPERTRAIL_PORT'),
                 'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
             ],
-            'processors' => [PsrLogMessageProcessor::class],
+            'processors' => [PsrLogMessageProcessor::class, RedactContextProcessor::class],
         ],
 
         'stderr' => [
             'driver' => 'monolog',
-            'level' => env('LOG_LEVEL', 'debug'),
+            'level' => env('LOG_LEVEL', 'info'),
             'handler' => StreamHandler::class,
             'handler_with' => [
                 'stream' => 'php://stderr',
             ],
             'formatter' => env('LOG_STDERR_FORMATTER'),
-            'processors' => [PsrLogMessageProcessor::class],
+            'processors' => [PsrLogMessageProcessor::class, RedactContextProcessor::class],
         ],
 
         'syslog' => [
-            'driver' => 'syslog',
-            'level' => env('LOG_LEVEL', 'debug'),
-            'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
-            'replace_placeholders' => true,
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => SyslogHandler::class,
+            'handler_with' => [
+                'ident' => env('LOG_SYSLOG_IDENT', 'corpms'),
+                'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
+            ],
+            'processors' => [PsrLogMessageProcessor::class, RedactContextProcessor::class],
         ],
 
         'errorlog' => [
-            'driver' => 'errorlog',
-            'level' => env('LOG_LEVEL', 'debug'),
-            'replace_placeholders' => true,
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => ErrorLogHandler::class,
+            'processors' => [PsrLogMessageProcessor::class, RedactContextProcessor::class],
         ],
 
         'null' => [

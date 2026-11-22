@@ -27,8 +27,7 @@ class EmployeeChatNotice implements ShouldBroadcastNow
         public readonly Employee $employee,
         public readonly string $type,
         public readonly array $payload = [],
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function broadcastWith(): array

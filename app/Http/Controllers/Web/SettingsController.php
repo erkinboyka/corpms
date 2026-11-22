@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Web;
 use App\Domains\Audit\Services\AuditService;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AiEndpointGuard;
 use App\Support\PermissionService;
 use App\Support\SettingsService;
 use Illuminate\Http\RedirectResponse;
@@ -81,7 +82,15 @@ class SettingsController extends Controller
                 $rule = ['required', 'integer', 'min:'.$min, 'max:'.$max];
             }
             if ($key === 'corpms.ai.base_url') {
-                $rule = ['nullable', 'string', 'url:http,https', 'max:2000'];
+                // AI-04/SEC-08: только whitelist/публичный хост, без IP и redirect-ловушек.
+                $rule = [
+                    'nullable', 'string', 'url:http,https', 'max:2000',
+                    function (string $attribute, mixed $value, callable $fail): void {
+                        if (is_string($value) && $value !== '' && ! AiEndpointGuard::isAllowed($value)) {
+                            $fail(__('Адрес провайдера AI должен быть публичным HTTPS-хостом из whitelist; IP и внутренние сети запрещены.'));
+                        }
+                    },
+                ];
             }
             $validator = Validator::make(['value' => $input[$key]], ['value' => $rule], [], ['value' => $meta['name']]);
             if ($validator->fails()) {

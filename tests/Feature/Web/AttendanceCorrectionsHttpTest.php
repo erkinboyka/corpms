@@ -189,6 +189,69 @@ class AttendanceCorrectionsHttpTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'attendance.correction.approved']);
     }
 
+    /** H-BL-03: повторное решение уже рассмотренной заявки — 422, а не двойное применение. */
+    public function test_double_decide_is_rejected(): void
+    {
+        $record = AttendanceRecord::create([
+            'employee_id' => $this->worker->id,
+            'date' => today()->toDateString(),
+            'clock_in_at' => today()->toDateString().' 09:20',
+            'clock_out_at' => null,
+        ]);
+
+        $this->post('/attendance/corrections', [
+            'employee_id' => $this->worker->id,
+            'date' => today()->toDateString(),
+            'field' => 'clock_out_at',
+            'new_value' => today()->toDateString().' 18:00',
+            'reason' => 'Уход не записался',
+        ])->assertRedirect();
+
+        $correction = AttendanceCorrection::query()->sole();
+        $this->post('/attendance/corrections/'.$correction->id.'/approve')->assertRedirect();
+        $this->from('/attendance/corrections')
+            ->post('/attendance/corrections/'.$correction->id.'/approve')
+            ->assertSessionHasErrors();
+
+        $record->refresh();
+        self::assertSame('18:00', $record->clock_out_at?->format('H:i'));
+        self::assertSame(1, AttendanceCorrection::query()->count());
+    }
+
+    public function test_approve_rejects_stale_correction_after_timesheet_changed(): void
+    {
+        $record = AttendanceRecord::create([
+            'employee_id' => $this->worker->id,
+            'date' => today()->toDateString(),
+            'clock_in_at' => today()->toDateString().' 09:20',
+            'clock_out_at' => null,
+        ]);
+
+        $this->from('/attendance/corrections')
+            ->post('/attendance/corrections', [
+                'employee_id' => $this->worker->id,
+                'date' => today()->toDateString(),
+                'field' => 'clock_out_at',
+                'new_value' => today()->toDateString().' 18:00',
+                'reason' => 'Уход не записался',
+            ])->assertRedirect('/attendance/corrections');
+
+        /** @var AttendanceCorrection $correction */
+        $correction = AttendanceCorrection::query()->sole();
+
+        // между подачей и согласованием запись изменили
+        $record->update(['clock_out_at' => today()->toDateString().' 17:00']);
+
+        $this->from('/attendance/corrections')
+            ->post('/attendance/corrections/'.$correction->id.'/approve')
+            ->assertRedirect('/attendance/corrections')
+            ->assertSessionHasErrors('field');
+
+        self::assertSame(CorrectionStatus::Pending->value, $correction->fresh()->status->value);
+        self::assertSame('17:00', $record->fresh()->clock_out_at->format('H:i'));
+        self::assertNull($correction->fresh()->decided_by);
+    }
+
     public function test_reject_keeps_timesheet_untouched(): void
     {
         AttendanceRecord::create([

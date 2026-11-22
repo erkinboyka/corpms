@@ -6,10 +6,12 @@ namespace Tests\Feature\Documents;
 
 use App\Domains\Documents\Services\DocumentService;
 use App\Domains\Documents\Services\SignatureService;
+use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Document;
 use App\Models\DocumentCategory;
+use App\Models\DocumentSignature;
 use App\Models\DocumentSignatureRequest;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
@@ -21,6 +23,7 @@ use App\Models\EmployeeRole;
 use App\Models\QrToken;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\WorkflowTransition;
 use App\Shared\Enums\SignatureStatus;
 use App\Shared\Enums\WorkflowState;
 use Database\Seeders\RbacSeeder;
@@ -65,6 +68,36 @@ class DocumentWorkflowTest extends TestCase
     }
 
     /* ---------------- шаблоны и создание ---------------- */
+
+    #[Test]
+    public function workflow_step_employee_uses_assigned_employee_not_author(): void
+    {
+        $document = $this->makeDraftDocument();
+
+        $workflow = DocumentWorkflow::create([
+            'company_id' => $this->company->id,
+            'name' => 'BL-21',
+            'is_active' => true,
+        ]);
+        $step = DocumentWorkflowStep::create([
+            'workflow_id' => $workflow->id,
+            'step_order' => 1,
+            'name' => 'Назначенный сотрудник',
+            'actor_type' => 'employee',
+            'employee_id' => $this->director->id,
+            'required_action' => 'approve',
+            'is_terminal' => true,
+        ]);
+
+        $actors = $this->service->actorsOfStep($step, $document);
+        $this->assertCount(1, $actors);
+        $this->assertSame($this->director->id, $actors->first()->id);
+        $this->assertFalse($this->service->isActorOfStep($this->author, $step, $document));
+        $this->assertTrue($this->service->isActorOfStep($this->director, $step, $document));
+
+        $step->update(['employee_id' => null]);
+        $this->assertCount(0, $this->service->actorsOfStep($step, $document));
+    }
 
     #[Test]
     public function render_template_substitutes_variables_and_requires_all(): void
@@ -157,6 +190,19 @@ class DocumentWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function double_approve_of_same_step_is_rejected(): void
+    {
+        $document = $this->preparedDocument(false);
+        $this->service->submit($this->author, $document->fresh());
+
+        $this->service->approve($this->author, $document->fresh());
+        self::assertSame('approved', $document->fresh()->status->value);
+
+        $this->expectException(LogicException::class);
+        $this->service->approve($this->author, $document->fresh());
+    }
+
+    #[Test]
     public function unauthorized_approver_cannot_decide(): void
     {
         $document = $this->preparedDocument(false);
@@ -244,6 +290,41 @@ class DocumentWorkflowTest extends TestCase
         // верный
         $signature = $signatureService->sign($this->author, $request->fresh(), otp: $code);
         $this->assertSame('valid', $signature->status->value);
+    }
+
+    #[Test]
+    public function internal_otp_is_blocked_after_five_bad_codes(): void
+    {
+        $document = $this->approvedDocument();
+        $signatureService = app(SignatureService::class);
+        $signatureService->requestSignatures($this->director, $document, [$this->author->id], requiresOtp: true);
+
+        $request = DocumentSignatureRequest::query()->where('document_id', $document->id)->firstOrFail();
+        $code = $signatureService->issueOtp($request);
+
+        for ($i = 0; $i < 5; $i++) {
+            try {
+                $signatureService->sign($this->author, $request->fresh(), otp: '000000');
+                $this->fail('Неверный OTP должен отклоняться');
+            } catch (RuntimeException) {
+                $this->assertTrue(true);
+            }
+        }
+
+        $meta = $request->fresh()->meta ?? [];
+        $this->assertSame(5, (int) ($meta['otp_attempts'] ?? 0));
+        $this->assertNotEmpty($meta['otp_blocked_at'] ?? null);
+
+        try {
+            $signatureService->sign($this->author, $request->fresh(), otp: $code);
+            $this->fail('Заблокированный OTP не должен принимать даже верный код');
+        } catch (RuntimeException) {
+            $this->assertTrue(true);
+        }
+
+        $this->assertSame(0, DocumentSignature::query()->count());
+        $this->assertSame(5, AuditLog::query()->where('action', 'signature.otp_failed')->count());
+        $this->assertSame(1, AuditLog::query()->where('action', 'signature.otp_blocked')->count());
     }
 
     /** OTP выпускается автоматически при запросе подписи и доставляется подписанту. */
@@ -360,6 +441,69 @@ class DocumentWorkflowTest extends TestCase
         // второй раз: токен one_time уже использован
         $this->expectException(RuntimeException::class);
         $signatureService->signByQrToken($this->author, $request, $plain);
+    }
+
+    #[Test]
+    public function qr_token_claim_is_rolled_back_when_signing_fails(): void
+    {
+        $document = $this->approvedDocument();
+        $signatureService = app(SignatureService::class);
+
+        $signatureService->requestSignatures($this->director, $document, [$this->author->id], requiresOtp: false, driver: 'qr_approval');
+        $request = DocumentSignatureRequest::query()->where('document_id', $document->id)->first();
+
+        $plain = 'qr_'.Str::random(40);
+        QrToken::create([
+            'created_by' => $this->author->id,
+            'token_hash' => hash('sha256', $plain),
+            'subject_type' => DocumentSignatureRequest::class,
+            'subject_id' => $request->id,
+            'purpose' => 'sign',
+            'one_time' => true,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        // Состояние, при котором sign() обязан отказать: запрос уже закрыт.
+        $request->update(['status' => 'signed']);
+
+        try {
+            $signatureService->signByQrToken($this->author, $request->fresh(), $plain);
+            $this->fail('Подпись должна быть отклонена');
+        } catch (LogicException) {
+            // ожидаемо
+        }
+
+        $this->assertNull(QrToken::query()->where('token_hash', hash('sha256', $plain))->sole()->used_at);
+        $this->assertSame(0, DocumentSignature::query()->count());
+
+        // Токен не потерян: после восстановления запроса им можно подписать.
+        $request->update(['status' => 'pending']);
+        $signature = $signatureService->signByQrToken($this->author, $request->fresh(), $plain);
+        $this->assertSame('valid', $signature->status->value);
+        $this->assertSame(1, DocumentSignature::query()->count());
+        $this->assertNotNull(QrToken::query()->where('token_hash', hash('sha256', $plain))->sole()->used_at);
+    }
+
+    #[Test]
+    public function prepare_qr_signature_rejects_status_outside_quick_qr_transition(): void
+    {
+        $document = $this->preparedDocument(false);
+        $this->service->submit($this->author, $document->fresh());
+
+        $this->assertSame('submitted', $document->fresh()->status->value);
+        $this->expectException(LogicException::class);
+
+        try {
+            app(SignatureService::class)->prepareQrSignature($this->author, $document->fresh());
+        } finally {
+            // Невалидный переход не должен попасть в историю и не менять статус.
+            $this->assertSame('submitted', $document->fresh()->status->value);
+            $this->assertSame(0, WorkflowTransition::query()
+                ->where('subject_type', 'document')
+                ->where('subject_id', $document->id)
+                ->where('to_status', 'signing')
+                ->count());
+        }
     }
 
     /* ---------------- helpers ---------------- */

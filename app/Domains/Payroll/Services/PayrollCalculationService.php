@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domains\Payroll\Services;
 
+use App\Domains\Workflow\WorkflowEngine;
 use App\Models\AttendanceRecord;
 use App\Models\Employee;
 use App\Models\EmployeeSalary;
 use App\Models\Holiday;
 use App\Models\LeaveRequest;
 use App\Models\PayrollLine;
+use App\Models\PayrollPayment;
 use App\Models\PayrollPeriod;
 use App\Models\SalaryComponent;
 use App\Models\User;
@@ -24,6 +26,7 @@ use App\Shared\Enums\PayrollPeriodStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use LogicException;
 
 /**
@@ -41,14 +44,38 @@ use LogicException;
  */
 class PayrollCalculationService
 {
+    /**
+     * Сотрудники, пропущенные при последнем расчёте (нет действующего оклада).
+     * Контроллер обязан показать это предупреждение пользователю и записать в аудит.
+     *
+     * @var list<string>
+     */
+    public array $skippedEmployees = [];
+
+    /** Референс платежей, созданных последней выплатой. */
+    public ?string $lastPaymentReference = null;
+
+    public function __construct(protected WorkflowEngine $engine) {}
+
     /** Пересчёт ведомости из табеля и окладов. Ручные строки (source=manual) сохраняются. */
     public function calculate(PayrollPeriod $period, User $actor): PayrollPeriod
     {
+        $this->skippedEmployees = [];
+
         return DB::transaction(function () use ($period, $actor): PayrollPeriod {
             $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
             if (in_array($period->status, [PayrollPeriodStatus::Draft, PayrollPeriodStatus::Calculated], true) === false) {
                 throw new LogicException(__('Пересчёт возможен только для черновика или рассчитанного периода'));
             }
+
+            // BL-10: переход проверяется декларативной машиной состояний до мутаций.
+            $fromStatus = $period->status->value;
+            $this->engine->assert(
+                WorkflowEngine::SUBJECT_PAYROLL,
+                $fromStatus,
+                PayrollPeriodStatus::Calculated->value,
+                __('Пересчёт возможен только для черновика или рассчитанного периода'),
+            );
 
             $start = $period->period_start->toDateString();
             $end = $period->period_end->toDateString();
@@ -56,6 +83,9 @@ class PayrollCalculationService
             $components = SalaryComponent::query()
                 ->where('company_id', $period->company_id)
                 ->where('is_active', true)
+                // BL-12: manual-компоненты создаются только ручной корректировкой,
+                // активный флаг не должен превращать их в авто-начисление для всех.
+                ->where('calculation', '!=', PayrollCalculation::Manual->value)
                 ->get();
 
             if ($components->isEmpty()) {
@@ -117,7 +147,11 @@ class PayrollCalculationService
                 /** @var EmployeeSalary|null $salary */
                 $salary = $salaries->get($employee->id)?->first();
                 if ($salary === null) {
-                    continue; // без оклада в периоде расчёт невозможен
+                    // Раньше молча пропускалось: ведомость выглядела полной, хотя
+                    // сотрудник не получил ни одной строки. Фиксируем и отдаём наверх.
+                    $this->skippedEmployees[] = trim($employee->last_name.' '.$employee->first_name).' (#'.$employee->employee_no.')';
+
+                    continue;
                 }
 
                 $base = (float) $salary->base_amount;
@@ -143,6 +177,14 @@ class PayrollCalculationService
             }
 
             $this->refreshTotals($period, $actor);
+            $this->engine->record(
+                WorkflowEngine::SUBJECT_PAYROLL,
+                $period->id,
+                $fromStatus,
+                PayrollPeriodStatus::Calculated->value,
+                'calculate',
+                $actor,
+            );
 
             return $period->refresh();
         });
@@ -234,11 +276,22 @@ class PayrollCalculationService
                 throw new LogicException(__('Согласовать можно только рассчитанную ведомость'));
             }
 
+            $fromStatus = $period->status->value;
+            $this->engine->assert(WorkflowEngine::SUBJECT_PAYROLL, $fromStatus, PayrollPeriodStatus::Approved->value);
+
             $period->update([
                 'status' => PayrollPeriodStatus::Approved,
                 'approved_at' => now(),
                 'approved_by' => $actor->id,
             ]);
+            $this->engine->record(
+                WorkflowEngine::SUBJECT_PAYROLL,
+                $period->id,
+                $fromStatus,
+                PayrollPeriodStatus::Approved->value,
+                'approve',
+                $actor,
+            );
 
             return $period->refresh();
         });
@@ -247,17 +300,67 @@ class PayrollCalculationService
     /** Выплата: approved → paid. Финальный статус, откатов нет. */
     public function pay(PayrollPeriod $period, User $actor): PayrollPeriod
     {
+        $this->lastPaymentReference = null;
+
         return DB::transaction(function () use ($period, $actor): PayrollPeriod {
             $period = PayrollPeriod::query()->whereKey($period->id)->lockForUpdate()->firstOrFail();
             if ($period->status !== PayrollPeriodStatus::Approved) {
                 throw new LogicException(__('Выплатить можно только согласованную ведомость'));
             }
 
+            $fromStatus = $period->status->value;
+            $this->engine->assert(WorkflowEngine::SUBJECT_PAYROLL, $fromStatus, PayrollPeriodStatus::Paid->value);
+
+            // BL-08: статус меняется только вместе с финансовыми записями.
+            $centsByEmployee = [];
+            foreach ($period->lines()->with('component')->get() as $line) {
+                $amountCents = (int) round(((float) $line->amount) * 100);
+                $isEarning = $line->component->kind === PayrollComponentKind::Earning;
+                $centsByEmployee[$line->employee_id] = ($centsByEmployee[$line->employee_id] ?? 0)
+                    + ($isEarning ? $amountCents : -$amountCents);
+            }
+
+            $payable = array_filter($centsByEmployee, static fn (int $cents): bool => $cents > 0);
+            if ($payable === [] || (float) $period->net_amount <= 0) {
+                throw new LogicException(__('Ведомость не содержит сумм к выплате'));
+            }
+
+            $reference = 'PAY-'.$period->id.'-'.strtoupper(Str::random(10));
+            $paidAt = now();
+            foreach ($payable as $employeeId => $cents) {
+                $currency = EmployeeSalary::query()
+                    ->where('employee_id', $employeeId)
+                    ->orderByDesc('effective_from')
+                    ->value('currency') ?: 'TJS';
+
+                PayrollPayment::create([
+                    'company_id' => $period->company_id,
+                    'period_id' => $period->id,
+                    'employee_id' => $employeeId,
+                    'amount' => $cents / 100,
+                    'currency' => $currency,
+                    'reference' => $reference,
+                    'paid_at' => $paidAt,
+                    'paid_by' => $actor->id,
+                ]);
+            }
+
             $period->update([
                 'status' => PayrollPeriodStatus::Paid,
-                'paid_at' => now(),
+                'paid_at' => $paidAt,
                 'paid_by' => $actor->id,
             ]);
+            $this->engine->record(
+                WorkflowEngine::SUBJECT_PAYROLL,
+                $period->id,
+                $fromStatus,
+                PayrollPeriodStatus::Paid->value,
+                'pay',
+                $actor,
+                $reference,
+            );
+
+            $this->lastPaymentReference = $reference;
 
             return $period->refresh();
         });

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -27,7 +28,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (\Illuminate\Support\Facades\DB::table('settings')->whereNotNull('company_id')->exists()) {
+        if (DB::table('settings')->whereNotNull('company_id')->exists()) {
             throw new RuntimeException('Cannot remove tenant scope while company settings exist. Export and resolve them first.');
         }
         // Возврат к unique(group, key) возможен только без перезаписей

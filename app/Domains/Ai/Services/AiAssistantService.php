@@ -10,9 +10,10 @@ use App\Domains\Audit\Services\AuditService;
 use App\Models\AiConversation;
 use App\Models\AttendanceRecord;
 use App\Models\Employee;
-use App\Models\Task;
+use App\Support\AiEndpointGuard;
 use App\Support\PermissionService;
 use App\Support\SettingsService;
+use App\Support\UntrustedContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -47,31 +48,38 @@ class AiAssistantService
         // D4 (RAG): релевантные фрагменты документов компании
         $rag = $this->ragContext($asker, $question);
 
-        $answer = null;
-        $usedLlm = $this->llmEnabled() && $this->llmAnswer($facts, $question, $history, $answer, false, $rag, $asker);
+        $llmAnswer = null;
+        $sourceItems = [];
+        $llmResponded = $this->llmEnabled()
+            && $this->llmAnswer($facts, $question, $history, $llmAnswer, false, $rag, $asker, $sourceItems);
 
-        if (! $usedLlm) {
-            $answer = $this->localAnalyst($facts, $question);
-        }
+        // AI-01: непустой текст без проверяемых источников не считается grounded
+        // и не подменяет детерминированный ответ по фактам.
+        $grounded = $sourceItems !== [];
+        $answer = $grounded ? (string) $llmAnswer : $this->localAnalyst($facts, $question);
+
+        $queryUsed = $facts;
+        $queryUsed['source_items'] = $sourceItems;
 
         $conversation = AiConversation::create([
             'employee_id' => $asker->id,
             'question' => $question,
             'answer' => $answer,
-            'query_used' => $facts,
-            // честный флаг: true — ответил LLM на фактах, false — локальный фолбэк
-            'grounded' => $usedLlm,
+            'query_used' => $queryUsed,
+            // AI-01/AI-02: true только при сохранённых проверяемых источниках
+            'grounded' => $grounded,
         ]);
 
         if ($asker->user !== null) {
             $this->audit->log($asker->user, 'ai.asked', 'ai_conversation', $conversation->id, null, [
                 'question' => $question,
-                'llm' => $usedLlm,
+                'llm' => $grounded,
+                'grounded' => $grounded,
             ]);
         }
 
-        // D3: LLM настроен, но синхронно не ответил — фоновый повтор в очереди
-        if (! $usedLlm) {
+        // D3: sources нет (LLM не ответил или ответил без ссылок) — фоновый повтор
+        if (! $grounded) {
             $this->queueRetry($conversation);
         }
 
@@ -98,8 +106,8 @@ class AiAssistantService
         $messages = [];
 
         foreach ($this->historyFor($asker, $limit, $excludeId)->reverse() as $item) {
-            $messages[] = ['role' => 'user', 'content' => (string) $item->question];
-            $messages[] = ['role' => 'assistant', 'content' => (string) $item->answer];
+            $messages[] = ['role' => 'user', 'content' => UntrustedContext::wrap('history', (string) $item->question)];
+            $messages[] = ['role' => 'assistant', 'content' => UntrustedContext::wrap('history', (string) $item->answer)];
         }
 
         return $messages;
@@ -137,17 +145,18 @@ class AiAssistantService
 
         $lines = [];
         foreach ($rag as $index => $item) {
-            $lines[] = sprintf(
+            $lines[] = UntrustedContext::wrap('rag:'.$item['document_id'], sprintf(
                 '%d. %s (%s): %s',
                 $index + 1,
                 $item['title'],
                 $item['number'],
                 $item['content'],
-            );
+            ));
         }
 
         return "\nРелевантные фрагменты документов компании (используй, только если они относятся к вопросу):\n"
-            .implode("\n", $lines);
+            .implode("\n", $lines)
+            ."\nЕсли ответ опирается на фрагмент, добавьте сразу после утверждения маркер [doc:N], где N — номер фрагмента из списка.";
     }
 
     /**
@@ -161,7 +170,9 @@ class AiAssistantService
         }
 
         try {
-            return $this->memory->contextBlock($asker);
+            $block = $this->memory->contextBlock($asker);
+
+            return trim($block) === '' ? '' : UntrustedContext::wrap('memory', $block);
         } catch (Throwable) {
             return '';
         }
@@ -221,8 +232,12 @@ class AiAssistantService
     {
         $settings = app(SettingsService::class);
 
-        return $settings->get('corpms.ai.base_url') !== ''
-            && $settings->get('corpms.ai.api_key') !== '';
+        $baseUrl = (string) $settings->get('corpms.ai.base_url');
+
+        return $baseUrl !== ''
+            && $settings->get('corpms.ai.api_key') !== ''
+            // даже унаследованная из БД настройка не должна стать SSRF-точкой
+            && AiEndpointGuard::isAllowed($baseUrl.'/chat/completions');
     }
 
     /**
@@ -235,8 +250,9 @@ class AiAssistantService
      * @param  array<int, array{document_id: int, title: string, number: string, score: float, content: string}>  $rag
      *
      * @param-out string|null $answerText
+     * @param-out array<int, array{type: string, label: string, url?: string}> $sourceItems
      */
-    protected function llmAnswer(array $facts, string $question, array $history = [], ?string &$answerText = null, bool $background = false, array $rag = [], ?Employee $asker = null): bool
+    protected function llmAnswer(array $facts, string $question, array $history = [], ?string &$answerText = null, bool $background = false, array $rag = [], ?Employee $asker = null, ?array &$sourceItems = null): bool
     {
         $settings = app(SettingsService::class);
         $baseUrl = rtrim((string) $settings->get('corpms.ai.base_url'), '/');
@@ -250,12 +266,13 @@ class AiAssistantService
         $system = 'Ты Bumi, ассистент HR-аналитики корпоративной системы. '
             .'Отвечай только на основе приведённых фактов; если фактов не хватает — скажи об этом. '
             .'Учитывай предыдущие реплики диалога: уточнения и местоимения относи к уже заданным вопросам.'
+            .UntrustedContext::RULE
             .$this->ragSystemMessage($rag)
             .$this->memoryContext($asker);
 
         $messages = [
             ['role' => 'system', 'content' => $system],
-            ['role' => 'system', 'content' => 'Факты: '.json_encode($facts, JSON_UNESCAPED_UNICODE)],
+            ['role' => 'system', 'content' => 'Факты: '.UntrustedContext::wrap('facts', (string) json_encode($facts, JSON_UNESCAPED_UNICODE))],
             ...array_slice($history, -12),
             ['role' => 'user', 'content' => $question],
         ];
@@ -272,7 +289,15 @@ class AiAssistantService
 
         $answerText = trim($content);
 
-        return true;
+        $ragSources = [];
+        $answerText = AiGrounding::applyRagCitations($rag, $answerText, $ragSources);
+        $toolSources = AiGrounding::normalize(
+            is_array($response['source_items'] ?? null) ? $response['source_items'] : [],
+        );
+        $sourceItems = AiGrounding::merge($toolSources, $ragSources);
+
+        // AI-01: успешный HTTP-ответ сам по себе grounded не означает.
+        return $sourceItems !== [];
     }
 
     /**
@@ -295,9 +320,14 @@ class AiAssistantService
             $payload['tool_choice'] = 'auto';
         }
 
+        if (! AiEndpointGuard::isAllowed($baseUrl.'/chat/completions')) {
+            return null;
+        }
+
         try {
             $response = Http::withToken($apiKey)
                 ->timeout($timeout)
+                ->withoutRedirecting()
                 ->post($baseUrl.'/chat/completions', $payload);
         } catch (Throwable) {
             return null;
@@ -315,6 +345,7 @@ class AiAssistantService
         $toolCalls = is_array($message['tool_calls'] ?? null) ? $message['tool_calls'] : [];
         if ($toolCalls === [] || $tools === [] || $asker === null) {
             unset($message['source_items']);
+
             return $message;
         }
 
@@ -348,6 +379,7 @@ class AiAssistantService
         try {
             $response = Http::withToken($apiKey)
                 ->timeout($timeout)
+                ->withoutRedirecting()
                 ->post($baseUrl.'/chat/completions', [
                     'model' => $model,
                     'messages' => $messages,
@@ -452,11 +484,18 @@ class AiAssistantService
             ? $this->ragContext($employee, (string) $conversation->question)
             : [];
 
-        if (! $this->llmAnswer($facts, (string) $conversation->question, $history, $answer, true, $rag, $employee)) {
-            return null;
+        $sourceItems = [];
+        if (! $this->llmAnswer($facts, (string) $conversation->question, $history, $answer, true, $rag, $employee, $sourceItems)) {
+            return null; // AI-05: источники не найдены — ответ и флаг не обновляем
         }
 
-        return ['answer' => $answer, 'grounded' => true];
+        $stored = $conversation->query_used;
+        if (! is_array($stored)) {
+            $stored = [];
+        }
+        $stored['source_items'] = $sourceItems;
+
+        return ['answer' => $answer, 'grounded' => true, 'query_used' => $stored];
     }
 
     /* -------------------- локальный аналитик -------------------- */

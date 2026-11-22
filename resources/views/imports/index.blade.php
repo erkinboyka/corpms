@@ -8,15 +8,15 @@
       <form method="post" action="{{ route('imports.upload') }}" enctype="multipart/form-data" class="row g-3">
         @csrf
         <div class="col-md-4">
-          <label class="form-label">{{ __('Тип данных') }}</label>
-          <select name="type" class="form-select">
+          <label class="form-label" for="imp-type">{{ __('Тип данных') }}</label>
+          <select id="imp-type" name="type" class="form-select">
             <option value="employees">{{ __('Сотрудники') }}</option>
             <option value="departments">{{ __('Отделы') }}</option>
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">{{ __('CSV файл') }}</label>
-          <input type="file" name="file" class="form-control" accept=".csv,.txt" required>
+          <label class="form-label" for="imp-file">{{ __('CSV файл') }}</label>
+          <input type="file" id="imp-file" name="file" class="form-control" accept=".csv,.txt" required>
         </div>
         <div class="col-md-2 d-flex align-items-end">
           <button class="btn btn-primary w-100" type="submit">{{ __('Загрузить') }}</button>

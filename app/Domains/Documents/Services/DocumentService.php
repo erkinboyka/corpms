@@ -15,6 +15,7 @@ use App\Models\DocumentWorkflowState;
 use App\Models\DocumentWorkflowStep;
 use App\Models\Employee;
 use App\Models\Role;
+use App\Support\NumberGenerator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -30,6 +31,7 @@ class DocumentService
     public function __construct(
         protected AuditService $audit,
         protected WorkflowEngine $engine,
+        protected NumberGenerator $numbers,
     ) {}
 
     /* -------------------- создание -------------------- */
@@ -241,8 +243,13 @@ class DocumentService
     public function decide(Employee $approver, Document $document, string $decision, ?string $comment): Document
     {
         return DB::transaction(function () use ($approver, $document, $decision, $comment) {
-            $from = $document->status->value;
-            $pivot = DocumentWorkflowState::query()->where('document_id', $document->id)->firstOrFail();
+            // H-BL-05: блокируем документ и текущее согласование внутри транзакции —
+            // параллельные approve/reject не должны дважды сдвинуть workflow.
+            $lockedDocument = Document::query()->whereKey($document->id)->lockForUpdate()->firstOrFail();
+            $from = $lockedDocument->status->value;
+            $pivot = DocumentWorkflowState::query()->where('document_id', $document->id)
+                ->lockForUpdate()
+                ->firstOrFail();
             $workflow = DocumentWorkflow::query()->findOrFail($pivot->workflow_id);
             $step = $this->step($workflow, $pivot->current_step);
 
@@ -250,6 +257,7 @@ class DocumentService
                 ->where('workflow_step_id', $step->id)
                 ->where('status', 'pending')
                 ->latest('id')
+                ->lockForUpdate()
                 ->first();
 
             if ($approval === null) {
@@ -307,18 +315,23 @@ class DocumentService
     /** Регистрация после полного согласования (п.35 ТЗ). */
     public function register(Employee $registrar, Document $document): Document
     {
-        $from = $document->status->value;
-        $this->engine->assert(WorkflowEngine::SUBJECT_DOCUMENT, $from, 'registered', __('Регистрировать можно только согласованный документ'));
+        // DB-07: статус, номер, workflow и аудит фиксируются одной транзакцией;
+        // блокировка строки документа не даёт зарегистрировать его дважды.
+        return DB::transaction(function () use ($registrar, $document) {
+            $document = Document::query()->lockForUpdate()->findOrFail($document->id);
+            $from = $document->status->value;
+            $this->engine->assert(WorkflowEngine::SUBJECT_DOCUMENT, $from, 'registered', __('Регистрировать можно только согласованный документ'));
 
-        $document->update([
-            'status' => 'registered',
-            'reg_number' => $this->nextRegNumber($document->company_id),
-        ]);
-        $this->engine->record(WorkflowEngine::SUBJECT_DOCUMENT, $document->id, $from, 'registered', 'register', $registrar->user, $document->reg_number);
+            $document->update([
+                'status' => 'registered',
+                'reg_number' => $this->nextRegNumber($document->company_id),
+            ]);
+            $this->engine->record(WorkflowEngine::SUBJECT_DOCUMENT, $document->id, $from, 'registered', 'register', $registrar->user, $document->reg_number);
 
-        $this->audit->log($registrar->user, 'document.registered', 'document', $document->id, null, ['reg_number' => $document->reg_number]);
+            $this->audit->log($registrar->user, 'document.registered', 'document', $document->id, null, ['reg_number' => $document->reg_number]);
 
-        return $document;
+            return $document;
+        });
     }
 
     public function archive(Employee $actor, Document $document): Document
@@ -381,7 +394,16 @@ class DocumentService
     public function actorsOfStep(DocumentWorkflowStep $step, Document $document): Collection
     {
         return match ($step->actor_type->value) {
-            'author', 'employee' => $document->author !== null ? collect([$document->author]) : collect(),
+            'author' => $document->author !== null ? collect([$document->author]) : collect(),
+            // BL-21: «employee» — конкретный сотрудник шага, никогда автор документа.
+            // Без назначенного сотрудника шаг остаётся недоступным (fail-closed).
+            'employee' => $step->employee_id !== null
+                ? Employee::query()
+                    ->whereKey((int) $step->employee_id)
+                    ->where('company_id', $document->company_id)
+                    ->where('status', 'active')
+                    ->get()
+                : collect(),
             'ceo' => $this->employeesByRoleSlug($document->company_id, 'company_director'),
             'role' => $this->employeesByRoleId($document->company_id, (int) $step->role_id),
             'department' => Employee::query()
@@ -421,14 +443,17 @@ class DocumentService
     protected function nextNumber(): string
     {
         $year = now()->format('Y');
-        $max = Document::query()->withTrashed()->whereYear('created_at', $year)->count();
+        $prefix = 'Д-'.$year.'-';
 
-        do {
-            $number = sprintf('Д-%s-%06d', $year, ++$max);
-            $taken = Document::query()->withTrashed()->where('document_number', $number)->exists();
-        } while ($taken);
+        // BL-07/DB-08: стартовое значение берём из максимального суффикса
+        // существующих номеров (включая soft-deleted), чтобы не пересечься
+        // с легаси-пропусками. Дальше номер выдаёт атомарная последовательность.
+        $value = $this->numbers->next('document.number', $year, fn () => $this->numbers->maxSuffix(
+            $prefix,
+            Document::query()->withTrashed()->where('document_number', 'like', $prefix.'%')->pluck('document_number'),
+        ));
 
-        return $number;
+        return sprintf('%s%06d', $prefix, $value);
     }
 
     /**
@@ -440,20 +465,16 @@ class DocumentService
     protected function nextRegNumber(int $companyId): string
     {
         $year = now()->format('Y');
-        $max = Document::query()->withTrashed()
-            ->where('company_id', $companyId)
-            ->whereNotNull('reg_number')
-            ->where('reg_number', 'like', __('Р-').$year.'-%')
-            ->count();
+        $prefix = 'Р-'.$year.'-';
 
-        do {
-            $regNumber = sprintf('Р-%s-%06d', $year, ++$max);
-            $taken = Document::query()->withTrashed()
+        $value = $this->numbers->next('document.reg_number.'.$companyId, $year, fn () => $this->numbers->maxSuffix(
+            $prefix,
+            Document::query()->withTrashed()
                 ->where('company_id', $companyId)
-                ->where('reg_number', $regNumber)
-                ->exists();
-        } while ($taken);
+                ->where('reg_number', 'like', $prefix.'%')
+                ->pluck('reg_number'),
+        ));
 
-        return $regNumber;
+        return sprintf('%s%06d', $prefix, $value);
     }
 }

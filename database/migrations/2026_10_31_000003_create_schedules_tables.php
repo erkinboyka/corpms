@@ -84,15 +84,18 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::enableForeignKeyConstraints();
+        // DB-01: удаление родителя, пока Employees всё ещё ссылается на него,
+        // ломает MySQL rollback.
+        // Сначала снимаем ссылку employees → work_schedules, затем дочерние
+        // таблицы и только потом родителя. Глобальные FK-переключатели не нужны.
+        Schema::table('employees', function (Blueprint $table): void {
+            $table->dropForeign(['work_schedule_id']);
+        });
+
         Schema::dropIfExists('leave_requests');
         Schema::dropIfExists('holidays');
         Schema::dropIfExists('schedule_shifts');
         Schema::dropIfExists('schedule_assignments');
         Schema::dropIfExists('work_schedules');
-        Schema::table('employees', function (Blueprint $table) {
-            $table->dropForeign(['work_schedule_id']);
-        });
-        Schema::disableForeignKeyConstraints();
     }
 };

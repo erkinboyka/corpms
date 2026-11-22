@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Models\AppNotification;
+use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentCategory;
@@ -127,12 +129,37 @@ class SignatureQrHttpTest extends TestCase
             ->assertSee($signature->signature_id);
     }
 
+    public function test_qr_page_shows_both_deadlines_and_sanitized_content(): void
+    {
+        $document = $this->makeDocument('QR с содержимым');
+        $document->update(['body' => '<p>Тело для проверки перед подписью</p><script>alert(1)</script>']);
+        $token = $this->issueToken($document);
+
+        $this->app['auth']->guard()->logout();
+
+        $this->get('/sign/'.$token)
+            ->assertOk()
+            ->assertSee('QR-ссылка действительна до')
+            ->assertSee('Код подтверждения действует до')
+            ->assertSee('Тело для проверки перед подписью')
+            ->assertDontSee('<script>alert(1)</script>', false);
+
+        QrToken::query()
+            ->where('token_hash', hash('sha256', $token))
+            ->update(['expires_at' => now()->subMinute()]);
+
+        $this->get('/sign/'.$token)
+            ->assertOk()
+            ->assertSee('QR-код недействителен')
+            ->assertDontSee('Тело для проверки перед подписью');
+    }
+
     public function test_qr_signing_requires_delivered_code(): void
     {
         $document = $this->makeDocument('Подпись только по коду');
         $token = $this->issueToken($document);
 
-        $notification = \App\Models\AppNotification::query()
+        $notification = AppNotification::query()
             ->where('type', 'signature.otp')->latest()->first();
         $this->assertNotNull($notification);
         $this->assertStringContainsString($this->lastCode, (string) $notification->body);
@@ -144,6 +171,29 @@ class SignatureQrHttpTest extends TestCase
 
         $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertRedirect();
         $this->assertSame(1, DocumentSignature::query()->count());
+    }
+
+    public function test_five_bad_codes_revoke_qr_token_and_are_audited(): void
+    {
+        $document = $this->makeDocument('QR с лимитом OTP');
+        $token = $this->issueToken($document);
+
+        $this->app['auth']->guard()->logout();
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->post('/sign/'.$token, ['otp_code' => '000000'])->assertSessionHasErrors('field');
+        }
+
+        $qr = QrToken::query()->where('token_hash', hash('sha256', $token))->sole();
+        $this->assertSame(5, (int) ($qr->meta['otp_attempts'] ?? 0));
+        $this->assertNotNull($qr->revoked_at);
+
+        // Даже правильный код больше не помогает.
+        $this->post('/sign/'.$token, ['otp_code' => $this->lastCode])->assertSessionHasErrors('field');
+        $this->assertSame(0, DocumentSignature::query()->count());
+
+        $this->assertSame(5, AuditLog::query()->where('action', 'signature.otp_failed')->count());
+        $this->assertSame(1, AuditLog::query()->where('action', 'signature.otp_blocked')->count());
     }
 
     public function test_qr_token_is_one_time_and_cannot_sign_twice(): void

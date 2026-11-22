@@ -17,6 +17,7 @@ class CertificateService
         if ($fingerprint === false) {
             return null;
         }
+
         return [
             'subject' => $cert['subject']['CN'] ?? ($cert['name'] ?? null),
             'issuer' => $cert['issuer']['CN'] ?? null,
@@ -41,6 +42,7 @@ class CertificateService
         if (isset($meta['valid_to']) && strtotime($meta['valid_to']) < $now) {
             return false;
         }
+
         return true;
     }
 
@@ -56,6 +58,7 @@ class CertificateService
             return false;
         }
         $result = openssl_verify($data, $signature, $pubKey, OPENSSL_ALGO_SHA256);
+
         return $result === 1;
     }
 }

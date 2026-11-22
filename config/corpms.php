@@ -14,6 +14,8 @@ return [
         'require_liveness' => env('CORPMS_BIO_REQUIRE_LIVENESS', true),
         // минуты offline до пометки устройства offline
         'offline_after_minutes' => env('CORPMS_BIO_OFFLINE_MINUTES', 15),
+        // SEC-09: срок хранения исходного payload события (дней); журнал событий сохраняется
+        'raw_payload_retention_days' => max(1, (int) env('CORPMS_BIO_RAW_TTL_DAYS', 30)),
     ],
 
     'tasks' => [
@@ -36,7 +38,7 @@ return [
     'telegram' => [
         // Bot API токен (п.66 ТЗ)
         'bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
-        // секрет для маршрута /api/telegram/webhook
+        // секрет проверяется в заголовке X-Telegram-Bot-Api-Secret-Token; в URL не передаётся
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET', ''),
         // username бота для deep-link
         'bot_username' => env('TELEGRAM_BOT_USERNAME', 'CorpMS_bot'),
@@ -50,6 +52,10 @@ return [
     'ai' => [
         // AI-модуль (п.68 ТЗ): базовый URL OpenAI-совместимого API
         'base_url' => env('AI_BASE_URL', ''),
+        // AI-04/SEC-08: явный whitelist хостов провайдера (через запятую).
+        // Пусто — допускается только хост из AI_BASE_URL и немаршрутизируемые
+        // тестовые TLD; IP-литералы и частные сети запрещены всегда.
+        'allowed_hosts' => env('AI_ALLOWED_HOSTS', ''),
         'api_key' => env('AI_API_KEY', ''),
         'model' => env('AI_MODEL', 'gpt-4o-mini'),
         'image_model' => env('AI_IMAGE_MODEL', ''),

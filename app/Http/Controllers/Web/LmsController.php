@@ -16,11 +16,11 @@ use App\Models\LmsMessage;
 use App\Models\LmsSubmission;
 use App\Models\LmsWhiteboard;
 use App\Models\LmsWhiteboardElement;
+use App\Support\EntityPhotoService;
 use App\Support\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class LmsController extends Controller
@@ -222,12 +222,12 @@ class LmsController extends Controller
             'description' => ['nullable', 'string'],
             'cover_color' => ['nullable', 'string', 'max:16'],
             'publish' => ['sometimes', 'boolean'],
-            'photo' => app(\App\Support\EntityPhotoService::class)->rules(),
+            'photo' => app(EntityPhotoService::class)->rules(),
             'reset_photo' => ['nullable', 'boolean'],
         ]);
 
         $course = $this->lms->createCourse($data, $request->user(), $this->me($request));
-        app(\App\Support\EntityPhotoService::class)->sync($course, $request, 'lms-courses');
+        app(EntityPhotoService::class)->sync($course, $request, 'lms-courses');
 
         return redirect()->route('lms.courses.show', $course)->with('status', __('Курс создан'));
     }
@@ -393,12 +393,12 @@ class LmsController extends Controller
             'lesson_id' => ['nullable', 'integer', 'exists:lms_lessons,id'],
             'due_at' => ['nullable', 'date'],
             'max_score' => ['nullable', 'integer', 'min:1', 'max:1000'],
-            'photo' => app(\App\Support\EntityPhotoService::class)->rules(),
+            'photo' => app(EntityPhotoService::class)->rules(),
             'reset_photo' => ['nullable', 'boolean'],
         ]);
 
         $assignment = $this->lms->createAssignment($data, $request->user(), $this->me($request));
-        app(\App\Support\EntityPhotoService::class)->sync($assignment, $request, 'lms-assignments');
+        app(EntityPhotoService::class)->sync($assignment, $request, 'lms-assignments');
 
         return redirect()->route('lms.assignments.index')->with('status', __('Задание создано'));
     }

@@ -70,6 +70,7 @@ class RfidService
         return DB::transaction(function () use ($device, $eventUuid, $cardUid, $direction, $timestamp) {
             // 1. идемпотентность
             $existing = BiometricEvent::query()
+                ->where('company_id', $device->company_id)
                 ->where('event_uuid', $eventUuid)
                 ->where('template_type', 'rfid')
                 ->first();
@@ -149,6 +150,7 @@ class RfidService
     ): BiometricEvent {
         return BiometricEvent::query()->create([
             'device_id' => $device->id,
+            'company_id' => $device->company_id,
             'employee_id' => $employee?->id,
             'event_uuid' => $eventUuid,
             'occurred_at' => $timestamp,

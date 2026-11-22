@@ -20,10 +20,13 @@ use App\Support\EntityPhotoService;
 use App\Support\EnumLabels;
 use App\Support\PermissionService;
 use App\Support\QrCodeGenerator;
+use App\Support\SearchQuery;
 use App\Support\SettingsService;
 use App\Support\TenantGuard;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -76,13 +79,10 @@ class DocumentController extends Controller
         }
 
         // Поиск по номеру/названию/регномеру (в рамках своей компании и scope)
-        $search = trim((string) $request->input('q'));
+        $searchQuery = SearchQuery::fromRequest($request);
+        $search = $searchQuery->value;
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('document_number', 'like', "%{$search}%")
-                    ->orWhere('reg_number', 'like', "%{$search}%");
-            });
+            $query->where(fn ($q) => $searchQuery->applyLike($q, ['title', 'document_number', 'reg_number']));
         }
 
         // Метрики считаются по всем записям scope, а не по текущей странице
@@ -354,7 +354,7 @@ class DocumentController extends Controller
         return back()->with('status', __('Запросы подписи созданы'));
     }
 
-    public function sign(Request $request, Document $document, DocumentSignatureRequest $signatureRequest): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function sign(Request $request, Document $document, DocumentSignatureRequest $signatureRequest): RedirectResponse|JsonResponse
     {
         $me = $request->user()->employee;
         if ($me === null) {
@@ -371,12 +371,14 @@ class DocumentController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
+
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
         if ($request->expectsJson()) {
             return response()->json(['message' => 'Документ подписан. Номер подписи: '.$signature->signature_id]);
         }
+
         return back()->with('status', __('Документ подписан'));
     }
 
@@ -470,6 +472,11 @@ class DocumentController extends Controller
         $resolved = $this->signatures->resolveQrSignToken($token);
 
         if ($resolved !== null) {
+            $tokenMeta = $resolved['token']->meta ?? [];
+            $otpExpiresAt = isset($tokenMeta['otp_expires_at'])
+                ? Carbon::parse($tokenMeta['otp_expires_at'])
+                : null;
+
             return view('signatures.qr-sign', [
                 'token' => $token,
                 'signer' => $resolved['signer'],
@@ -477,6 +484,8 @@ class DocumentController extends Controller
                 'request' => $resolved['request'],
                 'version' => $resolved['document']->currentVersion,
                 'expiresAt' => $resolved['token']->expires_at,
+                'otpExpiresAt' => $otpExpiresAt,
+                'documentBody' => $resolved['document']->body,
             ]);
         }
 

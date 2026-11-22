@@ -42,7 +42,16 @@ class AiQueueRecoveryTest extends TestCase
     public function test_recovery_archives_failure_before_removing_it_and_updates_answer(): void
     {
         $conversation = $this->failedJob();
-        Http::fake(['recovery.example/*' => Http::response(['choices' => [['message' => ['content' => 'Ответ восстановлен']]]])]);
+        Http::fake(['recovery.example/*' => Http::sequence()
+            ->push(['choices' => [['message' => [
+                'content' => null,
+                'tool_calls' => [[
+                    'id' => 'call_recovery',
+                    'type' => 'function',
+                    'function' => ['name' => 'task_stats', 'arguments' => '{}'],
+                ]],
+            ]]]])
+            ->push(['choices' => [['message' => ['content' => 'Ответ восстановлен']]]])]);
         $this->artisan('corpms:ai-recover')->assertExitCode(0);
         $this->assertTrue($conversation->fresh()->grounded);
         $this->assertDatabaseCount('failed_jobs', 0);

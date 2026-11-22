@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Web;
 
 use App\Models\AttendanceRecord;
+use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
@@ -12,12 +13,16 @@ use App\Models\EmployeeRole;
 use App\Models\EmployeeSalary;
 use App\Models\LeaveRequest;
 use App\Models\PayrollLine;
+use App\Models\PayrollPayment;
 use App\Models\PayrollPeriod;
 use App\Models\Role;
 use App\Models\SalaryComponent;
 use App\Models\User;
+use App\Models\WorkflowTransition;
+use App\Support\SingleFlightLock;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -190,6 +195,25 @@ class PayrollHttpTest extends TestCase
         $this->assertDatabaseCount('payroll_periods', 1);
     }
 
+    /** H-BL-01: пока другой запрос держит лок компании, ответ — 422, а не 500/дубль. */
+    public function test_period_create_respects_single_flight_lock(): void
+    {
+        $lockKey = 'payroll:period:'.$this->company->id;
+        $token = SingleFlightLock::acquire($lockKey);
+        self::assertNotNull($token);
+
+        try {
+            $this->post('/payroll', ['month' => '2026-10'])->assertSessionHasErrors('month');
+        } finally {
+            SingleFlightLock::release($lockKey, $token);
+        }
+
+        $this->assertDatabaseCount('payroll_periods', 0);
+
+        $this->post('/payroll', ['month' => '2026-10'])->assertRedirect();
+        $this->assertDatabaseCount('payroll_periods', 1);
+    }
+
     /** Детерминированный расчёт: 5000 оклад + 8ч×15 сверхурочных − 1000 аванс − 10% налог. */
     public function test_calculate_from_timesheet_is_deterministic(): void
     {
@@ -343,6 +367,54 @@ class PayrollHttpTest extends TestCase
         $this->assertSame('paid', $period->refresh()->status->value);
     }
 
+    /** BL-10: calculate/approve/pay пишут переходы в единый WorkflowEngine. */
+    public function test_payroll_lifecycle_is_journaled_in_workflow_engine(): void
+    {
+        $period = $this->fullFixture();
+
+        $this->post('/payroll/periods/'.$period->id.'/calculate')->assertRedirect();
+        $this->post('/payroll/periods/'.$period->id.'/approve')->assertRedirect();
+        $this->post('/payroll/periods/'.$period->id.'/pay')->assertRedirect();
+
+        $transitions = WorkflowTransition::query()
+            ->where('subject_type', 'payroll_period')
+            ->where('subject_id', $period->id)
+            ->orderBy('id')
+            ->get(['from_status', 'to_status', 'action', 'actor_user_id'])
+            ->map(fn ($t) => [
+                'from_status' => $t->from_status,
+                'to_status' => $t->to_status,
+                'action' => $t->action,
+                'actor_user_id' => (int) $t->actor_user_id,
+            ])->all();
+
+        $this->assertSame([
+            ['from_status' => 'draft', 'to_status' => 'calculated', 'action' => 'calculate', 'actor_user_id' => $this->adminUser->id],
+            ['from_status' => 'calculated', 'to_status' => 'approved', 'action' => 'approve', 'actor_user_id' => $this->adminUser->id],
+            ['from_status' => 'approved', 'to_status' => 'paid', 'action' => 'pay', 'actor_user_id' => $this->adminUser->id],
+        ], $transitions);
+    }
+
+    /** BL-12: активный manual-компонент не становится авто-начислением для всех. */
+    public function test_active_manual_component_is_not_auto_accrued(): void
+    {
+        $period = $this->fullFixture();
+        $manual = SalaryComponent::create([
+            'company_id' => $this->company->id,
+            'code' => 'MANUAL_BONUS',
+            'name' => 'Ручная премия',
+            'kind' => 'earning',
+            'calculation' => 'manual',
+            'rate' => 9999,
+            'is_active' => true,
+        ]);
+
+        $this->post('/payroll/periods/'.$period->id.'/calculate')->assertRedirect();
+
+        $this->assertSame(0, PayrollLine::query()->where('component_id', $manual->id)->count());
+        $this->assertSame(4, PayrollLine::query()->where('period_id', $period->id)->count());
+    }
+
     /** Экспорт CSV: UTF-8 BOM, разделитель «;», итоги в конце. */
     public function test_csv_export_has_bom_and_totals(): void
     {
@@ -475,5 +547,86 @@ class PayrollHttpTest extends TestCase
             'rate' => 500,
         ])->assertSessionHasErrors('code');
         $this->assertDatabaseCount('salary_components', 1);
+    }
+
+    public function test_pay_creates_immutable_payment_ledger_per_employee(): void
+    {
+        $period = $this->fullFixture();
+        $this->post('/payroll/periods/'.$period->id.'/calculate')->assertRedirect();
+        $this->post('/payroll/periods/'.$period->id.'/approve')->assertRedirect();
+        $this->post('/payroll/periods/'.$period->id.'/pay')->assertRedirect();
+
+        $this->assertSame('paid', $period->fresh()->status->value);
+        $payments = PayrollPayment::query()->where('period_id', $period->id)->get();
+        $this->assertCount(1, $payments);
+        $this->assertEquals(3620.0, (float) $payments->sole()->amount);
+        $this->assertMatchesRegularExpression('/^PAY-\d+-[A-Z0-9]{10}$/', (string) $payments->sole()->reference);
+
+        $audit = AuditLog::query()->where('action', 'payroll.paid')->sole();
+        $this->assertSame($payments->sole()->reference, $audit->new_value['reference']);
+        $this->assertSame(1, $audit->new_value['payments']);
+    }
+
+    public function test_pay_rejects_zero_amount_without_financial_records(): void
+    {
+        $period = $this->makePeriod();
+        $period->forceFill(['status' => 'approved', 'net_amount' => 0])->save();
+
+        $this->post('/payroll/periods/'.$period->id.'/pay')->assertSessionHasErrors('field');
+
+        $this->assertSame('approved', $period->fresh()->status->value);
+        $this->assertSame(0, PayrollPayment::query()->where('period_id', $period->id)->count());
+    }
+
+    public function test_calculate_warns_about_employees_without_salary(): void
+    {
+        $period = $this->fullFixture();
+        $noSalary = $this->makeEmployee('E-9', 'Без', 'Оклада');
+
+        $response = $this->post('/payroll/periods/'.$period->id.'/calculate')->assertRedirect();
+
+        $status = (string) $response->getSession()->get('status');
+        $this->assertStringContainsString('Оклада Без', $status);
+        $this->assertStringContainsString('пропущены', $status);
+
+        $audit = AuditLog::query()->where('action', 'payroll.calculated')->sole();
+        $this->assertNotEmpty($audit->new_value['skipped_employees']);
+        $this->assertStringContainsString('E-9', implode(' ', $audit->new_value['skipped_employees']));
+        $this->assertNotContains($noSalary->id, $period->lines()->pluck('employee_id')->all());
+    }
+
+    public function test_salary_periods_never_overlap_including_backdate_and_same_day(): void
+    {
+        $employee = $this->makeEmployee('S-1', 'Оклад', 'Тест');
+        $set = static fn (string $from, int $amount) => [
+            'employee_id' => $employee->id,
+            'base_amount' => $amount,
+            'currency' => 'TJS',
+            'effective_from' => $from,
+        ];
+
+        $this->post('/payroll/salaries', $set('2026-01-01', 1000))->assertRedirect();
+        $this->post('/payroll/salaries', $set('2026-06-01', 2000))->assertRedirect();
+        $this->post('/payroll/salaries', $set('2026-03-01', 1500))->assertRedirect();
+        // Повтор на ту же дату перезаписывает сумму, а не создаёт строку.
+        $this->post('/payroll/salaries', $set('2026-03-01', 1700))->assertRedirect();
+
+        $rows = EmployeeSalary::query()->where('employee_id', $employee->id)->orderBy('effective_from')->get();
+        $this->assertCount(3, $rows);
+        foreach ($rows->values() as $index => $row) {
+            $next = $rows->get($index + 1);
+            if ($next !== null) {
+                $this->assertTrue(
+                    $row->effective_to !== null && $row->effective_to->lt($next->effective_from),
+                    'Периоды оклада не должны пересекаться',
+                );
+            }
+        }
+        $this->assertNull($rows->last()->effective_to);
+        $this->assertSame(1700.0, (float) $rows->get(1)->base_amount);
+        $this->assertSame(1, DB::table('employee_salaries')
+            ->where('employee_id', $employee->id)
+            ->whereNull('effective_to')
+            ->count());
     }
 }

@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Support\PermissionService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -63,8 +64,8 @@ class ReportController extends Controller
 
         $rows = $ids === [] ? collect() : AttendanceRecord::query()
             ->whereIn('employee_id', $ids)
-            ->whereDate('date', '>=', $from->toDateString())
-            ->whereDate('date', '<=', $to->toDateString())
+            ->where('date', '>=', $from->startOfDay())
+            ->where('date', '<=', $to->endOfDay())
             ->selectRaw('employee_id, count(*) as days_worked')
             ->selectRaw('sum(late_minutes) as late_total')
             ->selectRaw('sum(early_leave_minutes) as early_total')
@@ -194,6 +195,13 @@ class ReportController extends Controller
             [$from, $to] = [$to, $from];
         }
 
+        // PERF-07/DB-S2: диапазон в столетия создаёт тяжёлые агрегаты.
+        if ($from->diffInDays($to) > 366) {
+            throw ValidationException::withMessages([
+                'to' => __('Максимальный период отчёта — 366 дней.'),
+            ]);
+        }
+
         return [$from, $to];
     }
 
@@ -216,8 +224,8 @@ class ReportController extends Controller
         $ids = $employees->pluck('id')->all();
         $aggregates = $ids === [] ? collect() : AttendanceRecord::query()
             ->whereIn('employee_id', $ids)
-            ->whereDate('date', '>=', $from->toDateString())
-            ->whereDate('date', '<=', $to->toDateString())
+            ->where('date', '>=', $from->startOfDay())
+            ->where('date', '<=', $to->endOfDay())
             ->selectRaw('employee_id, count(*) c, sum(late_minutes) late, sum(early_leave_minutes) early, sum(overtime_minutes) over_sum, sum(case when clock_out_at is null then 1 else 0 end) open')
             ->groupBy('employee_id')
             ->get()

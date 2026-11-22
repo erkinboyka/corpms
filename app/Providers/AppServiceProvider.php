@@ -4,12 +4,15 @@ namespace App\Providers;
 
 use App\Domains\Attendance\Events\AttendanceRecorded;
 use App\Domains\Attendance\Listeners\NotifyOnLateArrival;
+use App\Http\Middleware\BoostBrowserLogsGuard;
 use App\Support\EnumLabels;
 use App\Support\PermissionService;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // TEST-04: в production генерируем только HTTPS-ссылки даже если
+        // запрос пришёл от proxy без корректного X-Forwarded-Proto.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         // Bootstrap-разметка пейджера (Tabler) вместо tailwind-видов Laravel по умолчанию
         Paginator::defaultView('pagination::tabler');
         Paginator::defaultSimpleView('pagination::tabler');
@@ -49,6 +58,15 @@ class AppServiceProvider extends ServiceProvider
             return is_string($permission) && $permission !== ''
                 ? app(PermissionService::class)->check($user, $permission)
                 : false;
+        });
+
+        // SEC-04: vendor-роут Boost регистрируется до загрузки наших routes;
+        // навешиваем guard после полной регистрации всех маршрутов.
+        $this->app->booted(function (): void {
+            $route = Route::getRoutes()->getByName('boost.browser-logs');
+            if ($route !== null) {
+                $route->middleware(['throttle:10,1', BoostBrowserLogsGuard::class]);
+            }
         });
     }
 }

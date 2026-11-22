@@ -32,6 +32,8 @@ $user = User::where('email', 'ceo@corpms.demo')->firstOrFail();
 $company = $user->employee->company_id;
 $now = now()->toDateTimeString();
 DB::transaction(function () use ($company, $user, $now): void {
+    // The browser smoke starts from an already onboarded demo company.
+    DB::table('companies')->where('id', $company)->update(['onboarding_completed_at' => $now]);
     // Exercise currency-separated summaries instead of accepting only empty money states.
     foreach (['RUB', 'USD'] as $currency) {
         $account = DB::table('fin_accounts')->insertGetId(['company_id' => $company,

@@ -391,9 +391,9 @@
                         <div class="crm-timeline__time">{{ $history->created_at?->format('d.m H:i') }}</div>
                         <div class="crm-timeline__title">
                             @if ($history->from_status !== null)
-                                {{ $history->from_status }} →
+                                {{ $crm_label('task_status', $history->from_status) }} →
                             @endif
-                            <strong>{{ $history->to_status }}</strong>
+                            <strong>{{ $crm_label('task_status', $history->to_status) }}</strong>
                         </div>
                         @if ($history->comment !== null)
                             <div class="crm-timeline__text">{{ Str::limit($history->comment, 90) }}</div>

@@ -2,11 +2,10 @@
     $groups = [];
     $current = request()->route()?->getName();
     $active = \App\Support\Sidebar::activeRoute($current);
-    $icons = [__('Обзор') => 'layout-dashboard', __('Работа') => 'briefcase', __('Люди') => 'users', __('Клиенты') => 'address-book', __('Операции') => 'package', __('Финансы') => 'wallet', __('Документы') => 'files', __('Аналитика') => 'chart-bar', __('Администрирование') => 'adjustments'];
     foreach ($navItems as $entry) {
         if ($entry['type'] === 'section') {
             $section = $entry['label'];
-            $groups[$section] = ['active' => false, 'entries' => []];
+            $groups[$section] = ['active' => false, 'icon' => $entry['icon'] ?? 'folder', 'entries' => []];
             continue;
         }
         $groups[$section]['entries'][] = $entry;
@@ -30,11 +29,11 @@
         <nav aria-label="{{ __("Разделы платформы") }}">
             @foreach ($groups as $label => $group)
                 <details class="bm-dock__group" @if ($group['active']) open @endif>
-                    <summary aria-label="{{ $label }}" title="{{ $label }}"><i class="ti ti-{{ $icons[$label] ?? 'folder' }}"></i><span>{{ $label }}</span><i class="ti ti-chevron-down"></i></summary>
+                    <summary aria-label="{{ $label }}" title="{{ $label }}"><i class="ti ti-{{ $group['icon'] ?? 'folder' }}"></i><span>{{ $label }}</span><i class="ti ti-chevron-down"></i></summary>
                     <div class="bm-dock__links">
                         @foreach ($group['entries'] as $entry)
                             @if (isset($entry['children']) && count($group['entries']) > 1)
-                                <div class="bm-dock__caption">{{ $entry['title'] }}</div>
+                                <div class="bm-dock__caption">@if (!empty($entry['icon']))<i class="ti ti-{{ $entry['icon'] }}" aria-hidden="true"></i> @endif{{ $entry['title'] }}</div>
                             @endif
                             @foreach ($entry['children'] ?? [$entry] as $link)
                                 <a href="{{ route($link['route']) }}" @if ($link['route'] === $active) aria-current="{{ $current === $active ? 'page' : 'location' }}" @endif>{{ $link['title'] }}</a>

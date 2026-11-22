@@ -55,6 +55,16 @@
 }
 .crm-select.is-open .crm-select__arrow { transform: rotate(180deg); }
 .crm-select.is-open .crm-select__trigger { border-color: var(--crm-accent); box-shadow: var(--crm-focus-ring); }
+/* Секции идут одна за другой и имеют position: relative: без подъёма открытой
+   секции её выпадающий список оказывается под следующей секцией. */
+.crm-select.is-open { z-index: 60; }
+.crm-form__section:has(.crm-select.is-open),
+.card:has(.crm-select.is-open) { position: relative; z-index: 60; }
+/* workspace.css задаёт details::details-content { overflow: clip } для
+   анимации раскрытия — без исключения меню внутри секции обрезается. */
+@supports selector(details::details-content) {
+    .crm-app main details:has(.crm-select.is-open)::details-content { overflow: visible; }
+}
 .crm-select.is-invalid .crm-select__trigger { border-color: var(--crm-danger); }
 
 .crm-select__menu {

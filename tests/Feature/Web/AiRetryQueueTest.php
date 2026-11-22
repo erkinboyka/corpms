@@ -12,6 +12,7 @@ use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\UntrustedContext;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -126,7 +127,7 @@ class AiRetryQueueTest extends TestCase
 
     /* -------------------- выполнение повтора -------------------- */
 
-    public function test_retry_job_upgrades_fallback_answer_to_grounded_llm(): void
+    public function test_retry_without_sources_does_not_upgrade_grounded(): void
     {
         $this->enableLlm();
 
@@ -135,7 +136,7 @@ class AiRetryQueueTest extends TestCase
             'employee_id' => $this->adminEmployee->id,
             'question' => 'Есть ли опоздания сегодня?',
             'answer' => 'Локальный фолбэк: сегодня опоздали 1.',
-            'query_used' => ['scope' => 'company'],
+            'query_used' => ['scope' => 'company', 'source_items' => []],
             'grounded' => false,
         ]);
 
@@ -148,29 +149,27 @@ class AiRetryQueueTest extends TestCase
             'grounded' => true,
         ]);
 
-        // LLM снова доступен — job выполняется
+        // AI-05: LLM снова доступен, но не привёл источников — флаг не повышается
         Http::fake([
             'llm.example.com/v1/chat/completions' => Http::response([
                 'choices' => [['message' => ['content' => 'Финальный ответ LLM.']]],
             ]),
         ]);
 
-        (new RetryAiAnswer($conversation->id))->handle();
+        self::assertFalse(app(AiAssistantService::class)->retryLlm($conversation));
 
         $conversation->refresh();
-        self::assertTrue((bool) $conversation->grounded, 'Повтор должен обновить grounded');
-        self::assertSame('Финальный ответ LLM.', (string) $conversation->answer);
+        self::assertFalse((bool) $conversation->grounded);
+        self::assertSame('Локальный фолбэк: сегодня опоздали 1.', (string) $conversation->answer);
 
         // контекст повтора: старая реплика есть, фолбэк-ответ текущего диалога — нет
         Http::assertSent(function ($request): bool {
             $contents = array_column($request->data()['messages'], 'content');
 
-            return in_array('Старый вопрос о численности', $contents, true)
-                && in_array('Старый ответ ассистента', $contents, true)
+            return in_array(UntrustedContext::wrap('history', 'Старый вопрос о численности'), $contents, true)
+                && in_array(UntrustedContext::wrap('history', 'Старый ответ ассистента'), $contents, true)
                 && ! in_array('Локальный фолбэк: сегодня опоздали 1.', $contents, true);
         });
-
-        $this->assertDatabaseHas('audit_logs', ['action' => 'ai.retried']);
     }
 
     public function test_retry_job_skips_when_already_grounded(): void
@@ -206,9 +205,16 @@ class AiRetryQueueTest extends TestCase
         ]);
 
         Http::fake([
-            'llm.example.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => "Численность: 2.\n```json\n{\"blocks\":[{\"type\":\"chart\",\"title\":\"Численность\",\"data\":[{\"label\":\"Активных\",\"value\":2}]}]}\n```"]]],
-            ]),
+            'llm.example.com/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'content' => null,
+                    'tool_calls' => [[
+                        'id' => 'call_panel_retry',
+                        'type' => 'function',
+                        'function' => ['name' => 'task_stats', 'arguments' => '{}'],
+                    ]],
+                ]]]])
+                ->push(['choices' => [['message' => ['content' => "Численность: 2.\n```json\n{\"blocks\":[{\"type\":\"chart\",\"title\":\"Численность\",\"data\":[{\"label\":\"Активных\",\"value\":2}]}]}\n```"]]]]),
         ]);
 
         (new RetryAiAnswer($conversation->id, true))->handle();
@@ -219,6 +225,7 @@ class AiRetryQueueTest extends TestCase
         self::assertStringNotContainsString('```', (string) $conversation->answer, 'JSON-блок не должен попасть в текст ответа');
         // блоки LLM добавлены в query_used, потому что локальных блоков не было
         self::assertSame('chart', $conversation->query_used['blocks'][0]['type'] ?? null);
+        self::assertNotEmpty($conversation->query_used['source_items'] ?? []);
     }
 
     /* -------------------- потолок синхронного ожидания -------------------- */

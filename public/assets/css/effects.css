@@ -695,6 +695,14 @@ textarea.form-control { font-size: var(--crm-text-body); }
     box-shadow: 0 0 0 3px rgba(var(--crm-accent-rgb), .14), var(--crm-glass-shadow-1);
     background: var(--crm-surface);
 }
+/* UX-18: адаптивная ширина поля поиска вместо inline-геометрии */
+.crm-search-page-input {
+    width: min(320px, 56vw);
+}
+/* UX-18: семантический цвет через токен темы */
+.text-crm-purple {
+    color: var(--crm-purple);
+}
 .crm-toolbar .input-icon { position: relative; flex: 1 1 220px; max-width: 340px; }
 .crm-toolbar .input-icon .form-control { width: 100%; }
 .crm-toolbar .input-icon .input-icon-addon { color: var(--tblr-secondary); }
@@ -776,6 +784,14 @@ textarea.form-control { font-size: var(--crm-text-body); }
     max-width: 45%;
 }
 .crm-search-empty { padding: var(--crm-space-4); color: var(--crm-text-secondary); text-align: center; }
+/* FE-03: ошибки поиска должны быть заметны, а не тихо скрываться */
+.crm-search-error {
+    padding: var(--crm-space-3) var(--crm-space-4);
+    font-size: var(--crm-text-caption);
+    color: var(--crm-danger, #d639d9);
+    background: color-mix(in srgb, var(--crm-danger, #d639d9) 8%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--crm-danger, #d639d9) 24%, transparent);
+}
 
 /* C5: состояние загрузки живого поиска (aria-busy → индикатор в панели) */
 .crm-search-loading {
@@ -2298,7 +2314,10 @@ body.crm-palette-open { overflow: hidden; }
     background: var(--tblr-body-bg);
     overflow: hidden;
     box-shadow: 0 14px 34px rgba(4, 10, 17, .18);
+    /* Список в модальном окне монтируется в body — должен быть выше backdrop. */
+    z-index: 2000;
 }
+.select2-container--open { z-index: 2000; }
 .select2-container--default .select2-search--dropdown { padding: 8px 8px 0; }
 .select2-container--default .select2-search--dropdown .select2-search__input {
     border: 1px solid var(--tblr-border-color);

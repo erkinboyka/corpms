@@ -53,15 +53,15 @@
     <link rel="preload" href="/assets/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/vendor/tabler-icons.min.css">
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
-    <link rel="stylesheet" href="/assets/css/effects.css?v61">
+    <link rel="stylesheet" href="/assets/css/effects.css?v62">
     <link rel="stylesheet" href="/assets/css/corpms.css?v7">
     <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
     <link rel="stylesheet" href="/assets/css/ai-panel.css?v16">
-    <link rel="stylesheet" href="/assets/css/motion.css?v7">
+    <link rel="stylesheet" href="/assets/css/motion.css?v8">
     <script src="/assets/vendor/tabler.min.js" defer></script>
-    <script src="/assets/js/corpms.js?v48" defer></script>
+    <script src="/assets/js/corpms.js?v49" defer></script>
     <script src="/assets/js/bm-ui.js?v4" defer></script>
-    <script src="/assets/js/crm-select.js?v1" defer></script>
+    <script src="/assets/js/crm-select.js?v2" defer></script>
     <script src="/assets/js/lms.js?v6" defer></script>
     <script src="/assets/js/lms-whiteboard.js?v1" defer></script>
     <script src="/assets/js/lms-meeting.js?v1" defer></script>
@@ -74,13 +74,13 @@
     <link rel="stylesheet" href="/assets/css/workspace.css?v31">
     <link rel="stylesheet" href="/assets/css/bumi-tools.css?v2">
     <link rel="stylesheet" href="/assets/css/legal.css?v3">
-    <link rel="stylesheet" href="/assets/css/crm-select.css?v1">
-    <link rel="stylesheet" href="/assets/css/lms.css?v10">
+    <link rel="stylesheet" href="/assets/css/crm-select.css?v3">
+    <link rel="stylesheet" href="/assets/css/lms.css?v11">
     @stack('styles')
 </head>
 <body class="crm-app @yield('body_class')">
-<a class="bm-skip-link visually-hidden-focusable" href="#main-content">{{ __('Перейти к содержанию') }}</a>
-<div class="page">
+<a class="bm-skip-link visually-hidden-focusable" href="#main-content" data-crm-palette-background>{{ __('Перейти к содержанию') }}</a>
+<div class="page" data-crm-palette-background>
 
     @auth
         {{-- счётчик непрочитанных считаем один раз на запрос (раньше 3 раза: navbar + nav-actions ×2) --}}
@@ -161,7 +161,7 @@
                                 <div><i class="ti ti-{{ $flashClass === 'danger' ? 'alert-triangle' : 'check' }} icon alert-icon"></i></div>
                                 <div>{{ session($flashKey) }}</div>
                             </div>
-                            <a class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></a>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></button>
                         </div>
                     @endif
                 @endforeach
@@ -185,7 +185,7 @@
                                 @endif
                             </div>
                         </div>
-                        <a class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></a>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></button>
                     </div>
                 @endif
 
@@ -238,7 +238,7 @@
 
 @auth
     {{-- Единая панель настроек внешнего вида: оформление + секции экрана --}}
-    <div class="offcanvas offcanvas-end crm-offcanvas" tabindex="-1" id="crm-settings" aria-labelledby="crm-settings-title">
+    <div class="offcanvas offcanvas-end crm-offcanvas" tabindex="-1" id="crm-settings" aria-labelledby="crm-settings-title" data-crm-palette-background>
         <div class="offcanvas-header crm-cz__header">
             <div class="crm-cz__badge"><i class="ti ti-palette"></i></div>
             <div class="flex-grow-1">
@@ -363,7 +363,8 @@
                 <input type="text" class="crm-palette__input" id="crm-palette-input"
                        placeholder="{{ __("Перейти к разделу или найти…") }}"
                        autocomplete="off" spellcheck="false"
-                       aria-label="{{ __("Поиск команд и разделов") }}"
+                       aria-label="{{ __("Поиск команд и разделов") }}" role="combobox"
+                       aria-autocomplete="list" aria-haspopup="listbox"
                        aria-controls="crm-palette-list" aria-expanded="true" />
                 <kbd class="crm-hint-key">Esc</kbd>
             </div>

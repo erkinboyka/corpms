@@ -1,0 +1,13 @@
+[Unit]
+Description=CorpMS Laravel scheduler
+After=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/corpms/current
+ExecStart=/usr/bin/php artisan schedule:run
+
+[Install]
+WantedBy=multi-user.target

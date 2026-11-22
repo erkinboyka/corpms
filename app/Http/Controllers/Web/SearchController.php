@@ -11,7 +11,9 @@ use App\Models\Employee;
 use App\Models\Task;
 use App\Models\User;
 use App\Support\PermissionService;
+use App\Support\SearchQuery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -24,14 +26,15 @@ class SearchController extends Controller
         protected PermissionService $permissions,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $user = auth()->user();
         \assert($user instanceof User);
         // company-scope = «вся моя компания»: ищем только по своей компании
         $companyId = $user->employee?->company_id;
 
-        $q = trim((string) request('q', ''));
+        $search = SearchQuery::fromRequest($request);
+        $q = $search->value;
         $employees = collect();
         $tasks = collect();
         $documents = collect();
@@ -55,7 +58,7 @@ class SearchController extends Controller
                 $tasks = Task::query()
                     ->with('author')
                     ->where('company_id', $companyId)
-                    ->where(fn ($w) => $w->where('title', 'like', "%{$q}%")->orWhere('number', 'like', "%{$q}%"))
+                    ->where(fn ($w) => $search->applyLike($w, ['title', 'number']))
                     ->when($access['scope_value'] !== 'company', fn ($w) => $w
                         ->whereHas('assignments', fn ($a) => $a->whereIn('employee_id', $ids)->limit(1)))
                     ->orderByDesc('id')
@@ -70,9 +73,7 @@ class SearchController extends Controller
                 $documents = Document::query()
                     ->with('category')
                     ->where('company_id', $companyId)
-                    ->where(fn ($w) => $w->where('title', 'like', "%{$q}%")
-                        ->orWhere('document_number', 'like', "%{$q}%")
-                        ->orWhere('reg_number', 'like', "%{$q}%"))
+                    ->where(fn ($w) => $search->applyLike($w, ['title', 'document_number', 'reg_number']))
                     ->when($access['scope_value'] !== 'company', fn ($w) => $w
                         ->where(fn ($s) => $s->whereIn('author_id', $ids)
                             ->orWhereHas('signatureRequests', fn ($r) => $r->whereIn('signer_id', $ids))))
@@ -88,13 +89,14 @@ class SearchController extends Controller
     /**
      * Быстрые подсказки для живого поиска в топбаре (JSON, максимум 4+4+4).
      */
-    public function hint(): JsonResponse
+    public function hint(Request $request): JsonResponse
     {
         $user = auth()->user();
         \assert($user instanceof User);
         $companyId = $user->employee?->company_id;
 
-        $q = trim((string) request('q', ''));
+        $search = SearchQuery::fromRequest($request);
+        $q = $search->value;
         if (mb_strlen($q) < 2) {
             return response()->json(['query' => $q, 'employees' => [], 'tasks' => [], 'documents' => []]);
         }
@@ -125,7 +127,7 @@ class SearchController extends Controller
 
             $tasks = Task::query()
                 ->where('company_id', $companyId)
-                ->where(fn ($w) => $w->where('title', 'like', "%{$q}%")->orWhere('number', 'like', "%{$q}%"))
+                ->where(fn ($w) => $search->applyLike($w, ['title', 'number']))
                 ->when($access['scope_value'] !== 'company', fn ($w) => $w
                     ->whereHas('assignments', fn ($a) => $a->whereIn('employee_id', $ids)->limit(1)))
                 ->orderByDesc('id')
@@ -144,9 +146,7 @@ class SearchController extends Controller
 
             $documents = Document::query()
                 ->where('company_id', $companyId)
-                ->where(fn ($w) => $w->where('title', 'like', "%{$q}%")
-                    ->orWhere('document_number', 'like', "%{$q}%")
-                    ->orWhere('reg_number', 'like', "%{$q}%"))
+                ->where(fn ($w) => $search->applyLike($w, ['title', 'document_number', 'reg_number']))
                 ->when($access['scope_value'] !== 'company', fn ($w) => $w
                     ->where(fn ($s) => $s->whereIn('author_id', $ids)
                         ->orWhereHas('signatureRequests', fn ($r) => $r->whereIn('signer_id', $ids))))

@@ -30,7 +30,7 @@
     <a class="btn btn-sm {{ $statusFilter === 'open' ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies', ['status' => 'open']) }}">{{ __('Открытые') }}</a>
     <a class="btn btn-sm {{ $statusFilter === 'resolved' ? 'btn-primary' : 'btn-ghost-secondary' }}" href="{{ route('attendance.anomalies', ['status' => 'resolved']) }}">{{ __('Разобранные') }}</a>
     <div class="crm-toolbar__spacer"></div>
-    <span class="crm-chip {{ ($statusFilter ?? 'open') === 'open' ? 'crm-chip--orange' : 'crm-chip--grey' }}">{{ $anomalies->count() }} {{ __('в выборке') }}</span>
+    <span class="crm-chip {{ ($statusFilter ?? 'open') === 'open' ? 'crm-chip--orange' : 'crm-chip--grey' }}">{{ $anomalies->total() }} {{ __('в выборке') }}</span>
 </div>
 
 <div class="crm-queue">
@@ -81,4 +81,5 @@
         </div>
     @endforelse
 </div>
+<div class="mt-3">{{ $anomalies->links() }}</div>
 @endsection

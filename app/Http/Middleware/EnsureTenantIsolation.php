@@ -19,6 +19,7 @@ use App\Models\LeaveRequest;
 use App\Models\Message;
 use App\Models\RfidCard;
 use App\Models\TaskAttachment;
+use App\Models\TrustedCertificate;
 use App\Models\User;
 use App\Support\PermissionService;
 use App\Support\TenantGuard;
@@ -143,6 +144,14 @@ final class EnsureTenantIsolation
         if (array_key_exists('company_id', $attributes)) {
             // Глобальный праздник (company_id NULL) видят все тенанты.
             if ($model instanceof Holiday && $model->getAttribute('company_id') === null) {
+                return;
+            }
+
+            // DB-15: глобальный сертификат может удалить только platform-admin;
+            // для остальных company_id NULL остаётся запрещённым.
+            if ($model instanceof TrustedCertificate
+                && $model->getAttribute('company_id') === null
+                && $isPlatformAdmin) {
                 return;
             }
 

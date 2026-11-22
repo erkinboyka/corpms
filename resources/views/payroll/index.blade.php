@@ -45,7 +45,7 @@
 <div class="card">
     <div class="card-header">
         <h2 class="card-title bm-section-title">{{ __('Ведомости') }}</h2>
-        <span class="crm-chip ms-auto">{{ $periods->count() }} {{ __('всего') }}</span>
+        <span class="crm-chip ms-auto">{{ $periods->total() }} {{ __('всего') }}</span>
     </div>
     <div class="table-responsive">
         <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
@@ -95,6 +95,7 @@
             </tbody>
         </table>
     </div>
+    <div class="card-footer">{{ $periods->links() }}</div>
 </div>
 
 {{-- модалка нового периода --}}

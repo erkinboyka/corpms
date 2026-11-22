@@ -151,6 +151,8 @@
     border: 1px solid var(--home-line);
     border-radius: 15px;
     background: var(--home-panel);
+    /* Opaque fallback: keeps text readable and gives AT/a11y tools a solvable backdrop. */
+    background-color: var(--bm-sheet);
     box-shadow: inset 0 1px var(--bm-glass-glint), 0 10px 24px -20px var(--bm-glass-shadow);
 }
 .bm-home__panel-head { display: flex; align-items: start; justify-content: space-between; gap: .5rem; margin-block-end: 1rem; }
@@ -202,6 +204,7 @@
     border: 1px solid var(--home-line);
     border-radius: 9px;
     background: var(--home-panel);
+    background-color: var(--bm-sheet);
     color: inherit;
     text-decoration: none;
 }
@@ -352,7 +355,7 @@
     .bm-home__queue { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
     .bm-home__data { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
     .bm-home__data--solo { grid-template-columns: minmax(0, 1fr); }
-    .bm-home__system > .bm-home__panel { background: transparent; box-shadow: none; }
+    .bm-home__system > .bm-home__panel { background: transparent; background-color: var(--bm-sheet); box-shadow: none; }
 }
 @container (min-width: 490px) and (max-width: 739px) {
     .bm-home__queue { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }

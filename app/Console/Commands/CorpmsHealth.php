@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Migrations\Migrator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -39,6 +40,10 @@ class CorpmsHealth extends Command
         foreach ($checks as $check) {
             $healthy = $healthy && $check['ok'];
         }
+
+        // TEST-03: scheduler heartbeat без новой задачи и без изменения списка
+        // проверок (CorpmsHealthTest ожидает ровно 4 имени).
+        Cache::put('ops.health.last_run', now()->toIso8601String(), now()->addHours(2));
 
         if ($this->option('json')) {
             $this->line(json_encode([

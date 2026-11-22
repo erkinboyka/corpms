@@ -7,7 +7,7 @@
 <x-page-header eyebrow="{{ __('СИСТЕМА') }}" title="{{ __('Поиск') }}" subtitle="{{ __('Единый запрос: сотрудники, задачи, документы') }}">
     <form method="get" class="d-flex gap-2">
         <div class="input-icon">
-            <input type="text" name="q" value="{{ $q }}" class="form-control crm-search-input" style="width: min(320px, 56vw)" placeholder="{{ __('ФИО, задача, документ…') }}" autofocus aria-label="{{ __('Поиск по системе') }}">
+            <input type="text" name="q" value="{{ $q }}" class="form-control crm-search-input crm-search-page-input" placeholder="{{ __('ФИО, задача, документ…') }}" aria-label="{{ __('Поиск по системе') }}">
             <span class="input-icon-addon"><i class="ti ti-search"></i></span>
         </div>
         <button class="btn btn-primary">{{ __('Найти') }}</button>

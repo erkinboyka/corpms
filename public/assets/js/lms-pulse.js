@@ -82,10 +82,40 @@
         if (!url) { return; }
         var pollMs = Math.max(1500, Number(feed.dataset.pollMs || 3000));
         var since = lastId(feed);
+        var timer = null;
+        var busy = false;
+        var status = feed.parentNode ? LMS.qs('[data-lms-pulse-status]', feed.parentNode) : null;
+        var statusText = status ? LMS.qs('[data-lms-pulse-status-text]', status) : null;
+        var statusIcon = status ? LMS.qs('[data-lms-pulse-status-icon]', status) : null;
+        var retry = status ? LMS.qs('[data-lms-pulse-retry]', status) : null;
 
-        setInterval(function () {
+        /* UX-17: ошибки синхронизации больше не молчат. */
+        function setSyncState(ok) {
+            if (!status) { return; }
+            status.classList.toggle('text-danger', !ok);
+            status.setAttribute('role', ok ? 'status' : 'alert');
+            if (statusText) {
+                statusText.textContent = ok
+                    ? LMS.t('syncOk', 'Пульс актуален')
+                    : LMS.t('syncLost', 'Не удалось обновить пульс');
+            }
+            if (statusIcon) { statusIcon.className = 'ti ti-' + (ok ? 'circle-check' : 'alert-triangle'); }
+            if (retry) { retry.hidden = ok; }
+        }
+
+        function feedVisible() {
+            if (document.hidden) { return false; }
+            var section = feed.closest('[data-lms-section]');
+            return !section || !section.hidden;
+        }
+
+        function poll() {
+            if (busy || !feedVisible()) { return; }
+            busy = true;
             LMS.request(url + (url.indexOf('?') >= 0 ? '&' : '?') + 'since=' + since)
                 .then(function (data) {
+                    busy = false;
+                    setSyncState(true);
                     var events = data.events || [];
                     if (!events.length) { return; }
 
@@ -104,7 +134,24 @@
                         });
                     });
                 })
-                .catch(function () { /* silent retry on next tick */ });
-        }, pollMs);
+                .catch(function () {
+                    busy = false;
+                    setSyncState(false);
+                });
+        }
+
+        if (retry) { retry.addEventListener('click', poll); }
+
+        /* UX-06: не опрашиваем скрытую ленту. */
+        function syncPolling() {
+            if (!feedVisible()) {
+                if (timer !== null) { window.clearInterval(timer); timer = null; }
+                return;
+            }
+            if (timer === null) { timer = window.setInterval(poll, pollMs); }
+        }
+        document.addEventListener('visibilitychange', syncPolling);
+        document.addEventListener('lms:sectionchange', syncPolling);
+        syncPolling();
     });
 })();

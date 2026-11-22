@@ -9,6 +9,7 @@ use App\Models\AttendanceRecord;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEvent;
 use App\Models\Company;
+use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\RfidCard;
@@ -115,6 +116,55 @@ class RfidHttpTest extends TestCase
 
         $this->actingAs($this->workerUser);
         $this->get('/rfid')->assertForbidden();
+    }
+
+    /** DB-14: scope в SQL до limit — свои карты не теряются за чужими 200. */
+    public function test_department_scope_is_applied_before_limit(): void
+    {
+        $department = Department::create([
+            'company_id' => $this->company->id,
+            'name' => 'Свой отдел',
+            'code' => 'rfid-own',
+        ]);
+        $otherDepartment = Department::create([
+            'company_id' => $this->company->id,
+            'name' => 'Чужой отдел',
+            'code' => 'rfid-foreign',
+        ]);
+
+        $directorUser = User::factory()->create();
+        $director = $this->employee('DIR', 'Начальник', 'RFID', $directorUser->id, $department->id);
+        EmployeeRole::create([
+            'employee_id' => $director->id,
+            'role_id' => Role::query()->where('slug', 'department_director')->value('id'),
+        ]);
+        $own = $this->employee('OWN', 'Свой', 'Сотрудник', null, $department->id);
+        $foreign = $this->employee('FRN', 'Чужой', 'Сотрудник', null, $otherDepartment->id);
+
+        RfidCard::create(['employee_id' => $own->id, 'card_uid' => 'OWN-CARD', 'status' => 'active']);
+        for ($i = 1; $i <= 250; $i++) {
+            RfidCard::create([
+                'employee_id' => $foreign->id,
+                'card_uid' => 'FOREIGN-CARD-'.$i,
+                'status' => 'active',
+            ]);
+        }
+
+        $response = $this->actingAs($directorUser)->get('/rfid')->assertOk();
+        $response->assertSee('OWN-CARD');
+        $response->assertDontSee('FOREIGN-CARD-');
+    }
+
+    /** DB-03: rollback миграции не должен сужать enum с живыми rfid_reader. */
+    public function test_rfid_migration_down_refuses_when_reader_rows_exist(): void
+    {
+        $this->rfidDevice('SN-RFID-ROLLBACK-1');
+
+        $migration = require database_path('migrations/2026_11_02_100000_create_rfid_support.php');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('rfid_reader');
+        $migration->down();
     }
 
     public function test_issue_duplicate_card_uid_rejected_and_revoke_works(): void

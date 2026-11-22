@@ -287,19 +287,30 @@ class AiMemoryInsightsTest extends TestCase
 
         Http::fake([
             'llm.example.com/v1/embeddings' => Http::response(['data' => []]),
-            'llm.example.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => "Черновик:\n```json\n{$llmBlocks}\n```"]]],
-            ]),
+            'llm.example.com/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'content' => null,
+                    'tool_calls' => [[
+                        'id' => 'call_sanitize',
+                        'type' => 'function',
+                        'function' => ['name' => 'task_stats', 'arguments' => '{}'],
+                    ]],
+                ]]]])
+                ->push(['choices' => [['message' => ['content' => "Черновик:\n```json\n{$llmBlocks}\n```"]]]]),
         ]);
 
         $response = $this->postJson('/ai/message', ['question' => 'Расскажи обстановку в компании'])
             ->assertOk();
 
         $blocks = $response->json('blocks');
-        self::assertCount(1, $blocks, 'actions с внешним URL отброшен, остался text');
-        self::assertSame('text', $blocks[0]['type']);
-        self::assertStringNotContainsString('<', (string) $blocks[0]['content'], 'HTML-теги вырезаны');
-        self::assertLessThanOrEqual(4000, mb_strlen((string) $blocks[0]['content']));
-        self::assertLessThanOrEqual(80, mb_strlen((string) $blocks[0]['title']));
+        $textBlocks = array_values(array_filter(
+            $blocks,
+            static fn (array $block): bool => ($block['type'] ?? null) === 'text',
+        ));
+        self::assertCount(1, $textBlocks, 'actions с внешним URL отброшен, остался text и блок источников');
+        self::assertSame('text', $textBlocks[0]['type']);
+        self::assertStringNotContainsString('<', (string) $textBlocks[0]['content'], 'HTML-теги вырезаны');
+        self::assertLessThanOrEqual(4000, mb_strlen((string) $textBlocks[0]['content']));
+        self::assertLessThanOrEqual(80, mb_strlen((string) $textBlocks[0]['title']));
     }
 }

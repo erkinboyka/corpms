@@ -13,7 +13,10 @@ use App\Models\ScheduleAssignment;
 use App\Models\WorkSchedule;
 use App\Shared\Enums\AnomalyType;
 use App\Shared\Enums\AttendanceStatus;
+use App\Support\Concurrency;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Обработка биометрических событий → табель (п. 27, 28, 29, 71 ТЗ).
@@ -27,19 +30,56 @@ class AttendanceService
      * Применяет биометрическое событие к табелю.
      * Идемпотентность по event_uuid обеспечена на уровне BP (unique).
      */
+    /**
+     * H-BL-02: параллельные события одного дня не должны давать 500 на
+     * unique (employee_id, date). При конфликте повторяем идемпотентное
+     * применение на свежей записи: уже зафиксированный приход/выход
+     * вернётся без повторной записи.
+     */
     public function applyEvent(Employee $employee, BiometricEvent $event, ?WorkSchedule $schedule = null): AttendanceRecord
     {
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                return DB::transaction(fn (): AttendanceRecord => $this->applyEventOnce($employee, $event, $schedule));
+            } catch (QueryException $exception) {
+                if (! Concurrency::isUniqueViolation($exception) || $attempt === 2) {
+                    throw $exception;
+                }
+            }
+        }
+
+        throw new \LogicException('Недостижимая ветка');
+    }
+
+    private function applyEventOnce(Employee $employee, BiometricEvent $event, ?WorkSchedule $schedule): AttendanceRecord
+    {
         $day = Carbon::parse($event->occurred_at)->startOfDay();
-        $record = AttendanceRecord::query()->firstOrNew([
-            'employee_id' => $employee->id,
-            'date' => $day,
-        ]);
+        $record = AttendanceRecord::query()
+            ->where('employee_id', $employee->id)
+            ->where('date', $day)
+            ->lockForUpdate()
+            ->first() ?? new AttendanceRecord([
+                'employee_id' => $employee->id,
+                'date' => $day,
+            ]);
 
         $schedule ??= $this->scheduleFor($employee, $day->toDateString());
 
         if ($event->direction === 'in') {
             if ($record->exists && $record->clock_in_at !== null) {
+                // Повторный «приход» после уже зафиксированного «выхода» —
+                // некорректная последовательность, а не безобидный дубль.
+                if ($record->clock_out_at !== null
+                    && Carbon::parse($event->occurred_at)->greaterThan(Carbon::parse($record->clock_out_at))) {
+                    $this->markAnomaly($employee, $day, AnomalyType::DirectionMismatch, __('Приход зафиксирован после выхода'));
+                }
+
                 return $record;
+            }
+
+            if ($record->clock_out_at !== null
+                && Carbon::parse($event->occurred_at)->greaterThan(Carbon::parse($record->clock_out_at))) {
+                $this->markAnomaly($employee, $day, AnomalyType::DirectionMismatch, __('Приход зафиксирован после выхода'));
             }
 
             $record->clock_in_at = $event->occurred_at;
@@ -52,6 +92,11 @@ class AttendanceService
         } else {
             if ($record->clock_out_at !== null) {
                 return $record;
+            }
+
+            if ($record->clock_in_at !== null
+                && Carbon::parse($event->occurred_at)->lessThanOrEqualTo(Carbon::parse($record->clock_in_at))) {
+                $this->markAnomaly($employee, $day, AnomalyType::DirectionMismatch, __('Выход предшествует приходу'));
             }
 
             $record->clock_out_at = $event->occurred_at;
@@ -114,6 +159,17 @@ class AttendanceService
 
         if ($record->clock_in_at === null || $record->clock_out_at === null) {
             $zero($record);
+
+            return;
+        }
+
+        // BL-13: diffInMinutes(abs) превращал «выход раньше прихода» в
+        // положительные отработанные минуты. При нарушенном порядке событий
+        // часы не начисляются до ручной корректировки.
+        if ($record->clock_out_at->lessThanOrEqualTo($record->clock_in_at)) {
+            $scheduled = $record->scheduled_minutes;
+            $zero($record);
+            $record->scheduled_minutes = $scheduled;
 
             return;
         }
@@ -209,13 +265,27 @@ class AttendanceService
             ->get();
 
         foreach ($records as $record) {
-            AttendanceAnomaly::updateOrCreate(
-                ['employee_id' => $record->employee_id, 'date' => $day->toDateString(), 'type' => AnomalyType::MissingCheckout],
-                ['description' => __('Не зафиксирован выход'), 'status' => 'open']
+            // BL-14: без выхода часы не могут быть достоверными — пересчитываем
+            // запись и оставляем явную аномалию до ручной корректировки.
+            $this->recompute($record);
+            $this->markAnomaly(
+                $record->employee,
+                $day,
+                AnomalyType::MissingCheckout,
+                __('Не зафиксирован выход — требуется корректировка табеля'),
             );
         }
 
         return $records->count();
+    }
+
+    /** Идемпотентная регистрация аномалии табеля. */
+    protected function markAnomaly(Employee $employee, Carbon $day, AnomalyType $type, string $description): void
+    {
+        AttendanceAnomaly::updateOrCreate(
+            ['employee_id' => $employee->id, 'date' => $day->toDateString(), 'type' => $type],
+            ['description' => $description, 'status' => 'open'],
+        );
     }
 
     protected function breakMinutes(?WorkSchedule $schedule, Carbon $day): int

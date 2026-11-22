@@ -31,15 +31,14 @@ class ChatDelta implements ShouldBroadcastNow
     use SerializesModels;
 
     /**
-     * @param array<string, mixed> $payload идентификаторы для клиента
+     * @param  array<string, mixed>  $payload  идентификаторы для клиента
      */
     public function __construct(
         public readonly Conversation $conversation,
         public readonly string $type,
         public readonly ?Message $message = null,
         public readonly array $payload = [],
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function broadcastWith(): array

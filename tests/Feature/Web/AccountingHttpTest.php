@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Support\Sidebar;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 /**
@@ -249,7 +250,8 @@ class AccountingHttpTest extends TestCase
             ->firstOrFail();
         $this->assertSame(2000.0, $expenseEntry->creditTotal());
 
-        // повторный синк не создаёт дублей
+        // повторный синк не создаёт дублей (limit 1/мин сбрасываем между вызовами)
+        RateLimiter::clear('accounting.sync'.sha1((string) $this->adminUser->id));
         $this->post('/accounting/sync', ['month' => $month])->assertSessionHasNoErrors();
         $this->assertSame(2, AccEntry::query()->count());
 

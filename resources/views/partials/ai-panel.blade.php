@@ -1,4 +1,4 @@
-<div class="bm-pet d-print-none" data-ai-companion data-state="idle">
+<div class="bm-pet d-print-none" data-ai-companion data-state="idle" data-crm-palette-background>
     <button type="button" class="bm-pet__handle" data-ai-toggle aria-controls="ai-panel" aria-expanded="false"
             aria-label="{{ __("Bumi Mini. Открыть чат") }}" aria-description="{{ __("Перемещайте стрелками или перетаскивайте. Escape вернёт Bumi на место.") }}">
         <svg class="bm-mini-actor" viewBox="53 9 368 395" aria-hidden="true" focusable="false">

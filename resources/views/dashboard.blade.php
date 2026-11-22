@@ -4,7 +4,7 @@
 @section('body_class', 'bm-home-page')
 
 @push('styles')
-    <link rel="stylesheet" href="/assets/css/dashboard.css?v3">
+    <link rel="stylesheet" href="/assets/css/dashboard.css?v5">
 @endpush
 
 @php

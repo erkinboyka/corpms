@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\EmployeeSalary;
 use App\Models\PayrollLine;
+use App\Models\PayrollPayment;
 use App\Models\PayrollPeriod;
 use App\Models\SalaryComponent;
 use App\Shared\Enums\PayrollCalculation;
@@ -18,13 +19,16 @@ use App\Shared\Enums\PayrollPeriodStatus;
 use App\Shared\Enums\PermissionScope;
 use App\Support\EnumLabels;
 use App\Support\PermissionService;
+use App\Support\SingleFlightLock;
 use App\Support\TenantGuard;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use LogicException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -51,11 +55,12 @@ class PayrollController extends Controller
         \assert($scope !== false, __('маршрут уже проверяет право'));
         $showAmounts = $scope === PermissionScope::Company;
 
+        // UX-20: постранично, чтобы рост истории не замедлял страницу.
         $periods = PayrollPeriod::query()
             ->where('company_id', $me->company_id)
             ->orderByDesc('period_start')
-            ->limit(60)
-            ->get();
+            ->paginate(30)
+            ->withQueryString();
 
         $salaryCount = EmployeeSalary::query()
             ->whereIn('employee_id', Employee::query()->where('company_id', $me->company_id)->select('id'))
@@ -93,22 +98,46 @@ class PayrollController extends Controller
         $start = Carbon::parse($validated['month'].'-01');
         $end = $start->copy()->endOfMonth();
 
-        $overlap = PayrollPeriod::query()
-            ->where('company_id', $me->company_id)
-            ->where('period_start', '<=', $end->toDateString())
-            ->where('period_end', '>=', $start->toDateString())
-            ->exists();
+        // H-BL-01: проверка пересечения и вставка должны быть одной критической
+        // секцией. Блокировки строк недостаточно, когда ещё нет ни одной
+        // ведомости, поэтому дополнительно берём single-flight на компанию.
+        $lockKey = 'payroll:period:'.$me->company_id;
+        $token = SingleFlightLock::acquire($lockKey);
 
-        if ($overlap) {
-            return back()->withErrors(['month' => __('Ведомость за этот период уже существует')])->withInput();
+        if ($token === null) {
+            return back()->withErrors(['month' => __('Ведомость создаётся другим запросом, повторите попытку')])->withInput();
         }
 
-        $period = PayrollPeriod::query()->create([
-            'company_id' => $me->company_id,
-            'period_start' => $start->toDateString(),
-            'period_end' => $end->toDateString(),
-            'status' => PayrollPeriodStatus::Draft,
-        ]);
+        try {
+            $period = DB::transaction(function () use ($start, $end, $me): PayrollPeriod {
+                $overlap = PayrollPeriod::query()
+                    ->where('company_id', $me->company_id)
+                    ->where('period_start', '<=', $end->toDateString())
+                    ->where('period_end', '>=', $start->toDateString())
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($overlap !== null) {
+                    throw ValidationException::withMessages([
+                        'month' => __('Ведомость за этот период уже существует'),
+                    ]);
+                }
+
+                return PayrollPeriod::query()->create([
+                    'company_id' => $me->company_id,
+                    'period_start' => $start->toDateString(),
+                    'period_end' => $end->toDateString(),
+                    'status' => PayrollPeriodStatus::Draft,
+                ]);
+            });
+        } catch (QueryException) {
+            // unique (company_id, period_start) — гонка; возвращаем 422, а не 500
+            throw ValidationException::withMessages([
+                'month' => __('Ведомость за этот период уже существует'),
+            ]);
+        } finally {
+            SingleFlightLock::release($lockKey, $token);
+        }
 
         $this->audit->log($request->user(), 'payroll.created', 'payroll_period', $period->id, null, [
             'period_start' => $period->period_start->toDateString(),
@@ -194,13 +223,20 @@ class PayrollController extends Controller
             return back()->withErrors(['field' => $e->getMessage()]);
         }
 
+        $skipped = $this->payroll->skippedEmployees;
         $this->audit->log($request->user(), 'payroll.calculated', 'payroll_period', $period->id, $old, [
             'status' => $period->refresh()->status->value,
             'gross' => $period->gross_amount,
             'net' => $period->net_amount,
+            'skipped_employees' => $skipped,
         ]);
 
-        return back()->with('status', 'Ведомость рассчитана: начислено '.number_format((float) $period->gross_amount, 2, ',', ' '));
+        $message = 'Ведомость рассчитана: начислено '.number_format((float) $period->gross_amount, 2, ',', ' ');
+        if ($skipped !== []) {
+            $message .= '. Внимание: без оклада пропущены '.implode(', ', $skipped).'; проверьте оклады до согласования';
+        }
+
+        return back()->with('status', $message);
     }
 
     /** Согласование: calculated → approved. */
@@ -243,6 +279,8 @@ class PayrollController extends Controller
         $this->audit->log($request->user(), 'payroll.paid', 'payroll_period', $period->id, $old, [
             'status' => PayrollPeriodStatus::Paid->value,
             'net' => $period->net_amount,
+            'reference' => $this->payroll->lastPaymentReference,
+            'payments' => PayrollPayment::query()->where('period_id', $period->id)->count(),
         ]);
 
         return back()->with('status', __('Выплата зафиксирована'));
@@ -365,30 +403,47 @@ class PayrollController extends Controller
         }
 
         DB::transaction(function () use ($validated, $employee): void {
-            $previous = EmployeeSalary::query()
+            // BL-11/DB-05: все правки окладов одного сотрудника сериализуются
+            // блокировкой его строки — параллельные запросы не создадут два
+            // открытых периода.
+            Employee::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
+
+            $newFrom = Carbon::parse($validated['effective_from'])->startOfDay();
+            $newFromString = $newFrom->toDateString();
+
+            $sameDay = EmployeeSalary::query()
                 ->where('employee_id', $employee->id)
-                ->whereNull('effective_to')
-                ->orderByDesc('effective_from')
+                ->whereDate('effective_from', $newFromString)
                 ->first();
+            if ($sameDay !== null) {
+                $sameDay->update([
+                    'base_amount' => $validated['base_amount'],
+                    'currency' => $validated['currency'],
+                ]);
 
-            if ($previous !== null) {
-                $newFrom = Carbon::parse($validated['effective_from']);
-                if ($previous->effective_from->toDateString() === $newFrom->toDateString()) {
-                    // перезапись оклада на ту же дату
-                    $previous->update(['base_amount' => $validated['base_amount'], 'currency' => $validated['currency']]);
-
-                    return;
-                }
-                if ($previous->effective_from->lt($newFrom)) {
-                    $previous->update(['effective_to' => $newFrom->copy()->subDay()->toDateString()]);
-                }
+                return;
             }
+
+            $next = EmployeeSalary::query()
+                ->where('employee_id', $employee->id)
+                ->whereDate('effective_from', '>', $newFromString)
+                ->orderBy('effective_from')
+                ->first();
+            $effectiveTo = $next?->effective_from->copy()->subDay()->toDateString();
+
+            // Закрываем любой период, пересекающий новую дату (не только null).
+            EmployeeSalary::query()
+                ->where('employee_id', $employee->id)
+                ->whereDate('effective_from', '<=', $newFromString)
+                ->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $newFromString))
+                ->update(['effective_to' => $newFrom->copy()->subDay()->toDateString()]);
 
             EmployeeSalary::query()->create([
                 'employee_id' => $employee->id,
                 'base_amount' => $validated['base_amount'],
                 'currency' => $validated['currency'],
-                'effective_from' => $validated['effective_from'],
+                'effective_from' => $newFromString,
+                'effective_to' => $effectiveTo,
             ]);
         });
 

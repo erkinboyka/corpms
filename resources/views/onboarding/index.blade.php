@@ -11,30 +11,30 @@
           <form method="post" action="{{ route('onboarding.store') }}">
             @csrf
             <div class="mb-3">
-              <label class="form-label">{{ __('Название компании') }}</label>
-              <input type="text" name="name" class="form-control" value="{{ old('name', $company->name ?? '') }}" required>
+              <label class="form-label" for="onb-name">{{ __('Название компании') }}</label>
+              <input type="text" id="onb-name" name="name" class="form-control" value="{{ old('name', $company->name ?? '') }}" required>
             </div>
             <div class="mb-3">
-              <label class="form-label">{{ __('Юридическое название') }}</label>
-              <input type="text" name="legal_name" class="form-control" value="{{ old('legal_name', $company->legal_name ?? '') }}">
+              <label class="form-label" for="onb-legal-name">{{ __('Юридическое название') }}</label>
+              <input type="text" id="onb-legal-name" name="legal_name" class="form-control" value="{{ old('legal_name', $company->legal_name ?? '') }}">
             </div>
             <div class="mb-3">
-              <label class="form-label">{{ __('Адрес') }}</label>
-              <input type="text" name="address" class="form-control" value="{{ old('address', $company->address ?? '') }}">
+              <label class="form-label" for="onb-address">{{ __('Адрес') }}</label>
+              <input type="text" id="onb-address" name="address" class="form-control" value="{{ old('address', $company->address ?? '') }}">
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">{{ __('Телефон') }}</label>
-                <input type="text" name="phone" class="form-control" value="{{ old('phone', $company->phone ?? '') }}">
+                <label class="form-label" for="onb-phone">{{ __('Телефон') }}</label>
+                <input type="text" id="onb-phone" name="phone" class="form-control" value="{{ old('phone', $company->phone ?? '') }}">
               </div>
               <div class="col-md-6 mb-3">
-                <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-control" value="{{ old('email', $company->email ?? '') }}">
+                <label class="form-label" for="onb-email">Email</label>
+                <input type="email" id="onb-email" name="email" class="form-control" value="{{ old('email', $company->email ?? '') }}">
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label">{{ __('Язык интерфейса по умолчанию') }}</label>
-              <select name="language" class="form-select">
+              <label class="form-label" for="onb-language">{{ __('Язык интерфейса по умолчанию') }}</label>
+              <select id="onb-language" name="language" class="form-select">
                 <option value="ru" @selected(old('language','ru')==='ru')>{{ __('Русский') }}</option>
                 <option value="en" @selected(old('language')==='en')>English</option>
                 <option value="tg" @selected(old('language')==='tg')>{{ __('Тоҷикӣ') }}</option>

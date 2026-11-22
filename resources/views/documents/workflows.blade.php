@@ -65,7 +65,9 @@
                                     <span class="wf-steps__dot">·</span>
                                     <span class="wf-steps__actor">
                                         <i class="ti ti-{{ ['role' => 'key', 'department' => 'building-community', 'employee' => 'user', 'author' => 'user-edit', 'ceo' => 'crown'][$step->actor_type->value] ?? 'user' }}"></i>
-                                        @if ($step->role)
+                                        @if ($step->employee)
+                                            {{ trim($step->employee->last_name.' '.$step->employee->first_name) }}
+                                        @elseif ($step->role)
                                             {{ $step->role->name }}
                                         @else
                                             {{ ['role' => __('по роли'), 'department' => __('отдел'), 'employee' => __('сотрудник'), 'author' => __('автор'), 'ceo' => __('генеральный директор')][$step->actor_type->value] ?? $step->actor_type->value }}
@@ -162,6 +164,15 @@
                                     </select>
                                 </div>
                                 <div class="crm-form__field">
+                                    <label class="form-label">{{ __('Сотрудник (если «Сотрудник»)') }}</label>
+                                    <select class="form-select" data-wf-f="employee_id" disabled>
+                                        <option value="">—</option>
+                                        @foreach ($employees as $employeeOption)
+                                            <option value="{{ $employeeOption->id }}">{{ trim($employeeOption->last_name.' '.$employeeOption->first_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="crm-form__field">
                                     <label class="form-label">{{ __('Действие') }}</label>
                                     <select class="form-select" data-wf-f="required_action">
                                         @foreach ($actions as $action)
@@ -221,7 +232,7 @@
         stepCards().forEach(function (card, i) {
             card.querySelector('[data-wf-badge]').textContent = i + 1;
             card.querySelector('[data-wf-title]').textContent = 'Шаг ' + (i + 1);
-            var map = { name: 'name', actor_type: 'actor_type', role_id: 'role_id', required_action: 'required_action' };
+            var map = { name: 'name', actor_type: 'actor_type', role_id: 'role_id', employee_id: 'employee_id', required_action: 'required_action' };
             Object.keys(map).forEach(function (key) {
                 var field = card.querySelector('[data-wf-f="' + key + '"]');
                 if (field) { field.name = 'steps[' + i + '][' + map[key] + ']'; }
@@ -255,15 +266,16 @@
         reindex();
     });
 
-    /* видимость поля роли — только для actor=role */
+    /* видимость полей actor — роль только для role, сотрудник только для employee */
     list.addEventListener('change', function (event) {
         var actor = event.target.closest('[data-wf-f="actor_type"]');
         if (!actor) { return; }
         var card = actor.closest('[data-wf-step-card]');
-        var roleField = card.querySelector('[data-wf-f="role_id"]');
-        var wrap = roleField.closest('.crm-form__field');
-        wrap.style.opacity = actor.value === 'role' ? '' : '.45';
-        roleField.disabled = actor.value !== 'role';
+        [['role_id', 'role'], ['employee_id', 'employee']].forEach(function (pair) {
+            var field = card.querySelector('[data-wf-f="' + pair[0] + '"]');
+            field.closest('.crm-form__field').style.opacity = actor.value === pair[1] ? '' : '.45';
+            field.disabled = actor.value !== pair[1];
+        });
     });
 
     /* ---------- навигация ---------- */
@@ -304,6 +316,12 @@
                 if (actor === 'role' && !role.value) {
                     role.reportValidity();
                     role.focus();
+                    return false;
+                }
+                var employeeField = cards[i].querySelector('[data-wf-f="employee_id"]');
+                if (actor === 'employee' && !employeeField.value) {
+                    employeeField.reportValidity();
+                    employeeField.focus();
                     return false;
                 }
             }

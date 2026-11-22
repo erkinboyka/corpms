@@ -69,7 +69,10 @@ class AnalyticsService
         }
 
         $records = AttendanceRecord::query()
-            ->whereDate('date', $date->toDateString())
+            // DB-S1/PERF-07: range по DATE-колонке использует индекс,
+            // в отличие от DATE(col) = ?. Границы Carbon задают полный день
+            // (в SQLite cast 'date' хранит 'Y-m-d H:i:s').
+            ->whereBetween('date', [$date->startOfDay(), $date->endOfDay()])
             ->whereIn('employee_id', $ids)
             ->get();
 
@@ -106,7 +109,7 @@ class AnalyticsService
             ? collect()
             : AttendanceRecord::query()
                 ->whereIn('employee_id', $ids)
-                ->whereDate('date', '>=', $from->toDateString())
+                ->where('date', '>=', $from->startOfDay())
                 ->get();
 
         $byDate = $rows->groupBy(fn ($r) => $r->date instanceof CarbonInterface ? $r->date->toDateString() : (string) $r->date);

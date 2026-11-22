@@ -224,9 +224,16 @@ class SettingsCompanyScopeTest extends TestCase
         ]);
 
         Http::fake([
-            'llm.example.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => 'Ответ из LLM компании A.']]],
-            ]),
+            'llm.example.com/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'content' => null,
+                    'tool_calls' => [[
+                        'id' => 'call_company_a',
+                        'type' => 'function',
+                        'function' => ['name' => 'task_stats', 'arguments' => '{}'],
+                    ]],
+                ]]]])
+                ->push(['choices' => [['message' => ['content' => 'Ответ из LLM компании A.']]]]),
         ]);
 
         $conversationA = $this->conversation($this->employeeA());
@@ -241,7 +248,7 @@ class SettingsCompanyScopeTest extends TestCase
         // диалог компании B не видит LLM-настройки компании A
         self::assertFalse($service->retryLlm($conversationB), 'Компания B не должна видеть ключ компании A');
 
-        Http::assertSentCount(1);
+        Http::assertSentCount(2); // tool call + финальный ответ компании A
     }
 
     /* -------------------- helpers -------------------- */

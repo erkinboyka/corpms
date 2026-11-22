@@ -126,6 +126,45 @@ class AdminModulesHttpTest extends TestCase
         $this->post('/workflows', ['name' => 'Длинный', 'steps' => $many])->assertSessionHasErrors(['steps']);
     }
 
+    public function test_employee_workflow_step_requires_a_scoped_employee(): void
+    {
+        $this->post('/workflows', [
+            'name' => 'BL-21 без сотрудника',
+            'steps' => [
+                ['name' => 'Сотрудник', 'actor_type' => 'employee', 'required_action' => 'approve'],
+            ],
+        ])->assertSessionHasErrors('steps.0.employee_id');
+
+        $foreignCompany = Company::create(['name' => 'Foreign', 'code' => 'forg']);
+        $foreign = Employee::create([
+            'company_id' => $foreignCompany->id,
+            'user_id' => User::factory()->create()->id,
+            'employee_no' => 'F-1',
+            'first_name' => 'Чужой',
+            'last_name' => 'Сотрудник',
+            'status' => 'active',
+        ]);
+
+        $this->post('/workflows', [
+            'name' => 'BL-21 чужой сотрудник',
+            'steps' => [
+                ['name' => 'Сотрудник', 'actor_type' => 'employee', 'employee_id' => $foreign->id, 'required_action' => 'approve'],
+            ],
+        ])->assertSessionHasErrors('steps.0.employee_id');
+
+        $this->post('/workflows', [
+            'name' => 'BL-21 валидный сотрудник',
+            'steps' => [
+                ['name' => 'Сотрудник', 'actor_type' => 'employee', 'employee_id' => $this->worker->id, 'required_action' => 'approve'],
+            ],
+        ])->assertRedirect();
+
+        $step = DocumentWorkflowStep::query()
+            ->whereHas('workflow', fn ($q) => $q->where('name', 'BL-21 валидный сотрудник'))
+            ->firstOrFail();
+        $this->assertSame($this->worker->id, (int) $step->employee_id);
+    }
+
     public function test_workflows_view_denied_without_permission(): void
     {
         $this->actingAs(User::factory()->create());

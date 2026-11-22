@@ -438,7 +438,15 @@ class TaskController extends Controller
             return back()->withErrors(['status' => $message]);
         }
 
-        $this->tasks->changeStatus($me, $task, $status, $validated['comment'] ?? null);
+        try {
+            $this->tasks->changeStatus($me, $task, $status, $validated['comment'] ?? null);
+        } catch (LogicException $e) {
+            if ($json) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return back()->withErrors(['status' => $e->getMessage()]);
+        }
 
         if ($json) {
             $task->refresh();
@@ -529,11 +537,25 @@ class TaskController extends Controller
             abort(403, __('Нет доступа к этой задаче'));
         }
 
+        $isAssignee = TaskAssignment::query()
+            ->where('task_id', $task->id)
+            ->where('employee_id', $me->id)
+            ->exists();
+        if (! $isAssignee
+            && (int) $task->author_id !== (int) $me->id
+            && ! $this->permissions->check($request->user(), 'tasks.manage')) {
+            abort(403, __('Отправить результат может только исполнитель или автор задачи'));
+        }
+
         $validated = $request->validate([
             'summary' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $this->tasks->submitResult($me, $task, $validated['summary'] ?? null);
+        try {
+            $this->tasks->submitResult($me, $task, $validated['summary'] ?? null);
+        } catch (LogicException $e) {
+            return back()->withErrors(['summary' => $e->getMessage()]);
+        }
 
         return back()->with('status', __('Результат отправлен на проверку'));
     }

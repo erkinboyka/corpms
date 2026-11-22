@@ -18,7 +18,11 @@ use App\Shared\Enums\TaskAssignmentStatus;
 use App\Shared\Enums\TaskPriority;
 use App\Shared\Enums\TaskStatus;
 use App\Shared\Enums\TaskType;
+use App\Support\Concurrency;
+use App\Support\NumberGenerator;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Движок задач/поручений (§12–15 ТЗ):
@@ -32,7 +36,27 @@ class TaskService
 {
     public const MAX_SUBTASK_DEPTH = 3; // настраивается в settings (§15)
 
-    public function __construct(protected AuditService $audit) {}
+    /**
+     * BL-17: разрешённые переходы статусов. completed/cancelled — финальные,
+     * возврат в работу возможен только из review/returned/overdue.
+     *
+     * @var array<string, list<string>>
+     */
+    private const TRANSITIONS = [
+        'new' => ['planned', 'in_progress', 'review', 'completed', 'cancelled', 'overdue'],
+        'planned' => ['in_progress', 'review', 'completed', 'cancelled', 'overdue'],
+        'in_progress' => ['in_progress', 'review', 'returned', 'completed', 'cancelled', 'overdue'],
+        'review' => ['review', 'in_progress', 'returned', 'completed', 'cancelled'],
+        'returned' => ['in_progress', 'completed', 'cancelled'],
+        'overdue' => ['in_progress', 'completed', 'cancelled'],
+        'completed' => [],
+        'cancelled' => [],
+    ];
+
+    public function __construct(
+        protected AuditService $audit,
+        protected NumberGenerator $numbers,
+    ) {}
 
     /* -------------------- создать -------------------- */
 
@@ -137,7 +161,7 @@ class TaskService
     public function createSubtask(Employee $author, Task $parent, array $data): Task
     {
         if ($this->depth($parent) + 1 > self::MAX_SUBTASK_DEPTH) {
-            throw new \LogicException('Достигнут предел вложенности подзадач ('.self::MAX_SUBTASK_DEPTH.')');
+            throw new LogicException('Достигнут предел вложенности подзадач ('.self::MAX_SUBTASK_DEPTH.')');
         }
 
         $subtask = DB::transaction(function () use ($author, $parent, $data) {
@@ -176,33 +200,39 @@ class TaskService
 
     public function delegate(Employee $fromEmployee, TaskAssignment $assignment, Employee $toEmployee, ?string $reason = null): TaskDelegation
     {
-        $delegation = TaskDelegation::create([
-            'task_id' => $assignment->task_id,
-            'assignment_id' => $assignment->id,
-            'from_employee_id' => $fromEmployee->id,
-            'to_employee_id' => $toEmployee->id,
-            'reason' => $reason,
-        ]);
+        // BL-20: delegation, смена исполнителя и аудит — одна транзакция;
+        // блокировка assignment не даёт двум delegations «перейти» в разных потоках.
+        return DB::transaction(function () use ($fromEmployee, $assignment, $toEmployee, $reason): TaskDelegation {
+            $assignment = TaskAssignment::query()->lockForUpdate()->findOrFail($assignment->id);
 
-        $assignment->update([
-            'employee_id' => $toEmployee->id,
-            'assignment_status' => TaskAssignmentStatus::Accepted,
-            'acknowledged_at' => now(),
-        ]);
+            $delegation = TaskDelegation::create([
+                'task_id' => $assignment->task_id,
+                'assignment_id' => $assignment->id,
+                'from_employee_id' => $fromEmployee->id,
+                'to_employee_id' => $toEmployee->id,
+                'reason' => $reason,
+            ]);
 
-        if ($assignment->task->department_id === null || $assignment->task->department_id !== $toEmployee->department_id) {
-            // делегация вне отдела = author видит тряхнуться (audit)
-            $this->audit->log(
-                $fromEmployee->user()->first(),
-                'task.delegated',
-                'task_assignment',
-                $assignment->id,
-                null,
-                ['to_employee_id' => $toEmployee->id, 'reason' => $reason]
-            );
-        }
+            $assignment->update([
+                'employee_id' => $toEmployee->id,
+                'assignment_status' => TaskAssignmentStatus::Accepted,
+                'acknowledged_at' => now(),
+            ]);
 
-        return $delegation;
+            if ($assignment->task->department_id === null || $assignment->task->department_id !== $toEmployee->department_id) {
+                // делегация вне отдела = author видит тряхнуться (audit)
+                $this->audit->log(
+                    $fromEmployee->user()->first(),
+                    'task.delegated',
+                    'task_assignment',
+                    $assignment->id,
+                    null,
+                    ['to_employee_id' => $toEmployee->id, 'reason' => $reason]
+                );
+            }
+
+            return $delegation;
+        });
     }
 
     /* -------------------- статусы (§39,45,47) -------------------- */
@@ -210,6 +240,9 @@ class TaskService
     public function changeStatus(Employee $actor, Task $task, TaskStatus $status, ?string $comment = null): Task
     {
         $from = $task->status;
+        if (! in_array($status->value, self::TRANSITIONS[$from->value] ?? [], true)) {
+            throw new LogicException(__('Переход статуса задачи не разрешён: '.$from->value.' → '.$status->value));
+        }
 
         $task->update([
             'status' => $status,
@@ -269,12 +302,20 @@ class TaskService
 
     public function submitResult(Employee $employee, Task $task, ?string $summary): void
     {
+        // BL-18: результат может сдать только исполнитель или автор задачи.
+        $isAssignee = TaskAssignment::query()
+            ->where('task_id', $task->id)
+            ->where('employee_id', $employee->id)
+            ->exists();
+        if (! $isAssignee && (int) $task->author_id !== (int) $employee->id) {
+            throw new LogicException(__('Отправить результат может только исполнитель или автор задачи'));
+        }
+
         DB::transaction(function () use ($employee, $task, $summary) {
-            TaskResult::create([
-                'task_id' => $task->id,
-                'summary' => $summary,
-                'submitted_by' => $employee->id,
-            ]);
+            TaskResult::updateOrCreate(
+                ['task_id' => $task->id, 'submitted_by' => $employee->id],
+                ['summary' => $summary],
+            );
 
             $this->changeStatus($employee, $task, TaskStatus::Review, __('Отправлена на проверку'));
         });
@@ -296,13 +337,27 @@ class TaskService
             $open->save();
         }
 
-        return TaskTimeLog::create([
-            'task_id' => $task->id,
-            'employee_id' => $employee->id,
-            'started_at' => now(),
-            'stopped_at' => null,
-            'minutes' => 0,
-        ]);
+        try {
+            return TaskTimeLog::create([
+                'task_id' => $task->id,
+                'employee_id' => $employee->id,
+                'started_at' => now(),
+                'stopped_at' => null,
+                'minutes' => 0,
+            ]);
+        } catch (QueryException $exception) {
+            // H-BL-04: два параллельных START — победивший уже создал открытый
+            // лог (unique-generated key). Возвращаем его идемпотентно.
+            if (! Concurrency::isUniqueViolation($exception)) {
+                throw $exception;
+            }
+
+            return TaskTimeLog::query()
+                ->where('employee_id', $employee->id)
+                ->whereNull('stopped_at')
+                ->orderByDesc('id')
+                ->firstOrFail();
+        }
     }
 
     public function stopTimeTracking(Employee $employee, Task $task): ?TaskTimeLog
@@ -349,39 +404,53 @@ class TaskService
 
     /* -------------------- overdue (§44 ТЗ) -------------------- */
 
-    /** Пометить задачи просроченными (шедуляр).  */
+    /**
+     * Пометить задачи просроченными (шедуляр).
+     *
+     * BL-19: просрочиваются все открытые статусы, а не только in_progress,
+     * и каждый переход фиксируется в истории задачи (UI показывает overdue
+     * по дедлайну, поэтому БД не должна расходиться с rabотой интерфейса).
+     */
     public function markOverdue(): int
     {
-        $count = Task::query()
-            ->where('status', 'in_progress')
-            ->where('deadline', '<=', now()->format('Y-m-d H:i:s'))
-            ->where(function ($q) {
-                $q->whereNull('completed_at');
-            })
-            ->update(['status' => TaskStatus::Overdue->value]);
+        $openStatuses = ['new', 'planned', 'in_progress', 'review', 'returned'];
 
-        return $count;
+        $tasks = Task::query()
+            ->whereIn('status', $openStatuses)
+            ->where('deadline', '<=', now()->format('Y-m-d H:i:s'))
+            ->whereNull('completed_at')
+            ->get();
+
+        foreach ($tasks as $task) {
+            $from = $task->status->value;
+            $task->update(['status' => TaskStatus::Overdue->value]);
+            TaskStatusHistory::create([
+                'task_id' => $task->id,
+                'employee_id' => null,
+                'from_status' => $from,
+                'to_status' => TaskStatus::Overdue->value,
+                'comment' => __('Просрочено автоматически'),
+            ]);
+        }
+
+        return $tasks->count();
     }
 
     public function nextNumber(int $companyId): string
     {
         $year = now()->format('Y');
-        // с учётом soft-deleted: unique-номер после удаления нельзя выдавать повторно;
-        // нумерация скоуплена по компании (иначе утекает количество задач других тенантов)
-        $max = Task::query()->withTrashed()
-            ->where('company_id', $companyId)
-            ->whereYear('created_at', $year)
-            ->count();
+        $prefix = 'TSK-'.$year.'-';
 
-        // защита от коллизии (гонка/легаси-записи): первый свободный номер
-        do {
-            $number = sprintf('TSK-%s-%06d', $year, ++$max);
-            $taken = Task::query()->withTrashed()
+        // BL-07/DB-08: нумерация скоуплена по компании и выдаётся через
+        // атомарную последовательность, а не через COUNT()+1.
+        $value = $this->numbers->next('task.number.'.$companyId, $year, fn () => $this->numbers->maxSuffix(
+            $prefix,
+            Task::query()->withTrashed()
                 ->where('company_id', $companyId)
-                ->where('number', $number)
-                ->exists();
-        } while ($taken);
+                ->where('number', 'like', $prefix.'%')
+                ->pluck('number'),
+        ));
 
-        return $number;
+        return sprintf('%s%06d', $prefix, $value);
     }
 }

@@ -7,6 +7,14 @@
     $pollUrl = $pollUrl ?? '';
     $pollMs = $pollMs ?? 3000;
 @endphp
+@if ($pollUrl !== '')
+    {{-- UX-17: видимый статус синхронизации и явная кнопка повтора --}}
+    <div class="lms-pulse-sync small text-secondary d-flex align-items-center gap-2 px-3 py-2" data-lms-pulse-status role="status">
+        <i class="ti ti-circle-check" data-lms-pulse-status-icon aria-hidden="true"></i>
+        <span data-lms-pulse-status-text>{{ __('Пульс актуален') }}</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-lms-pulse-retry hidden>{{ __('Повторить') }}</button>
+    </div>
+@endif
 <div class="lms-pulse-feed" @if ($pollUrl !== '') data-lms-pulse="{{ $pollUrl }}" data-poll-ms="{{ $pollMs }}" @endif>
     @forelse ($activities as $activity)
         <div class="lms-pulse-item @if (! $loop->first) is-dim @endif" data-pulse-id="{{ $activity['id'] ?? 0 }}">

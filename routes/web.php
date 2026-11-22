@@ -10,14 +10,14 @@ use App\Http\Controllers\Web\AccountingEntryController;
 use App\Http\Controllers\Web\AccountingReportController;
 use App\Http\Controllers\Web\AiController;
 use App\Http\Controllers\Web\AnalyticsController;
-use App\Http\Controllers\Web\BackupController;
-use App\Http\Controllers\Web\CertificateController;
 use App\Http\Controllers\Web\AttendanceController;
 use App\Http\Controllers\Web\AttendanceCorrectionController;
 use App\Http\Controllers\Web\AuditController;
+use App\Http\Controllers\Web\BackupController;
 use App\Http\Controllers\Web\BiDashboardController;
 use App\Http\Controllers\Web\BiMetricsController;
 use App\Http\Controllers\Web\BiometricController;
+use App\Http\Controllers\Web\CertificateController;
 use App\Http\Controllers\Web\ChatController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\CrmActivityController;
@@ -35,11 +35,11 @@ use App\Http\Controllers\Web\FinInvoiceController;
 use App\Http\Controllers\Web\FinTransactionController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\IntegrationController;
-use App\Http\Controllers\Web\LocaleController;
-use App\Http\Controllers\Web\LmsController;
-use App\Http\Controllers\Web\OnboardingController;
 use App\Http\Controllers\Web\InventoryController;
+use App\Http\Controllers\Web\LmsController;
+use App\Http\Controllers\Web\LocaleController;
 use App\Http\Controllers\Web\NotificationController;
+use App\Http\Controllers\Web\OnboardingController;
 use App\Http\Controllers\Web\PayrollController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\ProjectMemberController;
@@ -95,6 +95,7 @@ Route::get('/sitemap.xml', function () {
         $xml .= '<url><loc>'.e(url($u)).'</loc></url>';
     }
     $xml .= '</urlset>';
+
     return response($xml, 200)->header('Content-Type', 'application/xml');
 })->name('sitemap');
 
@@ -260,7 +261,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/accounting/entries', [AccountingEntryController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.entries.index');
     Route::post('/accounting/entries', [AccountingEntryController::class, 'store'])->middleware('permission:accounting.manage@company')->name('accounting.entries.store');
-    Route::post('/accounting/sync', [AccountingEntryController::class, 'sync'])->middleware('permission:accounting.manage@company')->name('accounting.sync');
+    Route::post('/accounting/sync', [AccountingEntryController::class, 'sync'])->middleware(['permission:accounting.manage@company', 'throttle:1,1,accounting.sync'])->name('accounting.sync');
     Route::get('/accounting/entries/{entry}', [AccountingEntryController::class, 'show'])->middleware('permission:accounting.view')->name('accounting.entries.show');
 
     Route::get('/accounting/documents', [AccountingDocumentController::class, 'index'])->middleware('permission:accounting.view')->name('accounting.documents.index');
@@ -288,7 +289,7 @@ Route::middleware('auth')->group(function () {
     /* ---------- BI (E6) ---------- */
     Route::get('/bi', [BiDashboardController::class, 'index'])->middleware('permission:bi.view')->name('bi.index');
     Route::get('/bi/metrics', [BiMetricsController::class, 'index'])->middleware('permission:bi.view')->name('bi.metrics.index');
-    Route::post('/bi/rebuild', [BiDashboardController::class, 'rebuild'])->middleware('permission:bi.manage@company')->name('bi.rebuild');
+    Route::post('/bi/rebuild', [BiDashboardController::class, 'rebuild'])->middleware(['permission:bi.manage@company', 'throttle:1,1,bi.rebuild'])->name('bi.rebuild');
     Route::post('/bi/dashboards', [BiDashboardController::class, 'store'])->middleware('permission:bi.manage@company')->name('bi.dashboards.store');
     Route::get('/bi/dashboards/{dashboard}', [BiDashboardController::class, 'show'])->middleware('permission:bi.view')->name('bi.dashboards.show');
     Route::post('/bi/dashboards/{dashboard}/widgets', [BiDashboardController::class, 'storeWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.store');
@@ -358,7 +359,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('permission:settings.view@company')->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->middleware('permission:settings.manage@company')->name('settings.update');
 
-    Route::get('/backups', [BackupController::class, 'index'])->middleware('permission:settings.view@company')->name('backups.index');
+    Route::get('/backups', [BackupController::class, 'index'])->middleware(['platform', 'throttle:30,1'])->name('backups.index');
 
     Route::get('/certificates', [CertificateController::class, 'index'])->middleware('permission:settings.view@company')->name('certificates.index');
     Route::post('/certificates', [CertificateController::class, 'store'])->middleware('permission:settings.manage@company')->name('certificates.store');
@@ -368,9 +369,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/imports/upload', [ImportController::class, 'upload'])->middleware('permission:employees.manage@company')->name('imports.upload');
     Route::get('/imports/{job}', [ImportController::class, 'show'])->middleware('permission:employees.manage@company')->name('imports.show');
     Route::post('/imports/{job}/run', [ImportController::class, 'run'])->middleware('permission:employees.manage@company')->name('imports.run');
-    Route::post('/backups/db', [BackupController::class, 'runDb'])->middleware('permission:settings.manage@company')->name('backups.db');
-    Route::post('/backups/files', [BackupController::class, 'runFiles'])->middleware('permission:settings.manage@company')->name('backups.files');
-    Route::get('/backups/{file}', [BackupController::class, 'download'])->middleware('permission:settings.view@company')->name('backups.download');
+    Route::post('/backups/db', [BackupController::class, 'runDb'])->middleware(['platform', 'throttle:1,1,backups.db'])->name('backups.db');
+    Route::post('/backups/files', [BackupController::class, 'runFiles'])->middleware(['platform', 'throttle:1,1,backups.files'])->name('backups.files');
+    Route::get('/backups/{file}', [BackupController::class, 'download'])->middleware(['platform', 'throttle:30,1'])->name('backups.download');
 
     Route::get('/search', [SearchController::class, 'index'])->middleware(['permission:search.global', 'throttle:60,1'])->name('search.index');
     Route::get('/search/hint', [SearchController::class, 'hint'])->middleware(['permission:search.global', 'throttle:120,1'])->name('search.hint');

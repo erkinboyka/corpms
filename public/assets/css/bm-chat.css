@@ -762,6 +762,10 @@ button.bm-chat__msg-quote:hover { background: var(--bm-selected); }
 }
 
 .bm-chat__header-actions { display: flex; align-items: center; gap: .45rem; }
+/* Подписи к кнопкам в шапке диалога: текст виден всегда, тултип — дополнение. */
+.bm-chat__header-action { gap: .4rem; }
+.bm-chat__header-action-label { white-space: nowrap; }
+@media (max-width: 767px) { .bm-chat__header-action-label { display: none; } }
 #chat-latest {
     transition:
         opacity var(--crm-motion-control) var(--crm-ease-out),

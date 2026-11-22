@@ -255,8 +255,10 @@ class AiToolCallingTest extends TestCase
         $this->post('/ai', ['question' => 'Найди документ по бюджету'])->assertRedirect();
 
         $conversation = AiConversation::query()->sole();
-        self::assertTrue((bool) $conversation->grounded, 'финальный ответ после tool round получен от LLM');
+        self::assertTrue((bool) $conversation->grounded, 'финальный ответ после tool round подтверждён источниками');
         self::assertSame('Нашёл приказ о бюджете — откройте по ссылке.', (string) $conversation->answer);
+        self::assertNotEmpty($conversation->query_used['source_items'] ?? [], 'AI-02: источники инструмента сохраняются');
+        self::assertStringContainsString('Приказ о бюджете', (string) ($conversation->query_used['source_items'][0]['label'] ?? ''));
 
         // первый запрос — с tools; второй — с результатом инструмента в role=tool
         Http::assertSent(function ($request): bool {

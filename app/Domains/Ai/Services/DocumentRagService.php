@@ -8,6 +8,7 @@ use App\Domains\Analytics\Services\AnalyticsService;
 use App\Models\Document;
 use App\Models\DocumentChunk;
 use App\Models\Employee;
+use App\Support\AiEndpointGuard;
 use App\Support\PermissionService;
 use App\Support\SettingsService;
 use Illuminate\Support\Collection;
@@ -285,7 +286,7 @@ class DocumentRagService
         $apiKey = (string) $settings->get('corpms.ai.api_key');
         $model = (string) ($settings->get('corpms.ai.embeddings_model') ?? '');
 
-        if ($baseUrl === '' || $apiKey === '' || $model === '') {
+        if ($baseUrl === '' || $apiKey === '' || $model === '' || ! AiEndpointGuard::isAllowed($baseUrl.'/embeddings')) {
             return null;
         }
 
@@ -296,6 +297,7 @@ class DocumentRagService
         try {
             $response = Http::withToken($apiKey)
                 ->timeout($timeout)
+                ->withoutRedirecting()
                 ->post($baseUrl.'/embeddings', [
                     'model' => $model,
                     'input' => array_values($input),

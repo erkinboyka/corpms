@@ -52,7 +52,11 @@
         trigger.setAttribute('aria-haspopup', 'listbox');
         trigger.setAttribute('aria-expanded', 'false');
         trigger.disabled = select.disabled;
-        if (select.getAttribute('aria-label')) trigger.setAttribute('aria-label', select.getAttribute('aria-label'));
+        // The native select is hidden from AT, so its <label> no longer names
+        // the generated button. Provide an explicit accessible name instead.
+        var associatedLabel = select.labels && select.labels.length ? select.labels[0].textContent.trim() : '';
+        trigger.setAttribute('aria-label', select.getAttribute('aria-label') || associatedLabel
+            || select.getAttribute('data-placeholder') || labelOf(select) || 'Выбрать значение');
 
         var value = document.createElement('span');
         value.className = 'crm-select__value';

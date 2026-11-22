@@ -6,6 +6,7 @@ namespace Tests\Feature\Attendance;
 
 use App\Domains\Biometric\Services\BiometricService;
 use App\Models\AttendanceRecord;
+use App\Models\BiometricEvent;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
@@ -110,6 +111,21 @@ class DeviceApiControllerTest extends TestCase
             'event_uuid' => 'e1',
             'processing_status' => 'failed',
         ]);
+    }
+
+    /** SEC-09: терминал не может записать в журнал произвольные поля/PДн. */
+    public function test_only_allowlisted_payload_fields_are_stored(): void
+    {
+        $this->postJson('/api/v1/biometric/device/events', array_merge(self::payload('08:03:21'), [
+            'face_template' => 'raw-template',
+            'debug' => ['trace' => 'token'],
+        ]), ['Authorization' => 'Bearer '.$this->token])->assertOk();
+
+        $raw = BiometricEvent::query()->where('event_uuid', 'e1')->value('raw_payload');
+        self::assertIsArray($raw);
+        self::assertSame('DEV-100', $raw['employee_no']);
+        self::assertArrayNotHasKey('face_template', $raw);
+        self::assertArrayNotHasKey('debug', $raw);
     }
 
     public function test_direction_mismatch_rejected(): void

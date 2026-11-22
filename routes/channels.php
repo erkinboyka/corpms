@@ -5,7 +5,8 @@ use App\Models\Conversation;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (string) $user->id === (string) $id;
+    // SEC-10/BE-02: неавторизованный запрос должен дать 403, а не 500.
+    return $user !== null && (string) $user->id === (string) $id;
 });
 
 /*
@@ -14,7 +15,7 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
  * Ошибки доступа не раскрывают существование чужих диалогов: всегда false.
  */
 Broadcast::channel('chat.conversation.{conversationId}', function ($user, $conversationId) {
-    $employee = $user->employee;
+    $employee = $user?->employee;
 
     if ($employee === null) {
         return false;
@@ -30,7 +31,7 @@ Broadcast::channel('chat.conversation.{conversationId}', function ($user, $conve
         app(ChatService::class)->assertCanView($employee, $conversation);
 
         return true;
-    } catch (\Throwable) {
+    } catch (Throwable) {
         return false;
     }
 });
@@ -40,5 +41,7 @@ Broadcast::channel('chat.conversation.{conversationId}', function ($user, $conve
  * Видит только сам сотрудник — сверка id без дополнительных условий.
  */
 Broadcast::channel('employee.{employeeId}.chat', function ($user, $employeeId) {
-    return $user->employee !== null && (string) $user->employee->id === (string) $employeeId;
+    return $user !== null
+        && $user->employee !== null
+        && (string) $user->employee->id === (string) $employeeId;
 });

@@ -38,6 +38,7 @@
     var replyDraft = null;
     var pendingClientIds = {}; /* client_id -> элемент оптимистичного пузыря */
     var renderedIds = {};      /* id сообщения -> true (дедупликация) */
+    var editingIds = {};       /* id сообщения -> true, пока в текстовом поле есть несохранённый черновик */
     var pollTimer = null;
     var pollBusy = false;
     var consecutiveFailures = 0;
@@ -320,6 +321,7 @@
     function removeMessage(id) {
         var node = messagesEl && messagesEl.querySelector('[data-message-id="' + id + '"]');
         delete renderedIds[id];
+        delete editingIds[id];
         if (!node || !node.parentNode) { return; }
         if (reduceMotion || node.classList.contains('is-leaving')) {
             node.parentNode.removeChild(node);
@@ -342,7 +344,9 @@
         if (!old) { appendMessage(message); return; }
 
         var body = old.querySelector('.bm-chat__msg-body');
-        if (body) { body.innerHTML = formatBody(message.body || ''); }
+        /* FE-05: пока пользователь редактирует сообщение, polling не должен
+           затирать textarea свежей копией тела из event-потока. */
+        if (body && ! editingIds[message.id]) { body.innerHTML = formatBody(message.body || ''); }
         if (message.edited_at) {
             old.setAttribute('data-edited', '1');
             if (!old.querySelector('.bm-chat__msg-flag')) {
@@ -455,6 +459,9 @@
         if (document.hidden) { return; } /* вкладка скрыта — не тратим запросы */
 
         pollBusy = true;
+        /* FE-04: задержку выбирает ОДИН раз за цикл — catch больше не перезаписывается
+           последующим then() со значением по умолчанию. */
+        var nextDelay = 4000;
 
         fetch(routeBase + '/' + activeId + '/events?since=' + lastEventId, {
             credentials: 'same-origin',
@@ -484,12 +491,12 @@
             })
             .catch(function () {
                 consecutiveFailures += 1;
-                /* Пауза растёт до 30с: сеть молчит — не долбим её. */
-                schedulePoll(Math.min(30000, 4000 * Math.pow(2, Math.min(consecutiveFailures, 3))));
+                /* Пауза растёт 4/8/16/30с: сеть молчит — не долбим её. */
+                nextDelay = Math.min(30000, 4000 * Math.pow(2, Math.min(consecutiveFailures, 3)));
             })
             .then(function () {
                 pollBusy = false;
-                schedulePoll();
+                schedulePoll(nextDelay);
             });
     }
 
@@ -717,25 +724,59 @@
         area.value = original;
         area.rows = 2;
         area.maxLength = 8000;
+        area.setAttribute('aria-label', 'Редактирование сообщения');
 
         found.body.textContent = '';
         found.body.appendChild(area);
+        found.node.setAttribute('data-editing', '1');
+        editingIds[id] = true;
         area.focus();
         area.setSelectionRange(area.value.length, area.value.length);
 
-        function cancel() { updateMessageFromBody(id, original, true); }
+        var finished = false;
+        var saving = false;
+
+        function release() {
+            finished = true;
+            saving = false;
+            delete editingIds[id];
+            found.node.removeAttribute('data-editing');
+        }
+
+        function cancel() {
+            if (finished) { return; }
+            release();
+            updateMessageFromBody(id, original, true);
+        }
+
+        function finishFailed(draft, err) {
+            if (finished) { return; }
+            saving = false; /* черновик остаётся в поле — данные не теряются */
+            if (area.parentNode) {
+                area.value = draft;
+                area.focus({ preventScroll: true });
+            } else {
+                release();
+                updateMessageFromBody(id, draft, true);
+            }
+            notify(err && err.message ? err.message : 'Не удалось сохранить', true);
+        }
 
         function save() {
+            if (finished || saving) { return; }
             var value = area.value.trim();
             if (!value || value === original) { cancel(); return; }
+            saving = true;
 
             method(routeBase + '/messages/' + id, 'PUT', { body: value })
                 .then(function (body) {
+                    if (finished) { return; }
+                    release();
                     if (body.message) { updateMessage(body.message); }
+                    else { updateMessageFromBody(id, value, false); }
                 })
                 .catch(function (err) {
-                    notify(err.message || 'Не удалось сохранить', true);
-                    cancel();
+                    finishFailed(value, err);
                 });
         }
 
@@ -745,7 +786,7 @@
         });
         area.addEventListener('blur', function () {
             window.setTimeout(function () {
-                if (document.activeElement !== area && area.parentNode) { save(); }
+                if (! finished && document.activeElement !== area && area.parentNode) { save(); }
             }, 150);
         });
     }

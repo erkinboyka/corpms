@@ -67,7 +67,7 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">{{ __('Аналитика') }} {{ $scopeName }}</div>
+            <div class="crm-eyebrow">{{ __('Сводка и отчёты') }} {{ $scopeName }}</div>
             <h1 class="page-title mt-1">{{ __('Отчёты') }}</h1>
             <div class="text-secondary mt-1">{{ __('Сверху — что требует внимания, ниже — три отчёта с готовыми действиями') }}</div>
         </div>

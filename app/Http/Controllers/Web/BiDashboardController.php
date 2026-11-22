@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web;
 
 use App\Domains\Audit\Services\AuditService;
+use App\Domains\Bi\Jobs\RebuildBiMart;
 use App\Domains\Bi\Services\BiService;
 use App\Http\Controllers\Controller;
 use App\Models\BiDashboard;
 use App\Models\BiWidget;
 use App\Shared\Enums\BiWidgetKind;
 use App\Support\PermissionService;
+use App\Support\SingleFlightLock;
 use App\Support\TenantGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -186,28 +188,40 @@ class BiDashboardController extends Controller
         return back()->with('status', __('Виджет удалён'));
     }
 
-    /** Пересборка витрины за месяц. */
+    /** Пересборка витрины за месяц (BE-06/PERF-06: через очередь). */
     public function rebuild(Request $request): RedirectResponse
     {
         $me = $request->user()->employee;
         \assert($me !== null);
 
         $month = (string) $request->input('month', now()->format('Y-m'));
-
         if (preg_match('/^\d{4}-\d{2}$/', $month) !== 1) {
             $month = now()->format('Y-m');
         }
 
-        [$from, $to] = $this->period($month);
+        $companyId = (int) $me->company_id;
+        $lockKey = 'bi.rebuild:'.$companyId;
+        $lockToken = SingleFlightLock::acquire($lockKey);
 
-        $written = $this->bi->rebuild((int) $me->company_id, $from, $to);
+        if ($lockToken === null) {
+            abort(429, 'Пересборка витрины уже выполняется.');
+        }
 
-        $this->audit->log($request->user(), 'bi.rebuilt', 'bi_metric', null, null, [
-            'month' => $month,
-            'rows' => $written,
-        ]);
+        try {
+            RebuildBiMart::dispatch(
+                $companyId,
+                (int) $request->user()->id,
+                $month,
+                $lockKey,
+                $lockToken,
+            );
+        } catch (\Throwable $exception) {
+            SingleFlightLock::release($lockKey, $lockToken);
 
-        return back()->with('status', 'Витрина за '.$month.' пересобрана: '.$written.' строк');
+            throw $exception;
+        }
+
+        return back()->with('status', __('Пересборка витрины запущена'));
     }
 
     /**

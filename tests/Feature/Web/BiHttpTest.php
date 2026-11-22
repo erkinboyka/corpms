@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Support\Sidebar;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 /**
@@ -195,7 +196,8 @@ class BiHttpTest extends TestCase
         $this->assertSame(5000.0, $totals['deals_won_amount']);
         $this->assertSame(1.0, $totals['tasks_completed']);
 
-        // повторная сборка не дублирует строки
+        // повторная сборка не дублирует строки (limit 1/мин сбрасываем между вызовами)
+        RateLimiter::clear('bi.rebuild'.sha1((string) $this->adminUser->id));
         $this->post('/bi/rebuild', ['month' => $month])->assertSessionHasNoErrors();
         $this->assertSame(
             1,

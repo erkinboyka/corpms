@@ -41,64 +41,61 @@ class RfidController extends Controller
 
         $scope = $this->permissions->can($user, 'biometry.rfid.view');
 
-        $cards = RfidCard::query()
-            ->with(['employee', 'issuedBy'])
-            // межтенантная изоляция (S2): карты только сотрудников своей компании
-            ->whereHas('employee', fn ($q) => $q->where('company_id', $me->company_id))
-            ->orderByDesc('id')
-            ->limit(200)
-            ->get();
-
-        // ограничение области: department видит свой отдел, own — свое
+        // DB-14: scope применяется в SQL ДО limit(), иначе свои записи
+        // вне первой сотни чужих просто не попадали бы в результат.
         $deptIds = collect();
-        if ($scope === PermissionScope::Own) {
-            $cards = $cards->filter(fn (RfidCard $card) => (int) $card->employee_id === (int) $me->id);
-        } elseif ($scope === PermissionScope::Department) {
+        if ($scope === PermissionScope::Department) {
             $deptIds = Employee::query()
                 ->where('company_id', $me->company_id)
                 ->where('department_id', $me->department_id)
                 ->pluck('id');
-            $cards = $cards->filter(fn (RfidCard $card) => $deptIds->contains((int) $card->employee_id));
         }
+
+        $cardsQuery = RfidCard::query()
+            ->with(['employee', 'issuedBy'])
+            // межтенантная изоляция (S2): карты только сотрудников своей компании
+            ->whereHas('employee', fn ($q) => $q->where('company_id', $me->company_id));
+        if ($scope === PermissionScope::Own) {
+            $cardsQuery->where('employee_id', $me->id);
+        } elseif ($scope === PermissionScope::Department) {
+            $cardsQuery->whereIn('employee_id', $deptIds);
+        }
+        // UX-20: постраничные списки вместо жёстких limit(200).
+        $cards = $cardsQuery->orderByDesc('id')->paginate(50, ['*'], 'cards_page')->withQueryString();
+
+        $activeCardsCount = (clone $cardsQuery)->where('status', RfidCardStatus::Active)->count();
 
         $ownCompanyDeviceIds = BiometricDevice::query()->where('company_id', $me->company_id)->pluck('id');
 
-        $events = BiometricEvent::query()
+        $eventsQuery = BiometricEvent::query()
             ->where('template_type', 'rfid')
             ->with(['device', 'employee'])
             // события ридеров: только своей компании (устройство либо сотрудник)
             ->where(fn ($q) => $q->whereIn('device_id', $ownCompanyDeviceIds)
-                ->orWhereHas('employee', fn ($e) => $e->where('company_id', $me->company_id)))
-            ->orderByDesc('id')
-            ->limit(200)
-            ->get()
-            ->filter(function (BiometricEvent $event) use ($scope, $me, $deptIds) {
-                if ($scope === PermissionScope::Own) {
-                    return (int) $event->employee_id === (int) $me->id;
-                }
-                if ($scope === PermissionScope::Department) {
-                    return $event->employee_id !== null && $deptIds->contains((int) $event->employee_id);
-                }
-
-                return true;
-            });
+                ->orWhereHas('employee', fn ($e) => $e->where('company_id', $me->company_id)));
+        if ($scope === PermissionScope::Own) {
+            $eventsQuery->where('employee_id', $me->id);
+        } elseif ($scope === PermissionScope::Department) {
+            $eventsQuery->whereIn('employee_id', $deptIds);
+        }
+        $events = $eventsQuery->orderByDesc('id')->paginate(50, ['*'], 'events_page')->withQueryString();
 
         // сотрудники для выдачи карт (в своей компании в scope manage)
         $manageScope = $this->permissions->can($user, 'biometry.rfid.manage');
-        $employees = Employee::query()
+        $employeesQuery = Employee::query()
             ->where('company_id', $me->company_id)
-            ->where('status', 'active')
-            ->orderBy('last_name')
-            ->get();
+            ->where('status', 'active');
         if ($manageScope === PermissionScope::Own) {
-            $employees = $employees->filter(fn (Employee $e) => (int) $e->id === (int) $me->id);
+            $employeesQuery->where('id', $me->id);
         } elseif ($manageScope === PermissionScope::Department) {
-            $employees = $employees->filter(fn (Employee $e) => (int) $e->department_id === (int) $me->department_id);
+            $employeesQuery->where('department_id', $me->department_id);
         }
+        $employees = $employeesQuery->orderBy('last_name')->limit(500)->get();
 
         return view('biometrics.rfid', [
-            'cards' => $cards->values(),
-            'events' => $events->values(),
+            'cards' => $cards,
+            'activeCardsCount' => $activeCardsCount,
+            'events' => $events,
             'employees' => $employees->values(),
             'canManage' => $this->permissions->check($user, 'biometry.rfid.manage'),
         ]);

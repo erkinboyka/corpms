@@ -13,6 +13,7 @@ use App\Models\BiometricEvent;
 use App\Models\BiometricProfile;
 use App\Models\Employee;
 use App\Models\User;
+use App\Shared\Enums\BiometricDeviceType;
 use App\Shared\Enums\DeviceStatus;
 use App\Shared\Enums\PermissionScope;
 use App\Support\PermissionService;
@@ -21,6 +22,7 @@ use App\Support\TenantGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -112,7 +114,7 @@ class BiometricController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'serial_number' => ['required', 'string', 'max:64', 'unique:biometric_devices,serial_number'],
-            'device_type' => ['required', 'in:face_terminal,kiosk,fingerprint_gate,turnstile,qr_reader'],
+            'device_type' => ['required', Rule::enum(BiometricDeviceType::class)],
             'vendor' => ['required', 'string', 'max:64'],
             'model' => ['nullable', 'string', 'max:120'],
             'location' => ['nullable', 'string', 'max:200'],

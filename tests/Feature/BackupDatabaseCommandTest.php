@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\Process;
 use PDO;
 use Tests\TestCase;
 
@@ -110,6 +111,59 @@ class BackupDatabaseCommandTest extends TestCase
 
         $this->artisan('db:backup', ['--connection' => 'backup_mem'])
             ->assertExitCode(1); // Command::FAILURE
+    }
+
+    public function test_missing_source_database_file_fails_cleanly(): void
+    {
+        config(['database.connections.backup_missing' => [
+            'driver' => 'sqlite',
+            'database' => $this->backupDir.'/does-not-exist.sqlite',
+            'prefix' => '',
+        ]]);
+
+        $this->artisan('db:backup', ['--connection' => 'backup_missing'])
+            ->assertExitCode(1)
+            ->expectsOutputToContain('Бэкап не выполнен');
+    }
+
+    public function test_mysql_dump_failure_is_reported_and_password_never_goes_to_cli(): void
+    {
+        Process::fake([
+            '*' => Process::result(errorOutput: 'Access denied for user', exitCode: 2),
+        ]);
+        $this->configureMysqlBackup();
+
+        $this->artisan('db:backup', ['--connection' => 'backup_mysql'])->assertExitCode(1);
+
+        Process::assertRan(function ($process, $result): bool {
+            return ($process->environment['MYSQL_PWD'] ?? null) === 'never-log-this-secret'
+                && ! str_contains(implode(' ', (array) $process->command), 'never-log-this-secret')
+                && $result->failed();
+        });
+        $this->assertEmpty(glob($this->backupDir.'/backup_mysql_*.sql') ?: []);
+    }
+
+    public function test_empty_mysql_dump_is_rejected(): void
+    {
+        // exit code 0, но файл дампа не создан — старая версия считала такой бэкап валидным
+        Process::fake(['*' => Process::result(output: '')]);
+        $this->configureMysqlBackup();
+
+        $this->artisan('db:backup', ['--connection' => 'backup_mysql'])
+            ->assertExitCode(1)
+            ->expectsOutputToContain('Дамп не создан или пуст');
+    }
+
+    private function configureMysqlBackup(): void
+    {
+        config(['database.connections.backup_mysql' => [
+            'driver' => 'mysql',
+            'host' => 'db.internal',
+            'port' => 3306,
+            'username' => 'svc_backup',
+            'password' => 'never-log-this-secret',
+            'database' => 'crm_test',
+        ]]);
     }
 
     public function test_backup_is_scheduled_daily(): void

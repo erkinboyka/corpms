@@ -7,7 +7,9 @@ namespace App\Domains\Ai\Services;
 use App\Models\DocumentCategory;
 use App\Models\DocumentSignatureRequest;
 use App\Models\Employee;
+use App\Shared\Enums\PermissionScope;
 use App\Support\PermissionService;
+use Illuminate\Support\Str;
 
 class BumiActions
 {
@@ -40,6 +42,7 @@ class BumiActions
         $q = trim(preg_replace('/^(?:(?:буми|bumi|пожалуйста|можешь|можно|помоги мне|прошу)[\s,:]+)+/iu', '', trim($question)));
         if (preg_match('/^(?:подпиши(?:те)?|подписать|хочу подписать|покажи документы на подпись|что (?:у меня )?на подпись)\b(.*)$/iu', $q, $m)) {
             $filter = trim(preg_replace('/^(?:мне\s+)?(?:этот\s+)?(?:документ(?:ы)?|договор)?\s*/iu', '', trim($m[1])), " \t:№«»\"?!.");
+
             return $this->signatures($me, $filter);
         }
 
@@ -47,48 +50,50 @@ class BumiActions
             return null;
         }
         $object = trim($m[1]);
-        if (!preg_match('/^покажи\s+(?:мне\s+)?(?:раздел|список)\b|^покажи\s+график\s+(?:работы|смен)/iu', $q)
-            && !preg_match('/^(?:форму\s+)?(?:задачу|документ|служебную записку|приказ|файл|заявку)\b/iu', $object)
+        if (! preg_match('/^покажи\s+(?:мне\s+)?(?:раздел|список)\b|^покажи\s+график\s+(?:работы|смен)/iu', $q)
+            && ! preg_match('/^(?:форму\s+)?(?:задачу|документ|служебную записку|приказ|файл|заявку)\b/iu', $object)
             && ($artifact = app(BumiArtifacts::class)->prepare($me, $object, $facts)) !== null) {
             return $artifact;
         }
-        if (preg_match('/(?:заявк|заявлени|форму|отпуск)\w*.*(?:отпуск|отгул)|^(?:отпуск|отгул)\b/iu', $object) && !preg_match('/отч[её]т|таблиц|диаграмм/iu', $object)) {
+        if (preg_match('/(?:заявк|заявлени|форму|отпуск)\w*.*(?:отпуск|отгул)|^(?:отпуск|отгул)\b/iu', $object) && ! preg_match('/отч[её]т|таблиц|диаграмм/iu', $object)) {
             if (! $this->allowed($me, 'leaves.request')) {
                 return ['reply' => __('У вашей роли нет права подавать заявки на отсутствие.'), 'blocks' => []];
             }
             $dates = $this->dates($object);
             preg_match('/(?:причина|комментарий|по причине)\s*[:—-]?\s*(.+)$/iu', $object, $reason);
+
             return ['reply' => __('Проверьте даты вашей заявки. После отправки она попадёт в график согласования.'), 'blocks' => [[
                 'type' => 'leave_draft', 'reason' => $reason[1] ?? '', 'start' => $dates[0] ?? '', 'end' => $dates[1] ?? $dates[0] ?? '',
                 'kind' => mb_stripos($object, __('отгул')) !== false ? 'day_off' : 'vacation',
             ]]];
         }
-        if (preg_match('/^(?:мне\s+)?(?:картинк\w*|изображени\w*|иллюстраци\w*|баннер\w*|постер\w*|логотип\w*)\b/iu', $object) || preg_match('/^нарисуй\b/iu', $q) && !preg_match('/диаграмм|график/iu', $object)) {
+        if (preg_match('/^(?:мне\s+)?(?:картинк\w*|изображени\w*|иллюстраци\w*|баннер\w*|постер\w*|логотип\w*)\b/iu', $object) || preg_match('/^нарисуй\b/iu', $q) && ! preg_match('/диаграмм|график/iu', $object)) {
             return $this->files->illustration($me, $q);
         }
         if (preg_match('/^(?:мне\s+)?(?:форму\s+)?(?:новую\s+)?задач[уаыи]\b(.*)$/ius', $object, $m)) {
             if (! $this->allowed($me, 'tasks.create')) {
                 return ['reply' => __('У вашей роли нет права создавать задачи.'), 'blocks' => []];
             }
-            $title = trim($m[1], " :.");
+            $title = trim($m[1], ' :.');
             $deadline = $this->dates($title)[0] ?? null;
             if (preg_match('/[«"]([^»"]+)[»"]/u', $title, $name)) {
                 $title = $name[1];
             }
             $assignee = $me->id;
             if (preg_match('/(?:исполнитель|назначь на|исполнителю)\s*[:—-]?\s*([^,;\n]+)/iu', $object, $who)) {
-                $name = trim(preg_split('/\s+(?:на завтра|до |со сроком|приоритет|срок)/iu', $who[1])[0], " «»\".");
+                $name = trim(preg_split('/\s+(?:на завтра|до |со сроком|приоритет|срок)/iu', $who[1])[0], ' «»".');
                 $matches = array_filter($this->taskAssignees($me), static function ($label) use ($name) {
                     $parts = explode(' ', mb_strtolower($label));
                     $needle = mb_strtolower($name);
+
                     return in_array($needle, [...$parts, implode(' ', $parts), implode(' ', array_reverse($parts))], true);
                 });
                 $assignee = count($matches) === 1 ? array_key_first($matches) : null;
             }
             $priority = match (true) {
-                (bool)preg_match('/критическ/iu', $object) => 'critical',
-                (bool)preg_match('/срочн|высок(?:ий|им) приоритет|приоритет\s*[:—-]?\s*высок/iu', $object) => 'high',
-                (bool)preg_match('/низк(?:ий|им) приоритет|приоритет\s*[:—-]?\s*низк/iu', $object) => 'low',
+                (bool) preg_match('/критическ/iu', $object) => 'critical',
+                (bool) preg_match('/срочн|высок(?:ий|им) приоритет|приоритет\s*[:—-]?\s*высок/iu', $object) => 'high',
+                (bool) preg_match('/низк(?:ий|им) приоритет|приоритет\s*[:—-]?\s*низк/iu', $object) => 'low',
                 default => 'medium',
             };
 
@@ -106,8 +111,8 @@ class BumiActions
                 // Фолбэк на детерминированный черновик AiPanelService (текст + ссылки).
                 return null;
             }
-            $subject = trim(mb_substr($object, mb_strlen($m[0])), " :«»\".");
-            $title = $subject !== '' ? $subject : \Illuminate\Support\Str::ucfirst($m[0]);
+            $subject = trim(mb_substr($object, mb_strlen($m[0])), ' :«»".');
+            $title = $subject !== '' ? $subject : Str::ucfirst($m[0]);
             $body = $subject === '' ? '' : $writeText('Напиши только текст черновика документа. Не выдумывай имена, даты и обязательства. Запрос: '.$q);
 
             return ['reply' => $body ? __('Подготовил текст и заполнил форму. Проверьте документ перед сохранением.') : 'Открыл форму документа. Проверьте заголовок, дополните текст и выберите категорию.', 'blocks' => [[
@@ -116,7 +121,7 @@ class BumiActions
         }
 
         if (preg_match('/^(?:текстовый\s+)?(?:файл|txt)\b(.*)$/ius', $object, $m)) {
-            $brief = trim($m[1], " :");
+            $brief = trim($m[1], ' :');
             if ($brief === '') {
                 return ['reply' => 'Какой текст записать? Например, «Создай файл с текстом: План встречи на пятницу».', 'blocks' => []];
             }
@@ -136,12 +141,13 @@ class BumiActions
     {
         $scope = $this->permissions->can($me->user, 'employees.view');
         $people = Employee::query()->where('company_id', $me->company_id)->where('status', 'active');
-        if ($scope === \App\Shared\Enums\PermissionScope::Department && $me->department_id !== null) {
+        if ($scope === PermissionScope::Department && $me->department_id !== null) {
             $people->where('department_id', $me->department_id);
-        } elseif ($scope !== \App\Shared\Enums\PermissionScope::Company) {
+        } elseif ($scope !== PermissionScope::Company) {
             $people->whereKey($me->id);
         }
-        return $people->orderBy('last_name')->get(['id','first_name','last_name'])
+
+        return $people->orderBy('last_name')->get(['id', 'first_name', 'last_name'])
             ->mapWithKeys(fn ($p) => [$p->id => $p->last_name.' '.$p->first_name])->all();
     }
 
@@ -155,8 +161,9 @@ class BumiActions
         preg_match_all('/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\.\d{1,2}\.\d{4}|сегодня|завтра|послезавтра)\b/iu', mb_strtolower($text), $matches);
         $dates = [];
         foreach ($matches[0] as $date) {
-            if (in_array($date, [__('сегодня'),__('завтра'),__('послезавтра')], true)) {
-                $dates[] = today()->addDays(array_search($date, [__('сегодня'),__('завтра'),__('послезавтра')], true))->toDateString();
+            if (in_array($date, [__('сегодня'), __('завтра'), __('послезавтра')], true)) {
+                $dates[] = today()->addDays(array_search($date, [__('сегодня'), __('завтра'), __('послезавтра')], true))->toDateString();
+
                 continue;
             }
             $parts = str_contains($date, '.') ? array_reverse(explode('.', $date)) : explode('-', $date);
@@ -165,6 +172,7 @@ class BumiActions
                 $dates[] = sprintf('%04d-%02d-%02d', $year, $month, $day);
             }
         }
+
         return $dates;
     }
 
@@ -194,6 +202,7 @@ class BumiActions
                 'otp' => $request->requires_otp, 'internal' => $request->driver->value === 'internal',
             ];
         }
+
         return ['reply' => 'Вот документы, ожидающие вашей подписи. Проверьте название и версию, затем подтвердите подпись нужного документа.', 'blocks' => $blocks];
     }
 }

@@ -91,11 +91,18 @@ class AttendanceCorrectionService
         bool $approve,
         ?string $comment = null,
     ): AttendanceCorrection {
-        if ($correction->status !== CorrectionStatus::Pending) {
-            throw new LogicException(__('Заявка уже рассмотрена'));
-        }
-
+        // H-BL-03: статус читаем и блокируем внутри одной транзакции —
+        // два параллельных decide не должны дважды применить корректировку.
         return DB::transaction(function () use ($decider, $correction, $approve, $comment) {
+            $locked = AttendanceCorrection::query()
+                ->whereKey($correction->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== CorrectionStatus::Pending) {
+                throw new LogicException(__('Заявка уже рассмотрена'));
+            }
+
             $correction->forceFill([
                 'status' => $approve ? CorrectionStatus::Approved->value : CorrectionStatus::Rejected->value,
                 'decided_by' => $decider->id,
@@ -107,7 +114,21 @@ class AttendanceCorrectionService
                 $record = AttendanceRecord::query()
                     ->where('employee_id', $correction->employee_id)
                     ->whereDate('date', $correction->date->toDateString())
+                    ->lockForUpdate()
                     ->first();
+
+                // BL-16: заявка привязана к факту на момент подачи. Если запись
+                // изменилась (или её нет, хотя old_value был задан), перезапись
+                // устаревшей корректировкой недопустима.
+                $currentValue = $record?->{$correction->field};
+                $expectedValue = $correction->old_value;
+                $valuesMatch = ($currentValue === null && $expectedValue === null)
+                    || ($currentValue !== null && $expectedValue !== null
+                        && $currentValue->equalTo($expectedValue));
+
+                if (! $valuesMatch) {
+                    throw new LogicException(__('Данные табеля изменились с момента подачи заявки — корректировка устарела'));
+                }
 
                 if ($record === null) {
                     $record = AttendanceRecord::create([

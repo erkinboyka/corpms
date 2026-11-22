@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Ai\Services;
 
 use App\Models\Employee;
+use App\Support\AiEndpointGuard;
 use App\Support\SettingsService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -38,8 +39,11 @@ class BumiFiles
         if ($model === '' || $base === '' || $key === '') {
             return ['reply' => 'Для иллюстраций администратору нужно подключить модель изображений в настройках AI. Диаграмму по данным я могу построить уже сейчас.', 'blocks' => []];
         }
+        if (! AiEndpointGuard::isAllowed($base.'/images/generations')) {
+            return ['ok' => false, 'reply' => __('Адрес провайдера AI не прошёл проверку безопасности.'), 'blocks' => []];
+        }
         try {
-            $response = Http::withToken($key)->acceptJson()->connectTimeout(5)->timeout(90)->post($base.'/images/generations', [
+            $response = Http::withToken($key)->acceptJson()->connectTimeout(5)->timeout(90)->withoutRedirecting()->post($base.'/images/generations', [
                 'model' => $model, 'prompt' => $prompt, 'size' => '1024x1024', 'n' => 1,
             ]);
             $encoded = $response->json('data.0.b64_json');
@@ -73,6 +77,7 @@ class BumiFiles
             default => ['html', view('ai.report', $context)->render()],
         };
         $file = $this->save($employee, $title, $extension, $bytes) + ['artifact' => $kind, 'template' => $number];
+
         return ['reply' => $title.'. '.($kind === 'csv' ? __('Таблица CSV готова.') : __('Шаблон №').$number.' «'.$name.'».'),
             'blocks' => [$chart, $file, $source]];
     }
@@ -88,6 +93,7 @@ class BumiFiles
         rewind($stream);
         $content = stream_get_contents($stream);
         fclose($stream);
+
         return $content;
     }
 }

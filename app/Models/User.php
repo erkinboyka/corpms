@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'email', 'password', 'locale'])]
+#[Fillable(['name', 'email', 'password', 'locale', 'google_id', 'auth_provider'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {

@@ -258,13 +258,18 @@ class LmsService
         }
 
         $required = $course->lessons()->where('is_required', true)->pluck('id');
+        if ($required->isEmpty()) {
+            // Если обязательные уроки не отмечены, курс завершается только после
+            // прохождения всех уроков. Иначе один «Пройден» давал 100% сразу.
+            $required = $course->lessons()->pluck('id');
+        }
         $done = $required->isEmpty() ? 0 : LmsLessonProgress::query()
             ->where('enrollment_id', $enrollment->id)
             ->where('status', LmsProgressStatus::Completed->value)
             ->whereIn('lesson_id', $required)
             ->count();
 
-        $percent = $required->isEmpty() ? 100 : (int) round($done * 100 / $required->count());
+        $percent = $required->isEmpty() ? 0 : (int) round($done * 100 / $required->count());
         $enrollment->update([
             'company_id' => $companyId,
             'progress_percent' => min(100, $percent),

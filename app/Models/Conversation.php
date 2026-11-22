@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Shared\Enums\ConversationRole;
 use App\Shared\Enums\ConversationType;
 use App\Shared\Enums\ConversationVisibility;
 use Illuminate\Database\Eloquent\Model;

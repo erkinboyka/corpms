@@ -27,11 +27,11 @@
     <link rel="preload" href="/assets/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/assets/vendor/tabler-icons.min.css">
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
-    <link rel="stylesheet" href="/assets/css/effects.css?v57">
+    <link rel="stylesheet" href="/assets/css/effects.css?v58">
     <link rel="stylesheet" href="/assets/css/corpms.css?v7">
     <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
     <script src="/assets/vendor/tabler.min.js" defer></script>
-    <script src="/assets/js/corpms.js?v46" defer></script>
+    <script src="/assets/js/corpms.js?v47" defer></script>
     <link rel="icon" type="image/svg+xml" href="/assets/bm-mark.svg">
     <link rel="stylesheet" href="/assets/css/motion.css?v5">
     <link rel="stylesheet" href="/assets/css/workspace.css?v26">

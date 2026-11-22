@@ -29,6 +29,13 @@
                 @endif
             </div>
 
+            @if (filled($documentBody ?? null))
+                <div class="signature-qr-body mt-3">
+                    <div class="text-secondary small mb-1">{{ __('Содержимое документа') }}</div>
+                    @include('partials.rich-text', ['value' => $documentBody, 'class' => 'signature-qr-body-text'])
+                </div>
+            @endif
+
             <dl class="signature-qr-meta">
                 <div>
                     <dt>{{ __('Подписант') }}</dt>
@@ -43,8 +50,12 @@
                     <dd><code>{{ Str::limit($version?->sha256 ?? '—', 26, '…') }}</code></dd>
                 </div>
                 <div>
-                    <dt>{{ __('Код действителен до') }}</dt>
+                    <dt>{{ __('QR-ссылка действительна до') }}</dt>
                     <dd>{{ $expiresAt?->format('d.m.Y H:i') }}</dd>
+                </div>
+                <div>
+                    <dt>{{ __('Код подтверждения действует до') }}</dt>
+                    <dd>{{ $otpExpiresAt?->format('d.m.Y H:i') ?? '—' }}</dd>
                 </div>
             </dl>
 
@@ -54,7 +65,7 @@
                     <label class="form-label" for="qr-otp">{{ __('Код подтверждения') }}</label>
                     <input type="text" id="qr-otp" name="otp_code" class="form-control form-control-lg text-center"
                            inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
-                           placeholder="000000" required autofocus>
+                           placeholder="000000" required>
                     <div class="form-text">{{ __('Код отправлен подписанту в уведомлении') }}</div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-lg w-100">

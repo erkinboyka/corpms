@@ -13,12 +13,13 @@ use App\Models\MessageEvent;
 use App\Shared\Enums\ConversationRole;
 use App\Shared\Enums\ConversationType;
 use App\Shared\Enums\EmployeeStatus;
+use App\Support\SearchQuery;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -30,9 +31,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ChatController extends Controller
 {
-    public function __construct(private readonly ChatService $chat)
-    {
-    }
+    public function __construct(private readonly ChatService $chat) {}
 
     /** Страница чатов: список диалогов + открытый диалог. */
     public function index(Request $request, ?Conversation $conversation = null): View
@@ -212,7 +211,7 @@ class ChatController extends Controller
         $type = ConversationType::from($data['type']);
 
         $conversation = match ($type) {
-            ConversationType::Direct => (function () use ($request, $me, $data): Conversation {
+            ConversationType::Direct => (function () use ($me, $data): Conversation {
                 if (empty($data['employee_id'])) {
                     throw ValidationException::withMessages([
                         'employee_id' => __('Выберите сотрудника'),
@@ -314,8 +313,8 @@ class ChatController extends Controller
     public function employees(Request $request): JsonResponse
     {
         $me = $request->user()->employee;
-        $data = $request->validate(['q' => ['nullable', 'string', 'max:120'], 'conversation' => ['nullable', 'integer']]);
-        $query = trim($data['q'] ?? '');
+        $data = $request->validate(['conversation' => ['nullable', 'integer']]);
+        $query = SearchQuery::fromRequest($request);
         $conversation = isset($data['conversation']) ? Conversation::query()->findOrFail($data['conversation']) : null;
         if ($conversation !== null) {
             $this->chat->assertCanManage($me, $conversation);
@@ -327,14 +326,7 @@ class ChatController extends Controller
             ->where('status', EmployeeStatus::Active)
             ->where('id', '!=', $me->id)
             ->when($conversation, fn ($q) => $q->whereNotIn('id', $conversation->members()->whereNull('left_at')->select('employee_id')));
-        foreach (preg_split('/\s+/u', $query, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $term) {
-            $like = '%'.$term.'%';
-            $employees->where(function ($inner) use ($like): void {
-                $inner->where('first_name', 'like', $like)
-                    ->orWhere('last_name', 'like', $like)
-                    ->orWhere('email', 'like', $like);
-            });
-        }
+        $query->applyLikeTerms($employees->getQuery(), ['first_name', 'last_name', 'email']);
         $employees = $employees
             ->orderBy('last_name')
             ->limit(20)

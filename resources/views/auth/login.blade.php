@@ -14,7 +14,7 @@
                 <div class="mb-3">
                     <label class="form-label" for="email">{{ __('Рабочая почта') }}</label>
                     <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                           placeholder="name@company.ru" value="{{ old('email') }}" autocomplete="username" required autofocus
+                           placeholder="name@company.ru" value="{{ old('email') }}" autocomplete="username" required
                            @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
                     @error('email') <div class="invalid-feedback" id="email-error">{{ $message }}</div> @enderror
                 </div>

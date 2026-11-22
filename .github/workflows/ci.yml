@@ -41,11 +41,21 @@ jobs:
         with:
           php-version: '8.3'
           extensions: mbstring, pdo_sqlite, pdo_mysql, dom, xml, xmlwriter, zip
-          coverage: none
+          coverage: pcov
       - run: composer install --no-interaction --prefer-dist
       - name: PHP syntax
         run: rg --files app routes config database tests bootstrap -g '*.php' | xargs -n 1 php -l
-      - run: php vendor/phpunit/phpunit/phpunit --log-junit storage/logs/ci-tests.xml
+      - name: Fresh database schema
+        run: php artisan migrate:fresh --force --no-interaction
+      - run: |
+          rm -f .phpunit.result.cache
+          php vendor/phpunit/phpunit/phpunit --do-not-cache-result \
+            --log-junit storage/logs/ci-tests.xml \
+            --coverage-clover storage/logs/coverage.xml
+      - name: Coverage threshold
+        env:
+          COVERAGE_MIN: '30'
+        run: php tools/verify-coverage.php storage/logs/coverage.xml
       - name: Concurrent database operations
         if: matrix.database == 'mysql'
         run: php tools/verify-concurrency.php
@@ -59,7 +69,39 @@ jobs:
         if: always()
         with:
           name: test-results-${{ matrix.database }}
-          path: storage/logs/ci-tests.xml
+          path: |
+            storage/logs/ci-tests.xml
+            storage/logs/coverage.xml
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - name: Pint (no new violations)
+        run: php tools/verify-pint-baseline.php
+      - name: PHP syntax
+        run: rg --files app routes config database tests bootstrap tools -g '*.php' | xargs -n 1 php -l
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Ensure lockfile is committed
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "package-lock.json отсутствует — генерируем для этого прогона; закоммитьте его в репозиторий"
+            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          fi
+      - run: npm ci
+      - run: npm run build
+      - name: npm audit
+        run: npm audit --audit-level=high
   dependencies:
     runs-on: ubuntu-latest
     steps:

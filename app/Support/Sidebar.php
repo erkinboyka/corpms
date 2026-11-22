@@ -47,12 +47,12 @@ class Sidebar
 
     /** @var array<int, array{0:string,1:string,2?:string,3?:?string,4?:array}> */
     protected const ITEMS = [
-        ['_', 'Обзор'],
+        ['_', 'Обзор', 'layout-dashboard'],
         ['dashboard', 'Дашборд', 'layout-dashboard', 'attendance.dashboard.view'],
         ['notifications.index', 'Уведомления', 'bell', 'attendance.view'],
         ['chat.index', 'Чат', 'message-circle', 'chat.view'],
 
-        ['_', 'Работа'],
+        ['_', 'Работа', 'briefcase'],
         ['module', 'Задачи', 'list-check', 'tasks.view', [
             ['tasks.index', 'Все задачи', 'list', null],
             ['tasks.mine', 'Мои задачи', 'user-check', null],
@@ -71,7 +71,7 @@ class Sidebar
             ['schedules.mine', 'Мой график', 'alarm', 'attendance.view'],
         ]],
 
-        ['_', 'Люди'],
+        ['_', 'Люди', 'users'],
         ['employees.index', 'Сотрудники', 'users', 'employees.view'],
         ['module', 'Организация', 'building', null, [
             ['departments.index', 'Отделы', 'sitemap', 'departments.view'],
@@ -91,7 +91,7 @@ class Sidebar
             ['payroll.salaries', 'Оклады и компоненты', 'coins', 'payroll.view'],
         ]],
 
-        ['_', 'Клиенты'],
+        ['_', 'Клиенты', 'address-book'],
         ['module', 'CRM', 'chart-funnel', null, [
             ['crm.clients.index', 'Клиенты', 'address-book', 'crm.view'],
             ['crm.leads.index', 'Лиды', 'user-search', 'crm.view'],
@@ -99,7 +99,7 @@ class Sidebar
             ['crm.activities.index', 'Активности', 'calendar-event', 'crm.view'],
         ]],
 
-        ['_', 'Операции'],
+        ['_', 'Склад и закупки', 'package'],
         ['module', 'Склад', 'package', null, [
             ['inventory.index', 'Остатки', 'packages', 'inventory.view'],
             ['inventory.products', 'Товары', 'box', 'inventory.view'],
@@ -109,8 +109,8 @@ class Sidebar
         ]],
         ['purchases.index', 'Закупки', 'shopping-cart', 'purchases.view'],
 
-        ['_', 'Финансы'],
-        ['module', 'Операции', 'cash-banknote', null, [
+        ['_', 'Финансы', 'wallet'],
+        ['module', 'Денежные операции', 'cash-banknote', null, [
             ['finance.accounts.index', 'Касса и счета', 'wallet', 'finance.view'],
             ['finance.invoices.index', 'Счета и акты', 'file-invoice', 'finance.view'],
             ['finance.transactions.index', 'Доходы и расходы', 'receipt', 'finance.view'],
@@ -121,10 +121,10 @@ class Sidebar
             ['accounting.chart.index', 'План счетов', 'list-numbers', 'accounting.view'],
             ['accounting.entries.index', 'Проводки', 'arrows-right-left', 'accounting.view'],
             ['accounting.documents.index', 'Первичные документы', 'files', 'accounting.view'],
-            ['accounting.reports.index', 'Отчёты', 'report-analytics', 'accounting.view'],
+            ['accounting.reports.index', 'Бухгалтерские отчёты', 'report-analytics', 'accounting.view'],
         ]],
 
-        ['_', 'Документы'],
+        ['_', 'Документы', 'files'],
         ['module', 'Документооборот', 'files', null, [
             ['documents.index', 'Все документы', 'folder', 'documents.view'],
             ['documents.mine', 'Мои документы', 'file', 'documents.view'],
@@ -132,21 +132,21 @@ class Sidebar
             ['workflows.index', 'Маршруты согласования', 'arrows-split', 'workflows.view'],
         ]],
 
-        ['_', 'Аналитика'],
+        ['_', 'Аналитика', 'chart-bar'],
         ['analytics.index', 'Аналитика', 'chart-bar', 'analytics.view'],
         ['reports.index', 'Отчёты', 'report', 'reports.view'],
-        ['module', 'BI', 'chart-histogram', null, [
+        ['module', 'BI-витрина', 'chart-histogram', null, [
             ['bi.index', 'BI-дашборды', 'chart-dots', 'bi.view'],
             ['bi.metrics.index', 'Срезы витрины', 'chart-line', 'bi.view'],
         ]],
         ['ai.index', 'Bumi', 'sparkles', 'analytics.ai.use'],
         ['audit.index', 'Журнал действий', 'history', 'audit.view@company'],
 
-        ['_', 'Администрирование'],
+        ['_', 'Администрирование', 'adjustments'],
         ['users.index', 'Учётные записи', 'user-cog', 'users.manage'],
         ['integrations.index', 'Интеграции', 'plug', 'integrations.manage'],
         ['imports.index', 'Импорт данных', 'upload', 'employees.manage@company'],
-        ['backups.index', 'Резервные копии', 'database-export', 'settings.view@company'],
+        ['backups.index', 'Резервные копии', 'database-export', 'backups.manage'],
         ['certificates.index', 'Доверенные сертификаты', 'certificate', 'settings.view@company'],
         ['module', 'Биометрия', 'fingerprint', null, [
             ['biometrics.index', 'Устройства', 'device-fingerprint', 'biometry.devices.view'],
@@ -168,15 +168,19 @@ class Sidebar
         $permissions = app(PermissionService::class);
         $list = [];
         $sectionLabel = null;
+        $sectionIcon = 'folder';
         $sectionHasVisible = false;
         $sectionStart = null;
 
-        $flushSection = static function () use (&$list, &$sectionLabel, &$sectionHasVisible, &$sectionStart): void {
+        $flushSection = static function () use (&$list, &$sectionLabel, &$sectionIcon, &$sectionHasVisible, &$sectionStart): void {
             if ($sectionLabel !== null) {
                 if ($sectionHasVisible && $sectionStart !== null) {
-                    array_splice($list, $sectionStart, 0, [['type' => 'section', 'label' => $sectionLabel]]);
+                    array_splice($list, $sectionStart, 0, [
+                        ['type' => 'section', 'label' => $sectionLabel, 'icon' => $sectionIcon],
+                    ]);
                 }
                 $sectionLabel = null;
+                $sectionIcon = 'folder';
                 $sectionHasVisible = false;
                 $sectionStart = null;
             }
@@ -186,6 +190,7 @@ class Sidebar
             if ($item[0] === '_') {
                 $flushSection();
                 $sectionLabel = __($item[1]);
+                $sectionIcon = $item[2] ?? 'folder';
                 $sectionStart = count($list);
 
                 continue;

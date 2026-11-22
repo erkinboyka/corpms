@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Chat;
 
+use App\Domains\Chat\Events\ChatDelta;
+use App\Domains\Chat\Services\ChatService;
 use App\Models\Company;
 use App\Models\Conversation;
-use App\Models\ConversationMember;
 use App\Models\Employee;
 use App\Models\EmployeeRole;
 use App\Models\Message;
@@ -14,8 +15,10 @@ use App\Models\MessageEvent;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RbacSeeder;
+use Illuminate\Contracts\Broadcasting\Factory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -67,7 +70,7 @@ class ChatHttpTest extends TestCase
         $this->workerB = $this->employee($this->companyB, 'CB-1', 'Работник', 'Б');
         $this->workerUserB = User::findOrFail($this->workerB->user_id);
 
-        $this->direct = app(\App\Domains\Chat\Services\ChatService::class)
+        $this->direct = app(ChatService::class)
             ->findOrCreateDirect($this->adminEmployeeA, $this->workerA);
 
         $this->actingAs($this->adminA);
@@ -96,6 +99,36 @@ class ChatHttpTest extends TestCase
         }
 
         return $employee;
+    }
+
+    /** DB-09: число SQL-запросов списка диалогов не растёт с количеством диалогов. */
+    public function test_list_for_uses_constant_number_of_queries(): void
+    {
+        $service = app(ChatService::class);
+
+        $sequence = 0;
+        $queriesFor = function (int $conversations) use ($service, &$sequence): int {
+            for ($i = 1; $i <= $conversations; $i++) {
+                $sequence++;
+                $peer = $this->employee($this->companyA, 'N-'.$sequence, 'Непрочитанный', 'Участник'.$sequence);
+                $conversation = $service->findOrCreateDirect($this->adminEmployeeA, $peer);
+                $service->send($peer, $conversation, ['body' => 'Привет '.$i]);
+            }
+
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $list = $service->listFor($this->adminEmployeeA);
+            DB::disableQueryLog();
+
+            $this->assertGreaterThanOrEqual($conversations, $list->count());
+
+            return count(DB::getQueryLog());
+        };
+
+        $five = $queriesFor(5);
+        $fifty = $queriesFor(50);
+
+        $this->assertSame($five, $fifty, 'Список диалогов не должен делать N+1 запросов');
     }
 
     /** Назначить роль из RBAC-сида (без неё middleware permission:* откажет). */
@@ -128,7 +161,7 @@ class ChatHttpTest extends TestCase
         // Каналы регистрируются на драйвере, который был активен при загрузке
         // routes/channels.php (в phpunit это null). После смены драйвера
         // экземпляр новый — регистрируем каналы на нём заново.
-        app(\Illuminate\Contracts\Broadcasting\Factory::class)->forgetDrivers();
+        app(Factory::class)->forgetDrivers();
         require base_path('routes/channels.php');
     }
 
@@ -136,7 +169,7 @@ class ChatHttpTest extends TestCase
 
     public function test_group_owner_can_update_invite_exclude_and_delete_conversation(): void
     {
-        $group = app(\App\Domains\Chat\Services\ChatService::class)
+        $group = app(ChatService::class)
             ->createGroup($this->adminEmployeeA, 'Группа', [$this->workerA->id]);
         $url = '/chat/'.$group->id;
         $invitee = $this->employee($this->companyA, 'CA-3', 'Иван', 'Иванов');
@@ -162,7 +195,7 @@ class ChatHttpTest extends TestCase
     public function test_group_photo_is_member_only_and_wallpaper_is_personal(): void
     {
         Storage::fake('local');
-        $group = app(\App\Domains\Chat\Services\ChatService::class)
+        $group = app(ChatService::class)
             ->createGroup($this->adminEmployeeA, 'Группа', [$this->workerA->id]);
         $url = '/chat/'.$group->id;
         $this->post($url, ['_method' => 'PATCH', 'title' => 'Группа', 'avatar' => UploadedFile::fake()->image('photo.png')])
@@ -314,7 +347,7 @@ class ChatHttpTest extends TestCase
 
     public function test_conversation_of_other_company_is_invisible(): void
     {
-        $foreign = app(\App\Domains\Chat\Services\ChatService::class)
+        $foreign = app(ChatService::class)
             ->findOrCreateDirect($this->workerB, $this->employee($this->companyB, 'CB-2', 'Второй', 'Б'));
 
         // Конвенция проекта (EnsureTenantIsolation): объект чужого тенанта — 403,
@@ -326,7 +359,7 @@ class ChatHttpTest extends TestCase
 
     public function test_company_channel_is_readable_without_membership(): void
     {
-        $channel = app(\App\Domains\Chat\Services\ChatService::class)->createChannel($this->adminEmployeeA, [
+        $channel = app(ChatService::class)->createChannel($this->adminEmployeeA, [
             'title' => 'Объявления',
             'visibility' => 'company',
             'post_permission' => 'all',
@@ -349,7 +382,7 @@ class ChatHttpTest extends TestCase
 
     public function test_private_channel_is_invisible_to_non_member(): void
     {
-        $channel = app(\App\Domains\Chat\Services\ChatService::class)->createChannel($this->adminEmployeeA, [
+        $channel = app(ChatService::class)->createChannel($this->adminEmployeeA, [
             'title' => 'Закрытый',
             'visibility' => 'private',
             'post_permission' => 'admins',
@@ -433,7 +466,7 @@ class ChatHttpTest extends TestCase
 
     public function test_events_are_ordered_and_limited_by_conversation(): void
     {
-        $other = app(\App\Domains\Chat\Services\ChatService::class)
+        $other = app(ChatService::class)
             ->findOrCreateDirect($this->adminEmployeeA, $this->employee($this->companyA, 'CA-7', 'Другой', 'Собеседник'));
 
         $this->postJson('/chat/'.$other->id.'/messages', ['body' => 'в другом диалоге', 'client_id' => 'x1']);
@@ -524,7 +557,7 @@ class ChatHttpTest extends TestCase
         $this->postJson('/chat/'.$this->direct->id.'/subscribe', ['subscribe' => true])
             ->assertForbidden();
 
-        $channel = app(\App\Domains\Chat\Services\ChatService::class)->createChannel($this->adminEmployeeA, [
+        $channel = app(ChatService::class)->createChannel($this->adminEmployeeA, [
             'title' => 'Новости',
             'visibility' => 'company',
             'post_permission' => 'all',
@@ -600,7 +633,7 @@ class ChatHttpTest extends TestCase
     public function test_send_succeeds_even_if_broadcast_transport_fails(): void
     {
         // имитируем недоступность realtime-канала: слушатель бросает исключение
-        Event::listen(\App\Domains\Chat\Events\ChatDelta::class, function (): void {
+        Event::listen(ChatDelta::class, function (): void {
             throw new \RuntimeException('reverb down');
         });
 

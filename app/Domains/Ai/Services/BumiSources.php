@@ -24,18 +24,23 @@ final class BumiSources
             'projects_summary' => 'Реестр проектов', 'inventory_stock_summary' => 'Остатки склада',
             'accounting_trial_balance' => 'Оборотно-сальдовая ведомость', 'bi_metrics_summary' => 'Показатели BI',
             'attendance_summary' => 'Журнал посещаемости', 'task_stats' => 'Аналитика задач',
+            'search_documents' => 'Найденные документы', 'search_tasks' => 'Найденные задачи',
             default => null,
         };
         $items = [];
+        // конкретные записи важнее общего реестра: они первыми попадают в UI
+        foreach (is_array($result['items'] ?? null) ? $result['items'] : [] as $row) {
+            if (is_array($row) && isset($row['url'])) {
+                $items[] = ['label' => $row['title'] ?? $row['name'] ?? null, 'url' => parse_url((string) $row['url'], PHP_URL_PATH)];
+            }
+        }
         if ($register !== null) {
             $url = $result['url'] ?? match ($name) {
                 'attendance_summary' => route('attendance.index'), 'task_stats' => route('analytics.index'), default => null,
             };
             $items[] = ['label' => trim($register.' '.($result['month'] ?? $result['date'] ?? '')), 'url' => $url ? parse_url($url, PHP_URL_PATH).(($query = parse_url($url, PHP_URL_QUERY)) ? '?'.$query : '') : null];
         }
-        foreach ($result['items'] ?? [] as $row) {
-            if (isset($row['url'])) $items[] = ['label' => $row['title'] ?? $row['name'], 'url' => parse_url($row['url'], PHP_URL_PATH)];
-        }
+
         return $items;
     }
 
@@ -55,6 +60,7 @@ final class BumiSources
         };
         $stamp = now()->format('d.m.Y H:i');
         $context = $registers === ['message'] ? 'Данные пользователя' : 'Область выборки — '.$scope;
+
         return ['type' => 'sources', 'items' => $items, 'context' => implode(' · ', array_filter([$period, $context, $stamp]))];
     }
 }

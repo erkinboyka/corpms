@@ -246,17 +246,23 @@ class NotificationsTest extends TestCase
 
     /* ---------------- webhook HTTP ---------------- */
 
-    public function test_webhook_requires_secret(): void
+    public function test_webhook_requires_secret_header(): void
     {
         config(['corpms.telegram.webhook_secret' => 'topsecret123']);
         config(['corpms.telegram.bot_token' => '999:test']);
 
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
 
-        $this->postJson('/api/telegram/webhook/wrongsecret', ['message' => ['text' => '/help', 'chat' => ['id' => 1]]])
-            ->assertStatus(403);
+        $update = [
+            'update_id' => 1,
+            'message' => ['text' => '/help', 'chat' => ['id' => 1]],
+        ];
 
-        $this->postJson('/api/telegram/webhook/topsecret123', ['message' => ['text' => '/help', 'chat' => ['id' => 1]]])
+        $this->postJson('/api/telegram/webhook', $update)->assertStatus(403);
+
+        $this->postJson('/api/telegram/webhook', $update, [
+            'X-Telegram-Bot-Api-Secret-Token' => 'topsecret123',
+        ])
             ->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonPath('handled', true);

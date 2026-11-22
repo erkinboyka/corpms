@@ -16,6 +16,7 @@ use App\Shared\Permissions\PermissionMatrix;
 use App\Support\PermissionService;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RbacTest extends TestCase
@@ -89,6 +90,27 @@ class RbacTest extends TestCase
         $this->assertSame(PermissionScope::Own, $this->service->can($user, 'tasks.view'));
         $this->assertFalse($this->service->check($user, 'tasks.assign'));
         $this->assertFalse($this->service->check($user, 'employees.manage'));
+    }
+
+    /** TEST-11: матрица «роль → scope» через data provider вместо копипасты. */
+    #[DataProvider('roleScopeMatrix')]
+    public function test_role_scope_matrix(string $roleSlug, PermissionScope $expected): void
+    {
+        $user = User::factory()->create();
+        $this->employee($user, $roleSlug);
+
+        self::assertSame($expected, $this->service->can($user, 'tasks.view'));
+    }
+
+    /** @return array<string, array{0: string, 1: PermissionScope}> */
+    public static function roleScopeMatrix(): array
+    {
+        return [
+            'super_admin' => ['super_admin', PermissionScope::Company],
+            'company_director' => ['company_director', PermissionScope::Company],
+            'department_director' => ['department_director', PermissionScope::Department],
+            'employee' => ['employee', PermissionScope::Own],
+        ];
     }
 
     public function test_user_without_employee_denied(): void

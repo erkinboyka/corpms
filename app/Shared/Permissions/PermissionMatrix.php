@@ -174,6 +174,7 @@ final class PermissionMatrix
         'audit.view' => ['История действий', 'system'],
         'settings.view' => ['Настройки — просмотр', 'system'],
         'settings.manage' => ['Настройки — изменение', 'system'],
+        'backups.manage' => ['Резервные копии (платформа)', 'system'],
         'users.manage' => ['Управление пользователями', 'system'],
         'integrations.manage' => ['Интеграции и API', 'system'],
         'search.global' => ['Глобальный поиск', 'system'],

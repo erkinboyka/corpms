@@ -20,6 +20,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Keep secrets encrypted during rollback; the accessor supports both formats.
+        // DB-02: шифрование необратимо без ключа/исходного plaintext.
+        // Явный отказ защищает от частичного отката с потерей настроек.
+        throw new RuntimeException(
+            'Migration 2026_11_19_000002 is irreversible: encrypted settings cannot be decrypted safely during rollback. Restore settings from backup before rolling back.',
+        );
     }
 };

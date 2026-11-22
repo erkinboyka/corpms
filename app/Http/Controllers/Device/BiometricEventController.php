@@ -45,8 +45,11 @@ class BiometricEventController extends Controller
 
         try {
             $data = DB::transaction(function () use ($device, $validated, $request): ?array {
-                // 1. идемпотентность по event_uuid
-                $existing = BiometricEvent::query()->where('event_uuid', $validated['event_uuid'])->first();
+                // 1. идемпотентность по event_uuid в пределах компании устройства (BE-S1)
+                $existing = BiometricEvent::query()
+                    ->where('company_id', $device->company_id)
+                    ->where('event_uuid', $validated['event_uuid'])
+                    ->first();
                 if ($existing !== null) {
                     return null;
                 }
@@ -61,6 +64,7 @@ class BiometricEventController extends Controller
                 if ($employee === null) {
                     BiometricEvent::query()->create([
                         'device_id' => $device->id,
+                        'company_id' => $device->company_id,
                         'employee_id' => null,
                         'event_uuid' => $validated['event_uuid'],
                         'occurred_at' => $validated['timestamp'],
@@ -68,7 +72,8 @@ class BiometricEventController extends Controller
                         'confidence' => $validated['confidence'] ?? null,
                         'liveness_passed' => (bool) ($validated['liveness'] ?? true),
                         'liveness_required' => (bool) app(SettingsService::class)->get('corpms.biometric.require_liveness', true),
-                        'raw_payload' => $request->all(),
+                        // SEC-09: храним только поля, нужные для разбора события.
+                        'raw_payload' => $this->rawPayload($request),
                         'processing_status' => BiometricEventStatus::Failed,
                         'failure_reason' => 'employee not found',
                     ]);
@@ -79,6 +84,7 @@ class BiometricEventController extends Controller
                 // 3. фиксируем raw-событие (BIOMETRIC EVENT LOG, п. 30 ТЗ)
                 $event = BiometricEvent::query()->create([
                     'device_id' => $device->id,
+                    'company_id' => $device->company_id,
                     'employee_id' => $employee->id,
                     'event_uuid' => $validated['event_uuid'],
                     'occurred_at' => $validated['timestamp'],
@@ -86,7 +92,7 @@ class BiometricEventController extends Controller
                     'confidence' => $validated['confidence'] ?? null,
                     'liveness_passed' => (bool) ($validated['liveness'] ?? true),
                     'liveness_required' => (bool) app(SettingsService::class)->get('corpms.biometric.require_liveness', true),
-                    'raw_payload' => $request->all(),
+                    'raw_payload' => $this->rawPayload($request),
                     'processing_status' => BiometricEventStatus::Pending,
                 ]);
 
@@ -187,6 +193,19 @@ class BiometricEventController extends Controller
         ];
 
         return response()->json($result);
+    }
+
+    /** SEC-09: белый список полей вместо '$request->all()' (в т.ч. для неопознанных сотрудников). */
+    private function rawPayload(Request $request): array
+    {
+        return $request->only([
+            'event_uuid',
+            'employee_no',
+            'direction',
+            'timestamp',
+            'confidence',
+            'liveness',
+        ]);
     }
 
     public function status(Request $request): JsonResponse

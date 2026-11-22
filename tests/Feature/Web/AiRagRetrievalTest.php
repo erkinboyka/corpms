@@ -237,7 +237,7 @@ class AiRagRetrievalTest extends TestCase
                 return Http::response(['data' => $data]);
             },
             'llm.example.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => 'Бюджет на 2026 год утверждён.']]],
+                'choices' => [['message' => ['content' => 'Бюджет на 2026 год утверждён [doc:1].']]],
             ]),
         ]);
 
@@ -246,8 +246,11 @@ class AiRagRetrievalTest extends TestCase
         $this->post('/ai', ['question' => 'Какой бюджет на 2026 год?'])->assertRedirect();
 
         $conversation = AiConversation::query()->sole();
-        self::assertTrue((bool) $conversation->grounded, 'LLM ответил на фактах с контекстом документов');
+        self::assertTrue((bool) $conversation->grounded, 'LLM явно сослался на контекст документа');
         self::assertSame('Бюджет на 2026 год утверждён.', (string) $conversation->answer);
+        self::assertSame('document', $conversation->query_used['source_items'][0]['type'] ?? null);
+        self::assertStringContainsString('Бюджет 2026', (string) ($conversation->query_used['source_items'][0]['label'] ?? ''));
+        self::assertStringStartsWith('/', (string) ($conversation->query_used['source_items'][0]['url'] ?? ''));
 
         Http::assertSent(function ($request): bool {
             if (! str_contains($request->url(), 'chat/completions')) {

@@ -50,7 +50,7 @@ final class BumiArtifacts
             $choices = $chronological ? [3, 4, 5, 2, 14] : [1, 2, 8, 9, 10, 11, 12, 13, 14];
             $number = $requested ?? ($hint ? array_search($hint, $styles, true) + 1 : BumiTemplates::next($me, $kind, $choices));
             $style = $styles[$number - 1];
-            if (in_array($style, ['donut','pie','stack'], true) && (min($values) < 0 || array_sum($values) <= 0 || count($registers) > 1)) {
+            if (in_array($style, ['donut', 'pie', 'stack'], true) && (min($values) < 0 || array_sum($values) <= 0 || count($registers) > 1)) {
                 return ['reply' => 'Диаграмма долей требует сопоставимых неотрицательных величин с положительной суммой. Для этой выборки подойдут «Столбцы» или «Точечная шкала».', 'blocks' => [['type' => 'templates']]];
             }
         } else {
@@ -75,6 +75,7 @@ final class BumiArtifacts
                 }
                 $values[$label] = (float) str_replace(',', '.', $pair[2]);
             }
+
             return [__('Показатели из сообщения'), $values, ['message'], null, (bool) preg_match('/январ|феврал|март|апрел|июн|июл|август|сентябр|октябр|ноябр|декабр/iu', $input)];
         }
 
@@ -90,6 +91,7 @@ final class BumiArtifacts
             foreach ($this->analytics->attendanceTrend($people, $days) as $day) {
                 $values[$day['date']->format('d.m')] = $late ? $day['late'] : $day['present'] + $day['late'] + $day['remote'];
             }
+
             return [($late ? __('Опоздания') : __('Отмеченные сотрудники')).' за '.$days.' дн.', $values, ['attendance'],
                 today()->subDays($days - 1)->format('d.m.Y').' — '.today()->format('d.m.Y'), true];
         }
@@ -102,26 +104,30 @@ final class BumiArtifacts
             if (is_array($facts['my_attendance_today'] ?? null)) {
                 $values = [__('Опоздание, мин') => $facts['my_attendance_today']['late_minutes']];
             }
+
             return ['Посещаемость за '.today()->format('d.m.Y'), $values, ['attendance'], __('Сегодня'), false];
         }
         if (preg_match('/задач/iu', $object)) {
-            $labels = ['new'=>__('Новые'),'planned'=>__('Запланированы'),'in_progress'=>__('В работе'),'review'=>__('На проверке'),'completed'=>__('Завершены'),'overdue'=>__('Просрочены'),'returned'=>__('Возвращены'),'cancelled'=>__('Отменены')];
+            $labels = ['new' => __('Новые'), 'planned' => __('Запланированы'), 'in_progress' => __('В работе'), 'review' => __('На проверке'), 'completed' => __('Завершены'), 'overdue' => __('Просрочены'), 'returned' => __('Возвращены'), 'cancelled' => __('Отменены')];
             $values = [];
             foreach ($facts['tasks'] ?? $facts['my_tasks'] ?? [] as $status => $count) {
                 $values[$labels[$status] ?? $status] = $count;
             }
+
             return [__('Задачи по статусам'), $values ?: [__('Всего задач') => 0], ['tasks'], null, false];
         }
         if (preg_match('/отпуск|отсутстви/iu', $object)) {
             $stats = $facts['leaves'] ?? $this->analytics->leaveStats(collect([$me]));
+
             return [__('Заявки на отсутствие'), [__('На согласовании') => $stats['pending'] ?? 0, __('Согласованы') => $stats['approved'] ?? 0, __('Отклонены') => $stats['rejected'] ?? 0], ['leaves'], null, false];
         }
         if (preg_match('/числен|сотрудник|отдел|кадр/iu', $object)) {
-            if (!isset($facts['headcount'])) {
+            if (! isset($facts['headcount'])) {
                 return ['reply' => __('Для разбивки численности нужен доступ к кадровой аналитике.')];
             }
             $people = $this->analytics->accessibleEmployees($me->user, 'analytics.view')['employees'];
             $values = array_column($this->analytics->hrByDepartment($people), 'headcount', 'name');
+
             return [__('Численность по подразделениям'), $values, ['headcount'], null, false];
         }
         if (preg_match('/\b(?:по|про|об|о|на тему)\s+(?!компани|работ|показател|данным|шаблон|итог)/iu', $object)) {
@@ -135,6 +141,7 @@ final class BumiArtifacts
             $registers = ['headcount', 'attendance'];
         }
         $values[__('Просроченные задачи')] = $facts['tasks']['overdue'] ?? $facts['my_tasks']['overdue'] ?? 0;
+
         return [__('Сводка по рабочим показателям'), $values, [...$registers, 'tasks'], null, false];
     }
 }

@@ -32,6 +32,7 @@ final class QrCodeGenerator
     ];
 
     private static array $exp = [];
+
     private static array $log = [];
 
     public static function svg(string $text, int $size = 200, string $class = ''): string
@@ -259,8 +260,8 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, int> $data
-     * @param array<int, int> $generator
+     * @param  array<int, int>  $data
+     * @param  array<int, int>  $generator
      * @return array<int, int>
      */
     private static function rsEncode(array $data, array $generator): array
@@ -280,8 +281,8 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, array<int, bool>> $matrix
-     * @param array<int, array<int, bool>> $reserved
+     * @param  array<int, array<int, bool>>  $matrix
+     * @param  array<int, array<int, bool>>  $reserved
      */
     private static function placeFinders(array &$matrix, array &$reserved, int $size): void
     {
@@ -302,8 +303,8 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, array<int, bool>> $matrix
-     * @param array<int, array<int, bool>> $reserved
+     * @param  array<int, array<int, bool>>  $matrix
+     * @param  array<int, array<int, bool>>  $reserved
      */
     private static function placeTiming(array &$matrix, array &$reserved, int $size): void
     {
@@ -320,8 +321,8 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, array<int, bool>> $matrix
-     * @param array<int, array<int, bool>> $reserved
+     * @param  array<int, array<int, bool>>  $matrix
+     * @param  array<int, array<int, bool>>  $reserved
      */
     private static function placeAlignment(array &$matrix, array &$reserved, int $size, int $version): void
     {
@@ -369,9 +370,9 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, array<int, bool>> $matrix
-     * @param array<int, array<int, bool>> $reserved
-     * @param array<int, int> $codewords
+     * @param  array<int, array<int, bool>>  $matrix
+     * @param  array<int, array<int, bool>>  $reserved
+     * @param  array<int, int>  $codewords
      */
     private static function placeData(array &$matrix, array &$reserved, int $size, array $codewords): void
     {
@@ -408,8 +409,8 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, array<int, bool>> $matrix
-     * @param array<int, array<int, bool>> $reserved
+     * @param  array<int, array<int, bool>>  $matrix
+     * @param  array<int, array<int, bool>>  $reserved
      */
     private static function applyMask(array &$matrix, array &$reserved, int $size, int $mask): void
     {
@@ -485,7 +486,7 @@ final class QrCodeGenerator
     }
 
     /**
-     * @param array<int, array<int, bool>> $matrix
+     * @param  array<int, array<int, bool>>  $matrix
      */
     private static function penalty(array $matrix, int $size): int
     {

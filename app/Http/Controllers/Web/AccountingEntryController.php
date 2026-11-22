@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Domains\Accounting\Jobs\SyncFinanceEntries;
 use App\Domains\Accounting\Services\AccountingService;
 use App\Domains\Audit\Services\AuditService;
 use App\Http\Controllers\Controller;
@@ -12,6 +13,7 @@ use App\Models\AccEntryLine;
 use App\Models\FinTransaction;
 use App\Shared\Enums\AccEntrySource;
 use App\Support\PermissionService;
+use App\Support\SingleFlightLock;
 use App\Support\TenantGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -169,28 +171,39 @@ class AccountingEntryController extends Controller
         ]);
     }
 
-    /** Синк проводок из финансов за месяц. */
+    /** Синк проводок из финансов за месяц (BE-06/PERF-06: через очередь). */
     public function sync(Request $request): RedirectResponse
     {
         $me = $request->user()->employee;
         \assert($me !== null);
 
         $month = (string) $request->input('month', now()->format('Y-m'));
-
         if (preg_match('/^\d{4}-\d{2}$/', $month) !== 1) {
             $month = now()->format('Y-m');
         }
 
-        $from = $month.'-01';
-        $to = CarbonImmutable::createFromFormat('Y-m-d', $from)->endOfMonth()->toDateString();
+        $companyId = (int) $me->company_id;
+        $lockKey = 'accounting.sync:'.$companyId;
+        $lockToken = SingleFlightLock::acquire($lockKey);
 
-        $created = $this->accounting->syncFinance((int) $me->company_id, $from, $to);
+        if ($lockToken === null) {
+            abort(429, 'Синхронизация уже выполняется.');
+        }
 
-        $this->audit->log($request->user(), 'accounting.finance_synced', 'acc_entry', null, null, [
-            'month' => $month,
-            'created' => $created,
-        ]);
+        try {
+            SyncFinanceEntries::dispatch(
+                $companyId,
+                (int) $request->user()->id,
+                $month,
+                $lockKey,
+                $lockToken,
+            );
+        } catch (\Throwable $exception) {
+            SingleFlightLock::release($lockKey, $lockToken);
 
-        return back()->with('status', 'Проведено операций из финансов: '.$created);
+            throw $exception;
+        }
+
+        return back()->with('status', __('Синхронизация запущена'));
     }
 }

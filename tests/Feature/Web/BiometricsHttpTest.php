@@ -15,6 +15,7 @@ use App\Models\EmployeeRole;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkSchedule;
+use App\Support\EnumLabels;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -152,6 +153,22 @@ class BiometricsHttpTest extends TestCase
             'action' => 'device.registered',
             'object_id' => $device->id,
         ]);
+    }
+
+    /** DB-03/DB-11: БД поддерживает rfid_reader, UI обязан принимать тот же тип. */
+    public function test_register_device_accepts_rfid_reader_type(): void
+    {
+        $this->post('/biometrics/devices', [
+            'name' => 'RFID-ридер проходной',
+            'serial_number' => 'SN-RFID-UI-1',
+            'device_type' => 'rfid_reader',
+            'vendor' => 'generic',
+            'direction' => 'both',
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+
+        $device = BiometricDevice::query()->where('serial_number', 'SN-RFID-UI-1')->firstOrFail();
+        self::assertSame('rfid_reader', $device->device_type);
+        self::assertSame('RFID-ридер', EnumLabels::label('device_type', 'rfid_reader'));
     }
 
     public function test_device_validation_rejects_duplicate_serial(): void

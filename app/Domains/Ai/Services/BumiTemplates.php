@@ -44,6 +44,7 @@ final class BumiTemplates
     public static function edition(string $kind, int $number): array
     {
         [$report, $deck, $ink, $paper, $reportSections, $slideSections] = self::EDITIONS[$number - 1];
+
         return ['name' => $kind === 'deck' ? $deck : $report, 'ink' => '#'.$ink, 'paper' => '#'.$paper,
             'sections' => explode(' ', $kind === 'deck' ? $slideSections : $reportSections)];
     }
@@ -53,6 +54,7 @@ final class BumiTemplates
     {
         if (preg_match('/шаблон[аеуы]?\s*(?:№|номер|#)?\s*(\d+)\b/iu', $question, $match)) {
             $number = (int) $match[1];
+
             return $number >= 1 && $number <= count(self::names($kind)) ? $number : 0;
         }
         foreach (self::names($kind) as $index => $name) {
@@ -60,6 +62,7 @@ final class BumiTemplates
                 return $index + 1;
             }
         }
+
         return null;
     }
 
@@ -71,11 +74,12 @@ final class BumiTemplates
             foreach ($query['blocks'] ?? [] as $block) {
                 if (($block['artifact'] ?? null) === $kind && isset($block['template'])) {
                     $index = array_search($block['template'], $choices, true);
+
                     return $index === false ? $choices[0] : $choices[($index + 1) % count($choices)];
                 }
             }
         }
+
         return $choices[0];
     }
 }
-

@@ -405,8 +405,32 @@
 
     window.addEventListener('resize', resize);
     resize();
-    pollElements();
-    pollPresence();
-    setInterval(pollElements, pollMs);
-    setInterval(pollPresence, Math.max(2000, pollMs));
+
+    /* UX-06: останавливаем оба опроса, когда доска скрыта (другая секция
+       или неактивная вкладка), чтобы не копить запросы и stale DOM. */
+    var elementsTimer = null;
+    var presenceTimer = null;
+    function boardVisible() {
+        if (document.hidden) { return false; }
+        var section = root.closest('[data-lms-section]');
+        return !section || !section.hidden;
+    }
+    function stopPolling() {
+        if (elementsTimer !== null) { window.clearInterval(elementsTimer); elementsTimer = null; }
+        if (presenceTimer !== null) { window.clearInterval(presenceTimer); presenceTimer = null; }
+    }
+    function syncPolling() {
+        if (!boardVisible()) { stopPolling(); return; }
+        if (elementsTimer === null) {
+            pollElements();
+            elementsTimer = window.setInterval(pollElements, pollMs);
+        }
+        if (presenceTimer === null) {
+            pollPresence();
+            presenceTimer = window.setInterval(pollPresence, Math.max(2000, pollMs));
+        }
+    }
+    document.addEventListener('visibilitychange', syncPolling);
+    document.addEventListener('lms:sectionchange', syncPolling);
+    syncPolling();
 })();

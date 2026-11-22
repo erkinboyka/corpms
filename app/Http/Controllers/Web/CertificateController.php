@@ -7,20 +7,23 @@ namespace App\Http\Controllers\Web;
 use App\Models\TrustedCertificate;
 use App\Support\CertificateService;
 use App\Support\PermissionService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class CertificateController
 {
     public function __construct(private CertificateService $certs) {}
 
-    public function index(Request $request): \Illuminate\View\View
+    public function index(Request $request): View
     {
         $me = app(PermissionService::class)->employee($request->user());
         $items = TrustedCertificate::where('company_id', $me?->company_id)->orWhereNull('company_id')->orderByDesc('id')->get();
+
         return view('certificates.index', ['items' => $items]);
     }
 
-    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'type' => ['required', 'in:company,state'],
@@ -43,12 +46,14 @@ class CertificateController
             'pem' => $request->input('pem'),
             'is_active' => true,
         ]);
+
         return redirect()->route('certificates.index')->with('status', __('Сертификат добавлен'));
     }
 
-    public function destroy(TrustedCertificate $certificate): \Illuminate\Http\RedirectResponse
+    public function destroy(TrustedCertificate $certificate): RedirectResponse
     {
         $certificate->delete();
+
         return redirect()->route('certificates.index')->with('status', __('Сертификат удалён'));
     }
 }

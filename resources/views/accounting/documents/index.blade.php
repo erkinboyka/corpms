@@ -138,7 +138,7 @@
                     </div>
                 </div>
                 <div class="crm-form__section mb-0">
-                    <h3>{{ __('Примечание') }}</h3>
+                    <label class="h3" for="ad-notes">{{ __('Примечание') }}</label>
                     <div class="crm-form__desc">{{ __('Короткая пометка о назначении документа') }}</div>
                     <div class="crm-form__field mb-0">
                         <input type="text" id="ad-notes" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">

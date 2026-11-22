@@ -39,4 +39,9 @@ class DocumentWorkflowStep extends Model
     {
         return $this->belongsTo(Department::class, 'department_id');
     }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
 }

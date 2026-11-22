@@ -25,6 +25,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AttendanceController extends Controller
 {
+    /** DB-10: границы выборок «сегодня»/live — защита от unbounded get(). */
+    private const MAX_TODAY_RECORDS = 500;
+
+    private const MAX_LIVE_RECORDS = 100;
+
     public function __construct(
         protected AttendanceService $attendance,
         protected PermissionService $permissions,
@@ -50,7 +55,14 @@ class AttendanceController extends Controller
             $query->whereHas('employee', fn ($q) => $q->where('department_id', $me->department_id));
         }
 
-        $records = $query->orderBy('clock_in_at')->get();
+        // DB-10: агрегат считается по всем записям, а список ограничен.
+        $statusCounts = (clone $query)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->map(fn ($count) => (int) $count);
+
+        $records = $query->orderBy('clock_in_at')->limit(self::MAX_TODAY_RECORDS)->get();
 
         // Live-виджет: последние биометрические события дня (только своей компании)
         $events = BiometricEvent::query()
@@ -60,8 +72,6 @@ class AttendanceController extends Controller
             ->orderByDesc('id')
             ->limit(30)
             ->get();
-
-        $statusCounts = $records->groupBy(fn ($r) => $r->status->value)->map->count();
 
         return view('attendance.index', compact('records', 'events', 'statusCounts', 'scope'));
     }
@@ -88,7 +98,13 @@ class AttendanceController extends Controller
             $query->whereHas('employee', fn ($q) => $q->where('department_id', $me->department_id));
         }
 
-        $records = $query->orderBy('clock_in_at')->get();
+        $statusCounts = (clone $query)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->map(fn ($count) => (int) $count);
+
+        $records = $query->orderBy('clock_in_at')->limit(self::MAX_LIVE_RECORDS)->get();
 
         $events = BiometricEvent::query()
             ->with(['device', 'employee'])
@@ -97,8 +113,6 @@ class AttendanceController extends Controller
             ->orderByDesc('id')
             ->limit(30)
             ->get();
-
-        $statusCounts = $records->groupBy(fn ($r) => $r->status->value)->map->count();
 
         return response()->json([
             'counters' => $statusCounts,
@@ -286,7 +300,8 @@ class AttendanceController extends Controller
             $query->where('status', $statusFilter);
         }
 
-        $anomalies = $query->orderByDesc('date')->orderBy('type')->get();
+        // UX-20: настоящая постраничная выдача вместо unbounded get().
+        $anomalies = $query->orderByDesc('date')->orderBy('type')->paginate(50)->withQueryString();
 
         $canManage = $this->permissions->check($request->user(), 'attendance.anomalies.manage');
 
@@ -296,6 +311,13 @@ class AttendanceController extends Controller
     /** Разрешение аномалии (корректировка, п.30 ТЗ: HR фиксирует). */
     public function resolveAnomaly(Request $request, AttendanceAnomaly $anomaly): RedirectResponse
     {
+        // BL-15: route model binding даёт только tenant, но не department scope.
+        $employee = $anomaly->employee;
+        abort_unless(
+            $employee !== null && $this->permissions->canAccessEmployee($request->user(), 'attendance.anomalies.manage', $employee),
+            403,
+        );
+
         $validated = $request->validate([
             'resolution' => ['required', 'string', 'max:500'],
         ]);

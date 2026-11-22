@@ -71,7 +71,7 @@
                     <th scope="col">{{ __('Имя') }}</th>
                     <th scope="col">{{ __('Сотрудник') }}</th>
                     <th scope="col">{{ __('Роли') }}</th>
-                    <th scope="col" style="width: 340px">{{ __('Сброс пароля') }}</th>
+                    <th scope="col" class="text-nowrap">{{ __('Сброс пароля') }}</th>
                 </tr>
             </thead>
             <tbody>

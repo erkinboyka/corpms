@@ -1,0 +1,10 @@
+[Unit]
+Description=Run CorpMS Laravel scheduler every minute
+
+[Timer]
+OnCalendar=*:0/1
+Persistent=true
+Unit=corpms-scheduler.service
+
+[Install]
+WantedBy=timers.target

@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Console\Commands\CorpmsHealth;
+use Illuminate\Database\Migrations\MigrationRepositoryInterface;
+use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -58,6 +62,16 @@ class CorpmsHealthTest extends TestCase
         self::assertSame('все применены', $migrations['details']);
     }
 
+    public function test_health_writes_scheduler_heartbeat(): void
+    {
+        config(['cache.default' => 'array']);
+        Cache::forget('ops.health.last_run');
+
+        $this->runHealth();
+
+        $this->assertNotNull(Cache::get('ops.health.last_run'));
+    }
+
     public function test_failed_jobs_make_health_fail(): void
     {
         DB::table('failed_jobs')->insert([
@@ -96,12 +110,48 @@ class CorpmsHealthTest extends TestCase
         self::assertStringContainsString('порог 0', $queue['details']);
     }
 
+    public function test_database_connection_failure_is_reported(): void
+    {
+        $original = config('database.default');
+        config(['database.default' => 'no_such_connection']);
+
+        try {
+            $report = $this->runHealth();
+            $database = collect($report['checks'])->firstWhere('name', 'database');
+
+            self::assertFalse($report['ok']);
+            self::assertFalse($database['ok']);
+            self::assertStringContainsString('no_such_connection', $database['details']);
+        } finally {
+            config(['database.default' => $original]);
+        }
+    }
+
+    public function test_pending_migrations_make_health_fail(): void
+    {
+        $repository = $this->mock(MigrationRepositoryInterface::class);
+        $repository->shouldReceive('getRan')->andReturn([]);
+
+        $migrator = $this->mock(Migrator::class);
+        $migrator->shouldReceive('getMigrationFiles')->andReturn([
+            '2099_01_01_000000_pending.php' => 'pending',
+        ]);
+        $migrator->shouldReceive('getRepository')->andReturn($repository);
+
+        $report = $this->runHealth();
+        $migrations = collect($report['checks'])->firstWhere('name', 'migrations');
+
+        self::assertFalse($report['ok']);
+        self::assertFalse($migrations['ok']);
+        self::assertStringContainsString('2099_01_01_000000_pending.php', $migrations['details']);
+    }
+
     public function test_missing_storage_directories_make_health_fail(): void
     {
         $original = app()->storagePath();
         app()->useStoragePath(sys_get_temp_dir().'/corpms_missing_'.Str::uuid());
         try {
-            $command = app(\App\Console\Commands\CorpmsHealth::class);
+            $command = app(CorpmsHealth::class);
             $check = (new \ReflectionMethod($command, 'checkStorage'))->invoke($command);
             self::assertFalse($check['ok']);
             foreach (['storage', 'logs', 'app'] as $directory) {

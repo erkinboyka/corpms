@@ -32,24 +32,32 @@
 </div>
 
 <div class="nav-item">
-    <button type="button" class="nav-link px-0 position-relative" data-bs-toggle="offcanvas" data-bs-target="#crm-bell" aria-controls="crm-bell" title="{{ __("Уведомления") }}">
+    <button type="button" class="nav-link px-0 position-relative" data-bs-toggle="offcanvas" data-bs-target="#crm-bell" aria-controls="crm-bell" aria-label="{{ __("Уведомления") }}" title="{{ __("Уведомления") }}">
         <i class="ti ti-bell"></i>
         @if ($navUnreadBell > 0)<span class="badge bg-red position-absolute top-0 end-0 translate-middle">{{ $navUnreadBell }}</span>@endif
     </button>
 </div>
 
-{{-- C3: палитра Ctrl+K — кнопка видна и на 360px, где топбар с поиском скрыт --}}
+{{-- C3: палитра Ctrl+K — кнопка видна и на 360px, где топбар с поиском скрыт.
+     UX-16: на узких экранах добавляем отдельную подписанную кнопку поиска. --}}
 <div class="nav-item">
     <button type="button" class="nav-link px-0" data-crm-palette-open
             aria-label="{{ __("Палитра команд (Ctrl+K)") }}" title="{{ __("Команды и поиск — Ctrl+K") }}">
         <i class="ti ti-command"></i>
     </button>
 </div>
+<div class="nav-item d-lg-none">
+    <button type="button" class="nav-link px-0" data-crm-palette-open
+            aria-label="{{ __("Поиск по системе (Ctrl+K)") }}" title="{{ __("Поиск (Ctrl+K)") }}">
+        <i class="ti ti-search"></i>
+    </button>
+</div>
 
 <div class="nav-item dropdown">
-    <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" title="{{ __("Язык интерфейса") }}">
-        <i class="ti ti-language"></i>
-    </a>
+    <button type="button" class="nav-link px-0" data-bs-toggle="dropdown" aria-expanded="false"
+            aria-label="{{ __("Язык интерфейса") }}" title="{{ __("Язык интерфейса") }}">
+        <i class="ti ti-language" aria-hidden="true"></i>
+    </button>
     <div class="dropdown-menu dropdown-menu-end">
         @foreach (['ru' => __('Русский'), 'en' => 'English', 'tg' => __('Тоҷикӣ'), 'uz' => "O'zbek"] as $code => $label)
             <a class="dropdown-item {{ app()->getLocale() === $code ? 'active' : '' }}" href="{{ route('locale.switch', $code) }}">{{ $label }}</a>
@@ -58,7 +66,8 @@
 </div>
 
 <div class="nav-item dropdown">
-    <a href="#" class="nav-link d-flex lh-1 text-reset p-0 px-2" data-bs-toggle="dropdown">
+    <button type="button" class="nav-link d-flex lh-1 text-reset p-0 px-2" data-bs-toggle="dropdown"
+            aria-expanded="false" aria-label="{{ __("Меню пользователя") }}">
         @if ($navEmployee?->photo_path)
             <span class="avatar avatar-sm avatar-rounded">
                 <img src="/storage/{{ ltrim($navEmployee->photo_path, '/') }}" alt="" class="avatar-img">
@@ -72,7 +81,7 @@
                 <div class="mt-1 small text-secondary">{{ $navEmployee->position->name ?? __('Сотрудник') }}</div>
             </div>
         @endif
-    </a>
+    </button>
     <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
         <div class="dropdown-header d-flex align-items-center gap-2 py-2">
             @if ($navEmployee?->photo_path)

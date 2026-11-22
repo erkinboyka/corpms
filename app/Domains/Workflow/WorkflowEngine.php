@@ -87,6 +87,21 @@ final class WorkflowEngine
         throw new LogicException($message ?? sprintf('Переход не разрешён: %s → %s (%s)', $from, $to, $subject));
     }
 
+    /**
+     * Явно разрешённый системный переход «быстрая подпись по QR».
+     *
+     * Обычная машина состояний не допускает draft/revision → signing: документ
+     * сначала должен пройти согласование. QR-подпись — единственное исключение,
+     * и оно должно вызывать assert до record, чтобы история не содержала
+     * невалидных переходов.
+     */
+    public function assertQuickQrSignature(string $from): void
+    {
+        if (! in_array($from, ['draft', 'revision', 'approved', 'signing'], true)) {
+            throw new LogicException(sprintf('Быстрая QR-подпись недоступна из статуса %s', $from));
+        }
+    }
+
     /** Журнализация успешного перехода (вызывать после apply внутри транзакции). */
     public function record(
         string $subject,

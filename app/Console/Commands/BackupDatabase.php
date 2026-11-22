@@ -6,9 +6,9 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use PDO;
 use RuntimeException;
-use Symfony\Component\Process\Process;
 use Throwable;
 
 /**
@@ -128,24 +128,26 @@ class BackupDatabase extends Command
         $binary = (string) (env('DB_DUMP_BINARY') ?: 'mysqldump');
         $target = $dir."/{$name}_{$stamp}.sql";
 
-        $process = new Process([
-            $binary,
-            '--host='.($config['host'] ?? '127.0.0.1'),
-            '--port='.($config['port'] ?? '3306'),
-            '--user='.($config['username'] ?? 'root'),
-            '--single-transaction',
-            '--routines',
-            '--triggers',
-            '--no-tablespaces',
-            '--result-file='.$target,
-            (string) ($config['database'] ?? ''),
-        ], null, ['MYSQL_PWD' => (string) ($config['password'] ?? '')], null, 600);
+        // TEST-07: через фасад Process тесты проверяют пустой дамп и отказ
+        // mysqldump без реального бинарника; MYSQL_PWD остаётся в env процесса.
+        $result = Process::timeout(600)
+            ->env(['MYSQL_PWD' => (string) ($config['password'] ?? '')])
+            ->run([
+                $binary,
+                '--host='.($config['host'] ?? '127.0.0.1'),
+                '--port='.($config['port'] ?? '3306'),
+                '--user='.($config['username'] ?? 'root'),
+                '--single-transaction',
+                '--routines',
+                '--triggers',
+                '--no-tablespaces',
+                '--result-file='.$target,
+                (string) ($config['database'] ?? ''),
+            ]);
 
-        $process->run();
-
-        if (! $process->isSuccessful()) {
+        if (! $result->successful()) {
             @unlink($target);
-            $detail = trim($process->getErrorOutput()) ?: 'неизвестная ошибка';
+            $detail = trim($result->errorOutput()) ?: 'неизвестная ошибка';
             $hint = str_contains($detail, 'not found') || str_contains($detail, 'ENOENT')
                 ? ' (проверьте наличие mysqldump в PATH или задайте DB_DUMP_BINARY)'
                 : '';

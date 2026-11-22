@@ -12,7 +12,7 @@
             <div class="text-secondary mt-1">{{ __('План на') }} {{ $month }} {{ __('факт считается по журналу операций') }}</div>
         </div>
         <div class="col-auto d-print-none">
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.transactions.index', ['month' => $month]) }}"><i class="ti ti-receipt me-1"></i>{{ __('Операции') }}</a>
+            <a class="btn btn-ghost-secondary me-1" href="{{ route('finance.transactions.index', ['month' => $month]) }}"><i class="ti ti-receipt me-1"></i>{{ __('Денежные операции') }}</a>
             @can('checkBoxPermission', 'finance.manage')
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newBudget"><i class="ti ti-plus me-1"></i>{{ __('Задать бюджет') }}</button>
             @endcan

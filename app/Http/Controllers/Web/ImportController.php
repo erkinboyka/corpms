@@ -4,24 +4,37 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
-use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\ImportJob;
 use App\Models\Position;
 use App\Support\PermissionService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 
 class ImportController
 {
-    public function index(Request $request): \Illuminate\View\View
+    public function index(Request $request): View
     {
-        $jobs = ImportJob::orderByDesc('id')->limit(50)->get();
+        // SEC-03/BE-01: список заданий импорта — только текущий тенант.
+        // Без привязки к сотруднику/компании отдаём пустой набор (fail-closed).
+        $me = app(PermissionService::class)->employee($request->user());
+        $companyId = $me?->company_id;
+
+        $jobs = $companyId === null
+            ? collect()
+            : ImportJob::query()
+                ->where('company_id', $companyId)
+                ->orderByDesc('id')
+                ->limit(50)
+                ->get();
+
         return view('imports.index', ['jobs' => $jobs]);
     }
 
-    public function upload(Request $request): \Illuminate\Http\RedirectResponse
+    public function upload(Request $request): RedirectResponse
     {
         $request->validate([
             'type' => ['required', 'in:employees,departments'],
@@ -42,7 +55,7 @@ class ImportController
         return redirect()->route('imports.show', $job);
     }
 
-    public function show(ImportJob $job): \Illuminate\View\View
+    public function show(ImportJob $job): View
     {
         $path = Storage::path($job->file_path);
         $preview = [];
@@ -59,10 +72,11 @@ class ImportController
                 fclose($handle);
             }
         }
+
         return view('imports.show', ['job' => $job, 'header' => $header, 'preview' => $preview]);
     }
 
-    public function run(ImportJob $job): \Illuminate\Http\RedirectResponse
+    public function run(ImportJob $job): RedirectResponse
     {
         $job->update(['status' => 'running', 'started_at' => now()]);
         $me = app(PermissionService::class)->employee(auth()->user());
@@ -77,6 +91,7 @@ class ImportController
         $handle = fopen($path, 'r');
         if (! $handle) {
             $job->update(['status' => 'failed', 'errors' => [__('Файл недоступен')]]);
+
             return redirect()->route('imports.show', $job);
         }
 
@@ -117,6 +132,7 @@ class ImportController
             return null;
         }
         $v = $row[$map[$key]] ?? null;
+
         return $v === '' ? null : $v;
     }
 

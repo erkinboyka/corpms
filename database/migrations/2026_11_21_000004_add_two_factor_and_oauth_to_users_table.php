@@ -18,8 +18,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['two_factor_secret', 'two_factor_confirmed_at', 'google_id', 'auth_provider']);
-        });
+        // DB-02: удаление колонок two_factor_secret/google_id безвозвратно
+        // теряет секреты 2FA и привязку OAuth. Запрещаем такой откат явно.
+        throw new RuntimeException(
+            'Migration 2026_11_21_000004 is irreversible: rolling back would drop 2FA secrets and OAuth bindings. Disable 2FA/OAuth through the application before rollback.',
+        );
     }
 };

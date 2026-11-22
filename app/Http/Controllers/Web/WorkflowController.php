@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentWorkflow;
 use App\Models\DocumentWorkflowState;
 use App\Models\DocumentWorkflowStep;
+use App\Models\Employee;
 use App\Models\Role;
 use App\Shared\Enums\WorkflowAction;
 use App\Shared\Enums\WorkflowActorType;
@@ -16,6 +17,8 @@ use App\Support\PermissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -58,6 +61,11 @@ class WorkflowController extends Controller
             'workflows' => $workflows,
             'inWorkflow' => $inWorkflow,
             'roles' => Role::query()->orderBy('id')->get(['id', 'name']),
+            'employees' => Employee::query()
+                ->where('company_id', $me->company_id)
+                ->where('status', 'active')
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name']),
             'actorTypes' => WorkflowActorType::cases(),
             'actions' => WorkflowAction::cases(),
             'maxSteps' => self::MAX_STEPS,
@@ -83,9 +91,23 @@ class WorkflowController extends Controller
             'steps.*.name' => ['required', 'string', 'max:150'],
             'steps.*.actor_type' => ['required', 'in:role,department,employee,author,ceo'],
             'steps.*.role_id' => ['nullable', 'exists:roles,id'],
+            'steps.*.employee_id' => [
+                'nullable',
+                Rule::exists('employees', 'id')->where('company_id', $me->company_id),
+            ],
             'steps.*.required_action' => ['required', 'in:approve,review,sign'],
             'steps.*.is_signature_step' => ['nullable', 'boolean'],
         ]);
+
+        // BL-21: шаг «сотрудник» без назначенного сотрудника не должен
+        // молча резолвиться на автора документа.
+        foreach ($validated['steps'] as $index => $step) {
+            if ($step['actor_type'] === 'employee' && empty($step['employee_id'])) {
+                throw ValidationException::withMessages([
+                    'steps.'.$index.'.employee_id' => __('Для шага «сотрудник» выберите сотрудника'),
+                ]);
+            }
+        }
 
         $categories = array_values(array_filter(array_map(
             'trim',
@@ -110,6 +132,7 @@ class WorkflowController extends Controller
                     'name' => $step['name'],
                     'actor_type' => $actorType,
                     'role_id' => $actorType === WorkflowActorType::Role ? (int) ($step['role_id'] ?? 0) ?: null : null,
+                    'employee_id' => $actorType === WorkflowActorType::Employee ? (int) $step['employee_id'] : null,
                     'required_action' => $step['required_action'],
                     'is_signature_step' => (bool) ($step['is_signature_step'] ?? false),
                     'is_terminal' => $index === count($validated['steps']) - 1,

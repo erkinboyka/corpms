@@ -21,6 +21,7 @@ use App\Shared\Enums\FinInvoiceStatus;
 use App\Support\Sidebar;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -172,6 +173,36 @@ class FinanceHttpTest extends TestCase
         foreach (['accounts', 'transactions', 'invoices', 'budgets'] as $page) {
             $this->get('/finance/'.$page)->assertOk()->assertSee('USD')->assertSee('RUB');
         }
+    }
+
+    /** TEST-11: валюты считаются независимо — матрица через data provider. */
+    #[DataProvider('currencyMatrix')]
+    public function test_currency_balance_is_isolated(string $currency, float $opening): void
+    {
+        FinAccount::create([
+            'company_id' => $this->company->id,
+            'name' => 'Счёт '.$currency,
+            'kind' => 'bank',
+            'currency' => $currency,
+            'opening_balance' => $opening,
+            'is_active' => true,
+        ]);
+
+        $metrics = app(FinanceService::class)->metrics($this->company->id);
+
+        self::assertSame($opening, $metrics['by_currency'][$currency]['balance']);
+    }
+
+    /** @return array<string, array{0: string, 1: float}> */
+    public static function currencyMatrix(): array
+    {
+        // В setUp уже есть RUB-счёт, поэтому матрица использует другие валюты.
+        return [
+            'dollar' => ['USD', 100.0],
+            'euro' => ['EUR', 250.0],
+            'somoni' => ['TJS', 50.0],
+            'tenge' => ['KZT', 500.0],
+        ];
     }
 
     public function test_mixed_currency_budget_does_not_report_a_false_usage_percentage(): void

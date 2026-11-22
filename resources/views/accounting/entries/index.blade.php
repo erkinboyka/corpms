@@ -13,7 +13,7 @@
         </div>
         <div class="col-auto d-print-none">
             <a class="btn btn-ghost-secondary me-1" href="{{ route('accounting.chart.index') }}"><i class="ti ti-list-numbers me-1"></i>{{ __('План счетов') }}</a>
-            <a class="btn btn-ghost-secondary me-1" href="{{ route('accounting.reports.index', ['month' => $month]) }}"><i class="ti ti-report-analytics me-1"></i>{{ __('Отчёты') }}</a>
+            <a class="btn btn-ghost-secondary me-1" href="{{ route('accounting.reports.index', ['month' => $month]) }}"><i class="ti ti-report-analytics me-1"></i>{{ __('Бухгалтерские отчёты') }}</a>
             @can('checkBoxPermission', 'accounting.manage')
             <form method="post" action="{{ route('accounting.sync') }}" class="d-inline me-1">
                 @csrf

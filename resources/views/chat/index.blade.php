@@ -125,8 +125,11 @@
                         </div>
                     </div>
                     <div class="bm-chat__header-actions">
-                        <button type="button" class="btn btn-sm btn-ghost-secondary" data-bs-toggle="modal" data-bs-target="#chat-settings-dialog"
-                                aria-label="{{ __("Настройки диалога") }}" title="{{ __("Настройки диалога") }}"><i class="ti ti-settings" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-sm btn-ghost-secondary bm-chat__header-action" data-bs-toggle="modal" data-bs-target="#chat-settings-dialog"
+                                aria-label="{{ __("Настройки диалога") }}" title="{{ __("Настройки диалога") }}">
+                            <i class="ti ti-settings" aria-hidden="true"></i>
+                            <span class="bm-chat__header-action-label">{{ __('Настройки') }}</span>
+                        </button>
                         <button type="button" class="btn btn-sm btn-ghost-secondary" id="chat-latest" title="{{ __("К последнему сообщению") }}" aria-label="{{ __("К последнему сообщению") }}" hidden><i class="ti ti-arrow-down" aria-hidden="true"></i></button>
                         <button type="button" class="btn btn-sm btn-ghost-secondary" id="chat-context-toggle" aria-expanded="false" aria-controls="chat-context" title="{{ __("О диалоге") }}">
                             <i class="ti ti-info-circle"></i><span class="visually-hidden">{{ __('Информация о диалоге') }}</span>
@@ -300,7 +303,7 @@
 @endsection
 
 @push('styles')
-    <link rel="stylesheet" href="/assets/css/bm-chat.css?v8">
+    <link rel="stylesheet" href="/assets/css/bm-chat.css?v9">
 @endpush
 
 @push('scripts')

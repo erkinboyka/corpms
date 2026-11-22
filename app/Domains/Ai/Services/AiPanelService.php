@@ -7,10 +7,10 @@ namespace App\Domains\Ai\Services;
 use App\Models\AiConversation;
 use App\Models\AttendanceRecord;
 use App\Models\Document;
-use App\Models\DocumentCategory;
 use App\Models\Employee;
 use App\Models\Task;
 use App\Support\SettingsService;
+use App\Support\UntrustedContext;
 use Throwable;
 
 /**
@@ -78,6 +78,8 @@ class AiPanelService extends AiAssistantService
         $localOnly = (bool) ($local['local_only'] ?? false);
         $grounded = false;
 
+        $sourceItems = [];
+
         if (! $localOnly && $this->llmEnabled()) {
             $llmText = null;
             $llmBlocks = null;
@@ -85,7 +87,7 @@ class AiPanelService extends AiAssistantService
             $history = $this->historyMessages($asker);
             // D4 (RAG): релевантные фрагменты документов компании
             $rag = $this->ragContext($asker, $question);
-            if ($this->llmAnswerPanel($facts, $question, $history, $llmText, $llmBlocks, false, $rag, $asker)) {
+            if ($this->llmAnswerPanel($facts, $question, $history, $llmText, $llmBlocks, false, $rag, $asker, $sourceItems)) {
                 $reply = $llmText;
                 $grounded = true;
                 // grounded-приоритет: блоки из локальных намерений (на фактах) важнее
@@ -107,7 +109,24 @@ class AiPanelService extends AiAssistantService
             $blocks = $this->hintActions($asker);
         }
 
-        return ['ok' => true, 'reply' => $reply, 'blocks' => $blocks, 'facts' => $facts, 'grounded' => $grounded, 'local_only' => $localOnly];
+        // AI-02: источники видны пользователю через уже существующий блок ai.blocks.
+        if ($sourceItems !== []) {
+            $blocks[] = [
+                'type' => 'sources',
+                'context' => __('Источники ответа, подтверждённые данными'),
+                'items' => $sourceItems,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'reply' => $reply,
+            'blocks' => $blocks,
+            'facts' => $facts,
+            'grounded' => $grounded,
+            'local_only' => $localOnly,
+            'source_items' => $sourceItems,
+        ];
     }
 
     /** История + аудит — как в AiAssistantService::ask(), но с блоками в query_used. */
@@ -118,8 +137,13 @@ class AiPanelService extends AiAssistantService
                 'employee_id' => $asker->id,
                 'question' => $question,
                 'answer' => $payload['reply'],
-                'query_used' => ['facts' => $payload['facts'], 'blocks' => $payload['blocks']],
-                // честный флаг: true — ответил LLM, false — локальный фолбэк/сбой
+                'query_used' => [
+                    'facts' => $payload['facts'],
+                    'blocks' => $payload['blocks'],
+                    // AI-02: источники сохраняются и для панели
+                    'source_items' => $payload['source_items'] ?? [],
+                ],
+                // честный флаг: true — есть подтверждённые источники
                 'grounded' => (bool) ($payload['grounded'] ?? false),
             ]);
 
@@ -1094,8 +1118,9 @@ class AiPanelService extends AiAssistantService
      *
      * @param-out string|null $answerText
      * @param-out array<int, array<string, mixed>>|null $blocks
+     * @param-out array<int, array{type: string, label: string, url?: string}> $sourceItems
      */
-    protected function llmAnswerPanel(array $facts, string $question, array $history = [], ?string &$answerText = null, ?array &$blocks = null, bool $background = false, array $rag = [], ?Employee $asker = null): bool
+    protected function llmAnswerPanel(array $facts, string $question, array $history = [], ?string &$answerText = null, ?array &$blocks = null, bool $background = false, array $rag = [], ?Employee $asker = null, ?array &$sourceItems = null): bool
     {
         $settings = app(SettingsService::class);
         $baseUrl = rtrim((string) $settings->get('corpms.ai.base_url'), '/');
@@ -1116,12 +1141,13 @@ class AiPanelService extends AiAssistantService
             .'{"type":"text","title":"...","content":"..."}]} — '
             .'только если данные блоков полностью берутся из фактов. URL — относительные (начинаются с /). '
             .'Больше ничего после json-блока не пиши.'
+            .UntrustedContext::RULE
             .$this->ragSystemMessage($rag)
             .$this->memoryContext($asker);
 
         $message = $this->postWithTools([
             ['role' => 'system', 'content' => $system],
-            ['role' => 'system', 'content' => 'Факты: '.json_encode($facts, JSON_UNESCAPED_UNICODE)],
+            ['role' => 'system', 'content' => 'Факты: '.UntrustedContext::wrap('facts', (string) json_encode($facts, JSON_UNESCAPED_UNICODE))],
             ...array_slice($history, -12),
             ['role' => 'user', 'content' => $question],
         ], $baseUrl, $apiKey, $model, $timeout, $asker);
@@ -1162,7 +1188,14 @@ class AiPanelService extends AiAssistantService
             if (is_array($prepared) && ($prepared['blocks'] ?? []) !== []) {
                 $blocks = $prepared['blocks'];
                 $answerText = (string) ($prepared['reply'] ?? 'Готово.');
-                return true;
+                $ragSources = [];
+                $answerText = AiGrounding::applyRagCitations($rag, $answerText, $ragSources);
+                $sourceItems = AiGrounding::merge(
+                    AiGrounding::normalize(is_array($message['source_items'] ?? null) ? $message['source_items'] : []),
+                    $ragSources,
+                );
+
+                return $sourceItems !== [];
             }
         }
 
@@ -1171,8 +1204,14 @@ class AiPanelService extends AiAssistantService
         }
 
         $answerText = trim($content) !== '' ? trim($content) : 'Готово — данные ниже.';
+        $ragSources = [];
+        $answerText = AiGrounding::applyRagCitations($rag, $answerText, $ragSources);
+        $sourceItems = AiGrounding::merge(
+            AiGrounding::normalize(is_array($message['source_items'] ?? null) ? $message['source_items'] : []),
+            $ragSources,
+        );
 
-        return true;
+        return $sourceItems !== [];
     }
 
     /**
@@ -1192,19 +1231,37 @@ class AiPanelService extends AiAssistantService
             ? $this->ragContext($employee, (string) $conversation->question)
             : [];
 
-        if (! $this->llmAnswerPanel($facts, (string) $conversation->question, $history, $answer, $blocks, true, $rag, $employee)) {
-            return null;
+        $sourceItems = [];
+        if (! $this->llmAnswerPanel($facts, (string) $conversation->question, $history, $answer, $blocks, true, $rag, $employee, $sourceItems)) {
+            return null; // AI-05: без источников повтор не повышает grounded
         }
 
-        $update = ['answer' => $answer, 'grounded' => true];
-
-        $stored = $conversation->query_used;
-        if ($blocks !== null && is_array($stored) && is_array($stored['facts'] ?? null) && ($stored['blocks'] ?? []) === []) {
+        $stored = is_array($conversation->query_used) ? $conversation->query_used : [];
+        if ($blocks !== null && is_array($stored['facts'] ?? null) && ($stored['blocks'] ?? []) === []) {
             $stored['blocks'] = $blocks;
-            $update['query_used'] = $stored;
         }
 
-        return $update;
+        if ($sourceItems !== []) {
+            $stored['source_items'] = $sourceItems;
+            $storedBlocks = is_array($stored['blocks'] ?? null) ? $stored['blocks'] : [];
+            $hasSources = false;
+            foreach ($storedBlocks as $storedBlock) {
+                if (is_array($storedBlock) && ($storedBlock['type'] ?? null) === 'sources') {
+                    $hasSources = true;
+                    break;
+                }
+            }
+            if (! $hasSources) {
+                $storedBlocks[] = [
+                    'type' => 'sources',
+                    'context' => __('Источники ответа, подтверждённые данными'),
+                    'items' => $sourceItems,
+                ];
+            }
+            $stored['blocks'] = $storedBlocks;
+        }
+
+        return ['answer' => $answer, 'grounded' => true, 'query_used' => $stored];
     }
 
     /** Строгая санитизация блоков от LLM (типы, размеры, длины, URL). */

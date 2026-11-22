@@ -58,7 +58,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Очистка секретов необратима: исходные значения журнала не восстанавливаются.
+        // DB-02: маскирование необратимо. Молчаливый down() создавал бы ложное
+        // ощущение безопасного отката — падаем явно до начала отката.
+        throw new RuntimeException(
+            'Migration 2026_11_16_215115 is irreversible: masked audit secrets cannot be restored. Restore audit_logs from backup before rolling back.',
+        );
     }
 
     /**

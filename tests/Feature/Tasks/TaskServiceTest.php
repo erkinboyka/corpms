@@ -13,6 +13,8 @@ use App\Models\EmployeeRole;
 use App\Models\Role;
 use App\Models\Task;
 use App\Models\TaskAssignment;
+use App\Models\TaskResult;
+use App\Models\TaskStatusHistory;
 use App\Models\TaskTimeLog;
 use App\Models\User;
 use App\Shared\Enums\AssigneeType;
@@ -20,10 +22,13 @@ use App\Shared\Enums\PermissionScope;
 use App\Shared\Enums\TaskAssignmentStatus;
 use App\Shared\Enums\TaskPriority;
 use App\Shared\Enums\TaskStatus;
+use App\Support\NumberGenerator;
 use App\Support\PermissionService;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
+use LogicException;
 use Tests\TestCase;
 
 /**
@@ -51,7 +56,7 @@ class TaskServiceTest extends TestCase
         parent::setUp();
 
         $this->seed(RbacSeeder::class);
-        $this->service = new TaskService(app(AuditService::class));
+        $this->service = new TaskService(app(AuditService::class), app(NumberGenerator::class));
 
         $this->company = Company::create(['name' => 'Test Co', 'code' => 'testco']);
 
@@ -161,7 +166,7 @@ class TaskServiceTest extends TestCase
 
         $this->assertEquals(3, $this->service->depth($l3));
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
         $this->service->createSubtask($this->director, $l3, ['title' => 'Уровень 4']);
     }
 
@@ -275,6 +280,53 @@ class TaskServiceTest extends TestCase
         $this->assertEquals(30, $this->service->totalTrackedMinutes($other));
     }
 
+    /** H-BL-04: у сотрудника не может быть двух открытых интервалов START. */
+    public function test_only_one_open_time_log_per_employee(): void
+    {
+        $task = $this->service->create($this->worker, ['title' => 'Первая задача']);
+        $other = $this->service->create($this->worker, ['title' => 'Вторая задача']);
+
+        self::assertTrue(Schema::hasIndex(
+            'task_time_logs',
+            'task_time_logs_one_open_per_employee',
+        ));
+
+        $this->service->startTimeTracking($this->worker, $task);
+        $again = $this->service->startTimeTracking($this->worker, $other);
+
+        self::assertNotNull($again);
+        self::assertSame(1, TaskTimeLog::query()
+            ->where('employee_id', $this->worker->id)
+            ->whereNull('stopped_at')
+            ->count());
+    }
+
+    public function test_delegate_is_atomic_when_audit_fails(): void
+    {
+        $task = $this->service->create($this->director, [
+            'title' => 'Атомарное делегирование',
+            'assignees' => [['employee_id' => $this->director->id]],
+        ]);
+        $task->update(['department_id' => null]); // вне отдела → вызывается audit
+        $assignment = TaskAssignment::query()->where('task_id', $task->id)->firstOrFail();
+
+        $audit = \Mockery::mock(AuditService::class);
+        $audit->shouldReceive('log')->once()->andThrow(new \RuntimeException('audit failed'));
+        $service = new TaskService($audit, app(NumberGenerator::class));
+
+        try {
+            $service->delegate($this->director, $assignment, $this->worker, 'причина');
+            $this->fail('Ожидалось исключение аудита');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('audit failed', $e->getMessage());
+        }
+
+        $this->assertDatabaseMissing('task_delegations', ['assignment_id' => $assignment->id]);
+        $assignment->refresh();
+        $this->assertEquals($this->director->id, $assignment->employee_id);
+        $this->assertNull($assignment->acknowledged_at);
+    }
+
     /* ---------------- overdue (§44) ---------------- */
 
     public function test_mark_overdue_flags_only_past_deadlines(): void
@@ -306,6 +358,47 @@ class TaskServiceTest extends TestCase
         $this->assertEquals(1, $count);
         $this->assertSame(TaskStatus::Overdue, $late->fresh()->status);
         $this->assertSame(TaskStatus::InProgress, $future->fresh()->status);
+    }
+
+    public function test_mark_overdue_covers_all_open_statuses_and_writes_history(): void
+    {
+        $numbers = 100;
+        $created = [];
+        foreach (['new', 'planned', 'in_progress', 'review', 'returned'] as $status) {
+            $created[$status] = Task::create([
+                'company_id' => $this->company->id,
+                'department_id' => $this->itDept->id,
+                'title' => 'BL-19 '.$status,
+                'number' => 'TSK-2026-'.++$numbers,
+                'author_id' => $this->director->id,
+                'status' => $status,
+                'deadline' => '2026-10-28 00:00:00',
+            ]);
+        }
+        $completed = Task::create([
+            'company_id' => $this->company->id,
+            'department_id' => $this->itDept->id,
+            'title' => 'BL-19 completed',
+            'number' => 'TSK-2026-'.++$numbers,
+            'author_id' => $this->director->id,
+            'status' => 'completed',
+            'deadline' => '2026-10-28 00:00:00',
+            'completed_at' => now(),
+        ]);
+
+        $count = $this->service->markOverdue();
+
+        $this->assertSame(5, $count);
+        foreach ($created as $status => $task) {
+            $this->assertSame(TaskStatus::Overdue, $task->fresh()->status);
+            $history = TaskStatusHistory::query()
+                ->where('task_id', $task->id)
+                ->where('from_status', $status)
+                ->where('to_status', TaskStatus::Overdue->value)
+                ->first();
+            $this->assertNotNull($history);
+        }
+        $this->assertSame(TaskStatus::Completed, $completed->fresh()->status);
     }
 
     /* ---------------- permissions: department-scope vs own-scope (§49) ---------------- */
@@ -342,6 +435,52 @@ class TaskServiceTest extends TestCase
         $this->assertTrue(
             $permissions->checkScope($this->worker->user, 'tasks.view', PermissionScope::Own)
         );
+    }
+
+    public function test_status_transition_table_rejects_illegal_jump_without_history(): void
+    {
+        $task = $this->service->create($this->director, [
+            'title' => 'Переходы статусов',
+            'priority' => 'medium',
+            'assignees' => [['employee_id' => $this->worker->id]],
+        ]);
+
+        $this->service->changeStatus($this->worker, $task->fresh(), TaskStatus::InProgress);
+        $this->service->changeStatus($this->worker, $task->fresh(), TaskStatus::Completed);
+        $historyBefore = TaskStatusHistory::query()->where('task_id', $task->id)->count();
+
+        try {
+            $this->service->changeStatus($this->worker, $task->fresh(), TaskStatus::New);
+            $this->fail('Запрещённый переход completed → new должен быть отклонён');
+        } catch (LogicException) {
+            // ожидаемо
+        }
+
+        $this->assertSame('completed', $task->fresh()->status->value);
+        $this->assertSame($historyBefore, TaskStatusHistory::query()->where('task_id', $task->id)->count());
+    }
+
+    public function test_submit_result_is_assignee_only_and_idempotent(): void
+    {
+        $task = $this->service->create($this->director, [
+            'title' => 'Результат задачи',
+            'priority' => 'medium',
+            'assignees' => [['employee_id' => $this->worker->id]],
+        ]);
+
+        try {
+            $this->service->submitResult($this->worker2, $task, 'чужой результат');
+            $this->fail('Наблюдатель не должен сдавать результат');
+        } catch (LogicException) {
+            // ожидаемо
+        }
+        $this->assertSame(0, TaskResult::query()->count());
+
+        $this->service->submitResult($this->worker, $task->fresh(), 'первый');
+        $this->service->submitResult($this->worker, $task->fresh(), 'второй');
+
+        $this->assertSame(1, TaskResult::query()->where('task_id', $task->id)->count());
+        $this->assertSame('второй', TaskResult::query()->sole()->summary);
     }
 
     /* ---------------- helpers ---------------- */

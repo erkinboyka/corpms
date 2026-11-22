@@ -124,7 +124,7 @@
 <div class="page-header d-print-none mb-3">
     <div class="row align-items-center g-2">
         <div class="col">
-            <div class="crm-eyebrow">{{ __('Данные') }}</div>
+            <div class="crm-eyebrow">{{ __('Сводка') }}</div>
             <h1 class="page-title mt-1">{{ __('Аналитика') }}</h1>
             <div class="text-secondary mt-1">{{ __('Сводные показатели по посещаемости, задачам, документам и кадрам') }}</div>
         </div>
@@ -206,7 +206,7 @@
             </div>
             <div class="card-body d-flex flex-column">
                 @if ($marksTotal > 0)
-                    <div class="crm-bars flex-grow-1" style="min-height: 168px;">
+                    <div class="crm-bars flex-grow-1">
                     @foreach ($trend as $row)
                         @php
                             $dayTotal = $row['present'] + $row['late'] + $row['remote'];
@@ -429,7 +429,7 @@
                     <span class="crm-chip crm-chip--cyan">{{ $auditTrend['total'] }} {{ __('событий') }}</span>
                 </div>
                 <div class="card-body d-flex flex-column">
-                    <div class="crm-bars flex-grow-1" style="min-height: 168px;">
+                    <div class="crm-bars flex-grow-1">
                         @foreach ($auditTrend['days'] as $day)
                             <div class="crm-bar {{ $day['count'] === 0 ? 'crm-bar--dim' : '' }}">
                                 <div class="crm-bar__col"
@@ -461,7 +461,7 @@
                         @foreach ($auditActions as $item)
                             <div class="d-flex align-items-center gap-3 py-1">
                                 <div class="flex-grow-1 min-w-0">
-                                    <div class="small text-truncate font-monospace" title="{{ $item['action'] }}">{{ $item['action'] }}</div>
+                                    <div class="small text-truncate" title="{{ $item['action'] }}">{{ $crm_label('audit_action', $item['action']) }}</div>
                                     <div class="crm-kpi__bar mt-1">
                                         <i style="--w: {{ max(4, (int) round(100 * $item['count'] / $auditActionMax)) }}%"></i>
                                     </div>

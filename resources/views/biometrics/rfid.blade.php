@@ -33,12 +33,12 @@
 <div class="crm-metrics mb-3" data-crm-sec="metrics" data-crm-sec-label="{{ __("Метрики") }}">
     <div class="crm-metric">
         <div class="crm-metric__label" style="color: var(--crm-info);"><i class="ti ti-credit-card"></i>{{ __('Карт в системе') }}</div>
-        <div class="crm-metric__value">{{ $cards->count() }}</div>
-        <div class="crm-metric__hint">{{ $cards->filter(fn ($c) => $c->status->value === 'active')->count() }} {{ __('активных') }}</div>
+        <div class="crm-metric__value">{{ $cards->total() }}</div>
+        <div class="crm-metric__hint">{{ $activeCardsCount }} {{ __('активных') }}</div>
     </div>
     <div class="crm-metric">
         <div class="crm-metric__label" style="color: var(--crm-success);"><i class="ti ti-door-enter"></i>{{ __('Проходов в журнале') }}</div>
-        <div class="crm-metric__value">{{ $events->count() }}</div>
+        <div class="crm-metric__value">{{ $events->total() }}</div>
         <div class="crm-metric__hint">{{ __('последние события ридеров') }}</div>
     </div>
 </div>
@@ -47,7 +47,7 @@
     {{-- ===== Карты ===== --}}
     <div class="col-xl-5" data-crm-sec="cards">
         <div class="crm-form__section">
-            <h3>{{ __('Карты') }} <span class="text-secondary fw-normal">({{ $cards->count() }})</span></h3>
+            <h3>{{ __('Карты') }} <span class="text-secondary fw-normal">({{ $cards->total() }})</span></h3>
             <div class="crm-form__desc">{{ __('Выданные пропуска, сроки действия и блокировки') }}</div>
             <div class="table-responsive">
                 <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
@@ -84,13 +84,14 @@
                     </tbody>
                 </table>
             </div>
+            <div class="mt-2">{{ $cards->links() }}</div>
         </div>
     </div>
 
     {{-- ===== Журнал проходов ===== --}}
     <div class="col-xl-7" data-crm-sec="log">
         <div class="crm-form__section">
-            <h3>{{ __('Журнал проходов') }} <span class="text-secondary fw-normal">({{ $events->count() }})</span></h3>
+            <h3>{{ __('Журнал проходов') }} <span class="text-secondary fw-normal">({{ $events->total() }})</span></h3>
             <div class="crm-form__desc">{{ __('События ридеров: карта, сотрудник, результат обработки') }}</div>
             <div class="table-responsive">
                 <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
@@ -127,6 +128,7 @@
                     </tbody>
                 </table>
             </div>
+            <div class="mt-2">{{ $events->links() }}</div>
         </div>
     </div>
 </div>
