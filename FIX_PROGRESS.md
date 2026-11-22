@@ -1,6 +1,6 @@
 # FIX PROGRESS — исправление находок аудита
 
-Режим: исправления по запросу пользователя от 2026-11-22. Коммиты/push **не выполняются** без отдельного запроса. Перед каждым изменением — негативный тест, после — targeted + полный прогон на контрольных точках.
+Режим: исправления по запросу пользователя от 2026-11-22. Коммит/push выполнены отдельно по запросу пользователя: `7e29ac7`. Исторические контрольные точки ниже сохранены как есть и описывают состояние на момент каждого шага. Перед каждым изменением — негативный тест, после — targeted + полный прогон на контрольных точках.
 
 PHP для локальных проверок: `C:\OSPanel\modules\PHP-8.3\PHP\php.exe`.
 
@@ -109,7 +109,7 @@ P1 закрыт полностью (18/18 строк). P2/P3 — очередь;
 | 8 | «без маршрута / вмым / ывмывмМм» в шаблонах | Не дефект кода | DOM `#ntpl-wf`: option values `""`, `1`, `3` с этими именами | Это данные справочника workflow в БД; production-данные не трогались. Нужна очистка владельцем данных. |
 | 9 | Сырые `auth.login`/`ai.asked` в аналитике | ✅ Исправлено | `FrontendAccessibilityTest` 16/16 PASS; браузер: «Вход в систему», «Запрос к ИИ», «Экспорт отчёта» | Добавлены `EnumLabels::AUDIT_ACTIONS` + сегменты и `$crm_label('audit_action', …)`. |
 
-Первичная браузерная проверка была только DOM/computed styles (скриншоты встроенного браузера недоступны, node/npm отсутствовали). Позже установлены Node/npm/Playwright/Chromium: полный smoke `tools/verify-browser.py` — 48 страниц, 0 axe-нарушений, 0 JS-ошибок. Все изменения uncommitted/unpushed.
+Первичная браузерная проверка была только DOM/computed styles (скриншоты встроенного браузера недоступны, node/npm отсутствовали). Позже установлены Node/npm/Playwright/Chromium: полный smoke `tools/verify-browser.py` — 48 страниц, 0 axe-нарушений, 0 JS-ошибок. Изменения закоммичены и отправлены в GitHub: `7e29ac7`.
 
 ## Изменённые файлы (по мере исправлений)
 
@@ -159,4 +159,4 @@ P1 закрыт полностью (18/18 строк). P2/P3 — очередь;
 - `config/corpms.php`, `.env.example`, `app/Domains/Biometric/Services/BiometricRetentionService.php` (новый), `app/Http/Controllers/Device/BiometricEventController.php`, `routes/console.php`, `tests/Feature/BiometricRetentionTest.php` (новый), `tests/Feature/Attendance/DeviceApiControllerTest.php`, `tests/Feature/ScheduleTest.php` (SEC-09)
 - `database/migrations/2026_11_22_000014_scope_biometric_event_uuid.php` (новый), `app/Http/Controllers/Device/BiometricEventController.php`, `app/Domains/Biometric/Services/RfidService.php`, `tests/Feature/BiometricEventScopeTest.php` (новый) (BE-S1)
 - Post-audit UX-волна: `app/Domains/Lms/Services/LmsService.php`, `app/Support/EnumLabels.php`, `resources/views/tasks/show.blade.php`, `resources/views/analytics/index.blade.php`, `resources/views/chat/index.blade.php`, `resources/views/layouts/tabler.blade.php`, `resources/views/layouts/auth.blade.php`, `public/assets/css/crm-select.css`, `public/assets/css/effects.css`, `public/assets/css/lms.css`, `public/assets/css/bm-chat.css`, `public/assets/js/corpms.js`, `tests/Feature/FrontendAccessibilityTest.php`, `tests/Feature/Lms/LmsHttpTest.php`
-- Post-audit drill’ы и браузерный smoke: `AUDIT_REPORT/13_EXTERNAL_DRILLS.md` (новый), `tools/acceptance-environment.php`, `public/assets/js/crm-select.js`, `public/assets/css/dashboard.css`, `public/assets/css/motion.css`, `resources/views/dashboard.blade.php`, `resources/views/layouts/tabler.blade.php`, `package-lock.json` (новый, не закоммичен)
+- Post-audit drill’ы и браузерный smoke: `AUDIT_REPORT/13_EXTERNAL_DRILLS.md` (новый), `tools/acceptance-environment.php`, `public/assets/js/crm-select.js`, `public/assets/css/dashboard.css`, `public/assets/css/motion.css`, `resources/views/dashboard.blade.php`, `resources/views/layouts/tabler.blade.php`, `package-lock.json` (новый, закоммичен в `7e29ac7`)
