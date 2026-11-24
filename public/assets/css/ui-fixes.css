@@ -61,3 +61,26 @@
     .crm-password-field { min-width: 0; width: 100%; }
     .crm-password-field .form-control { min-width: 0; }
 }
+
+/* 2FA setup: reliable copy feedback and a selectable otpauth link */
+.twofa-qr__url {
+    display: block;
+    margin-top: .5rem;
+    padding: .45rem .55rem;
+    border: 1px solid var(--tblr-border-color);
+    border-radius: 6px;
+    background: var(--tblr-bg-surface);
+    color: var(--tblr-body-color);
+    font-size: .72rem;
+    line-height: 1.4;
+    word-break: break-all;
+    user-select: all;
+}
+.twofa-copy-status {
+    display: block;
+    min-height: 1.1em;
+    margin-top: .3rem;
+    color: var(--tblr-success, #2fb344);
+    font-size: .78rem;
+    line-height: 1.35;
+}

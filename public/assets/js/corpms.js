@@ -1794,7 +1794,7 @@
     }
 
     /* Формат: +7 (XXX) XXX-XX-XX · +1 (XXX) XXX-XX-XX · +375 (XX) XXX-XX-XX ·
-       остальные +DIAL XXX XXX XXX */
+       +992 XX XXX XX XX (Таджикистан) · остальные +DIAL XXX XXX XXX */
     function phoneFormat(dial, national) {
         var out = '+' + dial;
         var i;
@@ -1812,6 +1812,13 @@
             if (national.length > 2) { out += ' ' + national.slice(2, 5); }
             if (national.length > 5) { out += '-' + national.slice(5, 7); }
             if (national.length > 7) { out += '-' + national.slice(7, 9); }
+            return out;
+        }
+        if (dial === '992') {
+            if (national.length > 0) { out += ' ' + national.slice(0, 2); }
+            if (national.length > 2) { out += ' ' + national.slice(2, 5); }
+            if (national.length > 5) { out += ' ' + national.slice(5, 7); }
+            if (national.length > 7) { out += ' ' + national.slice(7, 9); }
             return out;
         }
         for (i = 0; i < national.length; i += 3) {
@@ -1944,9 +1951,10 @@
 
                 /* смена страны: подменяем префикс, если номер был в старом формате */
                 countrySel.addEventListener('change', function () {
+                    var dialPlaceholder = (countrySel.options[countrySel.selectedIndex].getAttribute('data-dial') || '+7');
+                    field.placeholder = dialPlaceholder === '+992' ? '+992 XX XXX XX XX' : dialPlaceholder + ' …';
                     var digits = field.value.replace(/\D/g, '');
                     if (digits === '') {
-                        field.placeholder = (countrySel.options[countrySel.selectedIndex].getAttribute('data-dial') || '+7') + ' …';
                         return;
                     }
                     var old = phoneMatchDial(digits, dials());

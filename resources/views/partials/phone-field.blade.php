@@ -30,7 +30,12 @@
     $initialIso = \App\Support\PhoneHelper::guess((string) ($value ?? ''), $timezone);
     $tzMap = \App\Support\PhoneHelper::dialByTimezone();
     $initialDial = \App\Support\PhoneHelper::dialOf($initialIso);
-    $placeholder = $initialDial === '+7' ? '+7 (999) 123-45-67' : $initialDial . ' …';
+    $placeholders = [
+        '+7' => '+7 (999) 123-45-67',
+        '+992' => '+992 XX XXX XX XX',
+        '+375' => '+375 (XX) XXX-XX-XX',
+    ];
+    $placeholder = $placeholders[$initialDial] ?? ($initialDial . ' …');
 @endphp
 <div class="crm-form__field">
     <label class="form-label" for="{{ $id }}">{{ $label }}@if ($required)<span class="req">*</span>@endif</label>

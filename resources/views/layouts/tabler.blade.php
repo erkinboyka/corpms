@@ -58,9 +58,9 @@
     <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
     <link rel="stylesheet" href="/assets/css/ai-panel.css?v16">
     <link rel="stylesheet" href="/assets/css/motion.css?v8">
-    <link rel="stylesheet" href="/assets/css/ui-fixes.css?v2">
+    <link rel="stylesheet" href="/assets/css/ui-fixes.css?v3">
     <script src="/assets/vendor/tabler.min.js" defer></script>
-    <script src="/assets/js/corpms.js?v52" defer></script>
+    <script src="/assets/js/corpms.js?v54" defer></script>
     <script src="/assets/js/bm-ui.js?v4" defer></script>
     <script src="/assets/js/crm-select.js?v2" defer></script>
     <script src="/assets/js/lms.js?v6" defer></script>

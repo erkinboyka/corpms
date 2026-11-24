@@ -66,7 +66,12 @@
                     {!! $qrSvg !!}
                 </div>
                 <p class="twofa-qr__hint">{{ __('Отсканируйте код приложением-аутентификатором') }}</p>
-                <p class="twofa-qr__manual">{{ __('Не работает сканирование?') }} <a href="{{ $qr }}">{{ __('Открыть ссылку для приложения') }}</a></p>
+                <p class="twofa-qr__manual">
+                    {{ __('Не работает сканирование?') }}
+                    <a href="{{ $qr }}" id="twofa-open-link">{{ __('Открыть ссылку для приложения') }}</a>
+                    <span class="twofa-copy-status" id="twofa-link-status" role="status" aria-live="polite"></span>
+                </p>
+                <code class="twofa-qr__url" id="twofa-qr-url">{{ $qr }}</code>
 
                 <div class="twofa-secret">
                     <span class="twofa-secret__label">{{ __('Секретный ключ') }}</span>
@@ -76,6 +81,7 @@
                             <i class="ti ti-copy"></i>
                         </button>
                     </div>
+                    <span class="twofa-copy-status" id="twofa-secret-status" role="status" aria-live="polite"></span>
                 </div>
             </div>
 
@@ -103,18 +109,70 @@
 @if (! $user->two_factor_confirmed_at)
 <script>
     (function () {
-        var button = document.getElementById('twofa-copy');
-        var value = document.getElementById('twofa-secret-value');
-        if (!button || !value) { return; }
-        button.addEventListener('click', function () {
-            var text = value.textContent.trim();
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(function () {
-                    button.innerHTML = '<i class="ti ti-check"></i>';
-                    setTimeout(function () { button.innerHTML = '<i class="ti ti-copy"></i>'; }, 1600);
-                });
+        /* http://corpms.local не является secure context — navigator.clipboard
+           там недоступен. Всегда есть запасной путь через execCommand. */
+        function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
             }
-        });
+            return new Promise(function (resolve, reject) {
+                var area = document.createElement('textarea');
+                var active = document.activeElement;
+                area.value = text;
+                area.setAttribute('readonly', '');
+                area.style.position = 'fixed';
+                area.style.top = '0';
+                area.style.left = '-9999px';
+                document.body.appendChild(area);
+                area.focus();
+                area.select();
+                var copied = false;
+                try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+                document.body.removeChild(area);
+                if (active && typeof active.focus === 'function') { active.focus(); }
+                if (copied) { resolve(); } else { reject(new Error('copy failed')); }
+            });
+        }
+
+        function flash(button, status, message) {
+            if (status) { status.textContent = message; }
+            if (!button) { return; }
+            button.innerHTML = '<i class="ti ti-check"></i>';
+            setTimeout(function () { button.innerHTML = '<i class="ti ti-copy"></i>'; }, 1600);
+        }
+
+        var button = document.getElementById('twofa-copy');
+        var secret = document.getElementById('twofa-secret-value');
+        var secretStatus = document.getElementById('twofa-secret-status');
+        if (button && secret) {
+            button.addEventListener('click', function () {
+                copyText(secret.textContent.trim())
+                    .then(function () { flash(button, secretStatus, '{{ __('Секрет скопирован') }}'); })
+                    .catch(function () {
+                        if (secretStatus) {
+                            secretStatus.textContent = '{{ __('Не удалось скопировать — выделите ключ вручную') }}';
+                        }
+                    });
+            });
+        }
+
+        var link = document.getElementById('twofa-open-link');
+        var linkStatus = document.getElementById('twofa-link-status');
+        if (link) {
+            link.addEventListener('click', function () {
+                copyText(link.href)
+                    .then(function () {
+                        if (linkStatus) {
+                            linkStatus.textContent = '{{ __('Ссылка скопирована — вставьте её в приложение, если оно не открылось') }}';
+                        }
+                    })
+                    .catch(function () {
+                        if (linkStatus) {
+                            linkStatus.textContent = '{{ __('Ссылка видна ниже — скопируйте её вручную') }}';
+                        }
+                    });
+            });
+        }
     })();
 </script>
 @endif
