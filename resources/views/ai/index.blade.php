@@ -39,7 +39,7 @@
                         <div class="bm-assistant__answer ai-markdown">{!! \App\Support\AssistantMarkdown::render((string) $item->answer) !!}</div>
                         @include('ai.blocks', ['blocks' => $item->query_used['blocks'] ?? []])
                         <div class="ai-msg__meta bm-assistant__answer-footer" data-grounded="{{ $item->grounded ? 'true' : 'false' }}">
-                            <span>{{ $item->grounded ? __('Ответ с языковой моделью') : __('Ответ Буми') }}</span>
+                            <span>{{ $item->grounded ? __('Ответ с языковой моделью') : __('Ответ Bumi') }}</span>
                             <button type="button" class="bm-assistant__copy" data-ai-copy aria-label="{{ __("Скопировать ответ") }}" title="{{ __("Скопировать ответ") }}"><i class="ti ti-copy" aria-hidden="true"></i></button>
                         </div>
                     </div>

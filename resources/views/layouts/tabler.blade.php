@@ -54,19 +54,20 @@
     <link rel="stylesheet" href="/assets/vendor/tabler-icons.min.css">
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
     <link rel="stylesheet" href="/assets/css/effects.css?v62">
-    <link rel="stylesheet" href="/assets/css/corpms.css?v7">
+    <link rel="stylesheet" href="/assets/css/corpms.css?v9">
     <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
     <link rel="stylesheet" href="/assets/css/ai-panel.css?v16">
     <link rel="stylesheet" href="/assets/css/motion.css?v8">
+    <link rel="stylesheet" href="/assets/css/ui-fixes.css?v2">
     <script src="/assets/vendor/tabler.min.js" defer></script>
-    <script src="/assets/js/corpms.js?v49" defer></script>
+    <script src="/assets/js/corpms.js?v52" defer></script>
     <script src="/assets/js/bm-ui.js?v4" defer></script>
     <script src="/assets/js/crm-select.js?v2" defer></script>
     <script src="/assets/js/lms.js?v6" defer></script>
     <script src="/assets/js/lms-whiteboard.js?v1" defer></script>
     <script src="/assets/js/lms-meeting.js?v1" defer></script>
     <script src="/assets/js/lms-pulse.js?v1" defer></script>
-    <script src="/assets/js/ai-panel.js?v15" defer></script>
+    <script src="/assets/js/ai-panel.js?v18" defer></script>
     <script src="/assets/vendor/echo/pusher.min.js" defer></script>
     <script src="/assets/vendor/echo/echo.iife.js" defer></script>
     <script src="/assets/js/bm-realtime.js?v1" defer></script>

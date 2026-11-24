@@ -18,4 +18,13 @@ return [
         'username' => env('LMS_TURN_USERNAME'),
         'credential' => env('LMS_TURN_CREDENTIAL'),
     ],
+
+    // Retention (days). null disables pruning for that data type.
+    'retention' => [
+        'signals_days' => env('LMS_RETENTION_SIGNALS_DAYS', 1),
+        'presence_days' => env('LMS_RETENTION_PRESENCE_DAYS', 1),
+        'activities_days' => env('LMS_RETENTION_ACTIVITIES_DAYS', 180),
+        'erased_elements_days' => env('LMS_RETENTION_ERASED_ELEMENTS_DAYS', 90),
+        'messages_days' => env('LMS_RETENTION_MESSAGES_DAYS', 365),
+    ],
 ];

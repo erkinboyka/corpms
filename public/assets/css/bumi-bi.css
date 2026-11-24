@@ -1,0 +1,409 @@
+/**
+ * BI-режим Bumi: один маскот бегает по странице с охапкой бумаг,
+ * боковой скролл не появляется, чат открывается мягко.
+ */
+
+body.bi-page {
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
+/* ---------- GENERATION: Bumi бегает по странице с охапкой бумаг ---------- */
+.bm-pet[data-bm-running] {
+    z-index: 1045;
+    --bm-run-left: -420px;
+    --bm-run-up: -180px;
+    --bm-run-right: 0px;
+    --bm-run-down: 0px;
+    animation: bm-page-patrol 11s ease-in-out infinite;
+}
+
+/* Не мешаем перетаскиванию и чату: на время взаимодействия маршрут замирает. */
+.bm-pet[data-bm-running][data-bm-paused],
+.bm-pet[data-bm-running][data-open],
+.bm-pet[data-bm-running][data-dragging] {
+    animation-play-state: paused;
+}
+
+.bm-pet[data-bm-running][data-bm-paused] .bm-pet__handle,
+.bm-pet[data-bm-running][data-open] .bm-pet__handle,
+.bm-pet[data-bm-running][data-dragging] .bm-pet__handle {
+    animation-play-state: paused;
+}
+
+body.bi-finishing .bm-pet[data-bm-running] {
+    z-index: 1046;
+}
+
+.bm-pet[data-bm-running] .bm-pet__handle {
+    position: relative;
+    transform-origin: 50% 100%;
+    filter: drop-shadow(0 10px 12px rgba(15, 23, 42, .26));
+    animation: bm-run-hop .46s ease-in-out infinite;
+}
+
+/* Охапка листов в руках Bumi: веер, а не плоская прямоугольная плашка. */
+.bm-pet__papers {
+    display: none;
+    position: absolute;
+    z-index: 4;
+    left: 50%;
+    top: 58%;
+    width: 38px;
+    height: 28px;
+    transform-origin: 50% 100%;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    pointer-events: none;
+}
+
+.bm-pet[data-bm-running] .bm-pet__papers {
+    display: block;
+    animation: bm-papers-carry .46s ease-in-out infinite alternate;
+}
+
+.bm-pet__papers i {
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(15, 23, 42, .2);
+    border-radius: 2px;
+    background: #f8fafc;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, .2);
+}
+
+.bm-pet__papers i::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    top: 6px;
+    height: 1px;
+    background: #cbd5e1;
+    box-shadow: 0 5px 0 #cbd5e1, 0 10px 0 #cbd5e1;
+}
+
+.bm-pet__papers i:nth-child(1) { transform: rotate(-14deg) translate(-4px, 1px); }
+.bm-pet__papers i:nth-child(2) { transform: rotate(5deg) translate(2px, -2px); opacity: .9; }
+.bm-pet__papers i:nth-child(3) { transform: rotate(-2deg); background: #fff; }
+.bm-pet__papers i:nth-child(3)::before {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #e8590c;
+    opacity: .75;
+}
+.bm-pet__papers i:nth-child(4) {
+    transform: rotate(15deg) translate(5px, 2px);
+    background: #eef4ff;
+    animation: bm-paper-flutter .8s ease-in-out infinite alternate;
+}
+
+.bm-pet[data-bm-running] .bm-mini-actor {
+    overflow: visible;
+}
+
+/* Mimicry: Bumi смотрит по сторонам, держит бумаги и время от времени моргает. */
+@media (prefers-reduced-motion: no-preference) {
+    .bm-pet[data-bm-running] .mini-idle {
+        transform-origin: 235px 231px;
+        animation: bm-think-look 2.8s ease-in-out infinite;
+    }
+
+    .bm-pet[data-bm-running] .mini-head {
+        transform-origin: 232px 234px;
+        animation: bm-think-head 3.4s ease-in-out infinite;
+    }
+
+    .bm-pet[data-bm-running] .mini-gaze {
+        animation: bm-think-gaze 2.2s ease-in-out infinite;
+    }
+
+    .bm-pet[data-bm-running] .mini-blink {
+        animation-duration: 2.3s;
+    }
+
+    .bm-pet[data-bm-running] .mini-arm.mini-left {
+        transform-origin: 145px 257px;
+        animation: bm-hold-papers .46s ease-in-out infinite alternate;
+    }
+
+    .bm-pet[data-bm-running] .mini-arm.mini-right {
+        transform-origin: 317px 246px;
+        animation: bm-steady-paper .46s ease-in-out infinite alternate-reverse;
+    }
+
+    .bm-pet[data-bm-running] .mini-stride {
+        animation: bm-quiet-bob .46s ease-in-out infinite;
+    }
+
+    .bm-pet[data-bm-running] .mini-facing {
+        animation: bm-patrol-facing 11s ease-in-out infinite;
+    }
+
+    .bm-pet[data-bm-running] .mini-foot.mini-left {
+        transform-origin: 192px 329px;
+        animation: mini-run .3s ease-in-out infinite alternate;
+    }
+
+    .bm-pet[data-bm-running] .mini-foot.mini-right {
+        transform-origin: 281px 325px;
+        animation: mini-run .3s ease-in-out infinite alternate-reverse;
+    }
+}
+
+/* Bumi меняет «занятие»: несёт → проверяет → передаёт. */
+@media (prefers-reduced-motion: no-preference) {
+    .bm-pet[data-bm-running][data-bm-stage="check"] .mini-idle {
+        animation-name: bm-think-look;
+        animation-duration: 1.3s;
+    }
+
+    .bm-pet[data-bm-running][data-bm-stage="check"] .mini-gaze {
+        animation-duration: .9s;
+    }
+
+    .bm-pet[data-bm-running][data-bm-stage="polish"] .mini-head {
+        animation-duration: 1.6s;
+    }
+
+    .bm-pet[data-bm-running][data-bm-stage="polish"] .mini-arm.mini-left {
+        animation-duration: .32s;
+    }
+}
+
+/* ---------- OPEN: плавное раскрытие чата и возврат док-панели ---------- */
+@media (prefers-reduced-motion: no-preference) {
+    .bm-pet[data-open] .bm-mini-editor {
+        animation: bm-editor-open .36s cubic-bezier(.2, .9, .24, 1) both;
+    }
+
+    .bm-pet[data-open] .ai-panel:not([hidden]) {
+        animation: bm-panel-open .36s cubic-bezier(.2, .9, .24, 1) both;
+    }
+
+    .bm-pet:not([data-open]) .bm-mini-dock {
+        animation: bm-dock-open .28s cubic-bezier(.2, .9, .24, 1) both;
+    }
+
+    .bm-pet [data-ai-write],
+    .crm-toolbar [data-bi-generate],
+    .page-header [data-bi-generate] {
+        transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .bm-pet [data-ai-write]:active,
+    .crm-toolbar [data-bi-generate]:active,
+    .page-header [data-bi-generate]:active {
+        transform: scale(.92);
+    }
+}
+
+@keyframes bm-think-look {
+    0%, 100% { transform: rotate(0); }
+    35% { transform: translate(-5px, 2px) rotate(-6deg); }
+    70% { transform: translate(4px, -2px) rotate(4deg); }
+}
+
+@keyframes bm-think-head {
+    0%, 100% { transform: rotate(0) translateY(0); }
+    40% { transform: rotate(5deg) translateY(2px); }
+    75% { transform: rotate(-4deg) translateY(-1px); }
+}
+
+@keyframes bm-think-gaze {
+    0%, 100% { transform: translate(-7px, 1px); }
+    50% { transform: translate(5px, -2px); }
+}
+
+@keyframes bm-hold-papers {
+    from { transform: rotate(-7deg) translateY(2px); }
+    to { transform: rotate(6deg) translateY(-2px); }
+}
+
+@keyframes bm-steady-paper {
+    from { transform: rotate(-5deg) translateY(1px); }
+    to { transform: rotate(4deg) translateY(-2px); }
+}
+
+@keyframes bm-quiet-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+@keyframes bm-run-hop {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    30% { transform: translateY(-8px) rotate(-3deg); }
+    65% { transform: translateY(0) rotate(2deg); }
+}
+
+@keyframes bm-page-patrol {
+    0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    6% { transform: translate3d(calc(var(--bm-run-left) * .12), calc(var(--bm-run-up) * .04 - 12px), 0) rotate(-3deg); }
+    12% { transform: translate3d(calc(var(--bm-run-left) * .28), calc(var(--bm-run-up) * .12), 0) rotate(1deg); }
+    20% { transform: translate3d(calc(var(--bm-run-left) * .5), calc(var(--bm-run-up) * .2 - 9px), 0) rotate(-2deg); }
+    28% { transform: translate3d(calc(var(--bm-run-left) * .72), var(--bm-run-up), 0) rotate(1deg); }
+    36% { transform: translate3d(calc(var(--bm-run-left) * .55), calc(var(--bm-run-up) * .86 - 11px), 0) rotate(-2deg); }
+    45% { transform: translate3d(calc(var(--bm-run-right) * .55), calc(var(--bm-run-up) * .78), 0) rotate(1deg); }
+    54% { transform: translate3d(calc(var(--bm-run-right) * .8), calc(var(--bm-run-up) * .5 - 10px), 0) rotate(2deg); }
+    62% { transform: translate3d(var(--bm-run-right), calc(var(--bm-run-up) * .3), 0) rotate(0deg); }
+    70% { transform: translate3d(calc(var(--bm-run-right) * .7), calc(var(--bm-run-down) * .3 - 8px), 0) rotate(2deg); }
+    78% { transform: translate3d(calc(var(--bm-run-right) * .35), var(--bm-run-down), 0) rotate(-1deg); }
+    86% { transform: translate3d(calc(var(--bm-run-left) * .1), calc(var(--bm-run-down) * .6 - 9px), 0) rotate(1deg); }
+    92% { transform: translate3d(calc(var(--bm-run-left) * .2), calc(var(--bm-run-down) * .45), 0) rotate(-2deg); }
+}
+
+@keyframes bm-patrol-facing {
+    0%, 48% { transform: perspective(1300px) rotateY(180deg); }
+    52%, 100% { transform: perspective(1300px) rotateY(0deg); }
+}
+
+@keyframes bm-papers-carry {
+    from { transform: translate(-50%, -50%) rotate(-10deg) translateY(1px); }
+    to { transform: translate(-50%, -50%) rotate(-4deg) translateY(-3px); }
+}
+
+@keyframes bm-paper-flutter {
+    from { transform: rotate(15deg) translate(5px, 2px); }
+    to { transform: rotate(20deg) translate(7px, 0); }
+}
+
+@keyframes bm-editor-open {
+    from { opacity: 0; transform: translateY(10px) scale(.96); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes bm-panel-open {
+    from { opacity: 0; transform: translateY(8px) scale(.94); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes bm-dock-open {
+    from { opacity: 0; transform: translateY(-6px) scale(.94); }
+    to { opacity: 1; transform: none; }
+}
+
+/* ---------- GENERATION: фон «творения» и картинки, которые собираются ---------- */
+body.bi-generating .page-body {
+    position: relative;
+}
+
+body.bi-generating .page-body::before {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(560px 360px at 12% 16%, rgba(32, 107, 196, .12), transparent 72%),
+        radial-gradient(480px 320px at 88% 72%, rgba(118, 81, 199, .12), transparent 72%);
+    background-size: 110% 110%;
+    animation: bi-gen-drift 16s ease-in-out infinite alternate;
+}
+
+body.bi-generating .bi-art-grid::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 14px;
+    background: repeating-linear-gradient(
+        115deg,
+        transparent 0 34px,
+        color-mix(in srgb, var(--crm-accent, #206bc4) 5%, transparent) 34px 35px,
+        transparent 35px 70px
+    );
+    opacity: .55;
+}
+
+body.bi-generating .bi-art-card__body::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 0 0 14px 14px;
+    background: linear-gradient(108deg, transparent 36%, rgba(255, 255, 255, .24) 50%, transparent 64%);
+    transform: translateX(-110%);
+    animation: bi-gen-shimmer 4.2s ease-in-out infinite;
+}
+
+body.bi-generating .bi-art-card:nth-child(2n) .bi-art-card__body::after { animation-delay: -1.4s; }
+body.bi-generating .bi-art-card:nth-child(3n) .bi-art-card__body::after { animation-delay: -2.8s; }
+
+/* ---------- FINISH: мягкий переход к готовой витрине ---------- */
+.bi-gen-veil {
+    position: fixed;
+    z-index: 1040;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    background: radial-gradient(circle at 50% 44%, rgba(164, 237, 211, .12), rgba(13, 42, 53, .32) 58%, rgba(13, 42, 53, .48));
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+    transition: opacity .75s ease, backdrop-filter .75s ease, -webkit-backdrop-filter .75s ease,
+                visibility 0s linear .75s;
+}
+
+body.bi-finishing .bi-gen-veil {
+    opacity: 1;
+    visibility: visible;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition-delay: 0s;
+}
+
+.bi-gen-veil__chart {
+    --art-accent: #a4edd3;
+    position: relative;
+    width: 240px;
+    height: 130px;
+    background: rgba(13, 42, 53, .5);
+    border-color: rgba(164, 237, 211, .3);
+    box-shadow: 0 24px 60px rgba(6, 24, 30, .35), inset 0 1px rgba(255, 255, 255, .12);
+}
+
+.bi-gen-veil__spark {
+    color: #e9fbf5;
+    font-size: 2.2rem;
+    text-shadow: 0 0 24px rgba(164, 237, 211, .9);
+    animation: bm-sparkle .9s ease-in-out infinite alternate;
+}
+
+@keyframes bi-gen-drift {
+    from { background-position: 0% 0%; opacity: .75; }
+    to { background-position: 100% 100%; opacity: 1; }
+}
+
+@keyframes bi-gen-scan {
+    to { background-position: 108px 0; }
+}
+
+@keyframes bi-gen-shimmer {
+    0% { transform: translateX(-110%); }
+    55%, 100% { transform: translateX(110%); }
+}
+
+@keyframes bm-sparkle {
+    from { opacity: .25; transform: scale(.72) rotate(-12deg); }
+    to { opacity: 1; transform: scale(1.18) rotate(12deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bm-pet[data-bm-running],
+    .bm-pet[data-bm-running] .bm-pet__handle,
+    .bm-pet[data-bm-running] .mini-facing,
+    .bm-pet[data-bm-running] .mini-foot,
+    .bm-pet[data-bm-running] .bm-pet__papers,
+    .bm-pet__papers i { animation: none; }
+    body.bi-generating .page-body::before,
+    body.bi-generating .bi-art-grid::after,
+    body.bi-generating .bi-art-card__body::after,
+    .bi-gen-veil__spark { animation: none; }
+    body.bi-generating .bi-art-card__body::after { display: none; }
+}

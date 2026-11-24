@@ -27,3 +27,6 @@ Schedule::command('corpms:health')->everyFifteenMinutes()->withoutOverlapping()-
 Schedule::call(function () {
     app(BiometricRetentionService::class)->pruneRawPayloads();
 })->name('biometrics.prune-raw-payloads')->dailyAt('04:10')->withoutOverlapping();
+
+// LMS: retention for high-volume realtime data; business records are preserved.
+Schedule::command('lms:prune')->dailyAt('04:20')->name('lms.prune')->withoutOverlapping();

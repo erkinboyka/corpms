@@ -84,7 +84,7 @@
                             <td class="small text-secondary">{{ $c->issuer }}</td>
                             <td class="small"><code>{{ substr((string) $c->fingerprint, 0, 16) }}…</code></td>
                             <td class="text-end">
-                                <form method="post" action="{{ route('certificates.destroy', $c) }}" class="d-inline">
+                                <form method="post" action="{{ route('certificates.destroy', $c) }}" class="d-inline" data-confirm="{{ __('Удалить сертификат?') }}" data-confirm-danger="1" data-confirm-ok="{{ __('Удалить') }}">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger" type="submit" title="{{ __('Удалить') }}" aria-label="{{ __('Удалить') }}">
                                         <i class="ti ti-trash"></i>

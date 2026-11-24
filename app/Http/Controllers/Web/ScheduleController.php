@@ -235,16 +235,29 @@ class ScheduleController extends Controller
             $query->where('status', $statusFilter);
         }
 
-        // счётчики по статусам в рамках scope (без фильтра) — для метрик страницы
-        $counts = $baseQuery
-            ->groupBy('status')
+        $counts = (clone $baseQuery)
+            ->reorder()
             ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
             ->pluck('total', 'status');
+
+        $year = (int) ($request->input('year') ?? now()->year);
+        $month = (int) ($request->input('month') ?? now()->month);
+        $month = max(1, min(12, $month));
+        $monthStart = \Carbon\Carbon::create($year, $month, 1)->startOfDay();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        $calendarLeaves = (clone $baseQuery)
+            ->whereDate('from_date', '<=', $monthEnd->toDateString())
+            ->whereDate('to_date', '>=', $monthStart->toDateString())
+            ->orderBy('from_date')
+            ->get();
 
         $leaves = $query->orderByDesc('id')->paginate(20)->withQueryString();
         $types = ['vacation', 'sick', 'business_leave', 'day_off', 'other'];
+        $viewMode = in_array($request->input('view'), ['table', 'calendar'], true) ? $request->input('view') : 'table';
 
-        return view('schedules.leaves', compact('leaves', 'canApprove', 'scope', 'types', 'statusFilter', 'counts'));
+        return view('schedules.leaves', compact('leaves', 'canApprove', 'scope', 'types', 'statusFilter', 'counts', 'year', 'month', 'calendarLeaves', 'viewMode'));
     }
 
     public function requestLeave(Request $request): RedirectResponse
@@ -382,9 +395,25 @@ class ScheduleController extends Controller
             ->orderByDesc('effective_from')
             ->get();
 
-        $holidays = Holiday::query()->where(fn ($query) => $query->where('company_id', $me->company_id)->orWhereNull('company_id'))
-            ->whereYear('date', now()->year)->orderBy('date')->get();
+        $year = (int) ($request->input('year') ?? now()->year);
+        $month = (int) ($request->input('month') ?? now()->month);
+        $month = max(1, min(12, $month));
 
-        return view('schedules.mine', compact('schedule', 'assignments', 'holidays'));
+        $holidays = Holiday::query()->where(fn ($query) => $query->where('company_id', $me->company_id)->orWhereNull('company_id'))
+            ->whereYear('date', $year)->orderBy('date')->get();
+
+        $monthStart = \Carbon\Carbon::create($year, $month, 1)->startOfDay();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+        $leaves = LeaveRequest::query()
+            ->where('employee_id', $me->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereDate('from_date', '<=', $monthEnd->toDateString())
+            ->whereDate('to_date', '>=', $monthStart->toDateString())
+            ->orderBy('from_date')
+            ->get();
+
+        $viewMode = in_array($request->input('view'), ['details', 'calendar'], true) ? $request->input('view') : 'details';
+
+        return view('schedules.mine', compact('schedule', 'assignments', 'holidays', 'leaves', 'year', 'month', 'viewMode'));
     }
 }

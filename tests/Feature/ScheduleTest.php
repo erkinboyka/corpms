@@ -27,7 +27,7 @@ final class ScheduleTest extends TestCase
         return $out;
     }
 
-    public function test_schedule_contains_exactly_six_named_jobs(): void
+    public function test_schedule_contains_exactly_seven_named_jobs(): void
     {
         $events = $this->events();
 
@@ -38,6 +38,7 @@ final class ScheduleTest extends TestCase
             'files.backup',
             'ops.health',
             'biometrics.prune-raw-payloads',
+            'lms.prune',
         ], array_keys($events));
     }
 
@@ -52,6 +53,7 @@ final class ScheduleTest extends TestCase
             'files.backup' => '40 3 * * *',
             'ops.health' => '*/15 * * * *',
             'biometrics.prune-raw-payloads' => '10 4 * * *',
+            'lms.prune' => '20 4 * * *',
         ], array_map(static fn (Event $event): string => $event->getExpression(), $events));
     }
 

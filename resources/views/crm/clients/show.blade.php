@@ -21,8 +21,7 @@
 
             @can('checkBoxPermission', 'crm.manage')
             <button class="btn btn-ghost-secondary me-1" data-bs-toggle="modal" data-bs-target="#editClient"><i class="ti ti-pencil me-1"></i>{{ __('Изменить') }}</button>
-            <form method="post" action="{{ route('crm.clients.toggle', $client) }}" class="d-inline"
-                  onsubmit="return confirm('{{ $client->status->value === 'active' ? __('Отправить клиента в архив?') : __('Вернуть клиента в работу?') }}')">
+            <form method="post" action="{{ route('crm.clients.toggle', $client) }}" class="d-inline" data-confirm="{{ $client->status->value === 'active' ? __('Отправить клиента в архив?') : __('Вернуть клиента в работу?') }}" data-confirm-danger="1">
                 @csrf
                 <button class="btn btn-ghost-secondary"><i class="ti ti-{{ $client->status->value === 'active' ? 'archive' : 'archive-off' }} me-1"></i>{{ $client->status->value === 'active' ? __('В архив') : __('В работу') }}</button>
             </form>
@@ -126,8 +125,7 @@
                             @endif
                         </div>
                         @can('checkBoxPermission', 'crm.manage')
-                        <form method="post" action="{{ route('crm.clients.contacts.destroy', [$client, $contact]) }}"
-                              onsubmit="return confirm('{{ __('Удалить контакт') }} «{{ $contact->fullName() }}»?')">
+                        <form method="post" action="{{ route('crm.clients.contacts.destroy', [$client, $contact]) }}" data-confirm="{{ __('Удалить контакт') }} «{{ $contact->fullName() }}»?" data-confirm-danger="1">
                             @csrf
                             @method('delete')
                             <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"><i class="ti ti-trash"></i></button>

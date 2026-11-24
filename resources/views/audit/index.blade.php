@@ -54,7 +54,7 @@
         <select id="audit-action" name="action" class="form-select" onchange="this.form.submit()">
             <option value="">{{ __('все действия') }}</option>
             @forelse ($actions as $a)
-                <option value="{{ $a }}" @selected($action === $a)>{{ $a }}</option>
+                <option value="{{ $a }}" @selected($action === $a)>{{ \App\Support\EnumLabels::label('audit_action', $a) }}</option>
             @empty
                 <option value="">{{ __('(журнал пуст)') }}</option>
             @endforelse
@@ -111,7 +111,7 @@
                                 <span class="crm-chip crm-chip--grey">{{ __('система') }}</span>
                             @endif
                         </td>
-                        <td><span class="crm-chip crm-chip--cyan">{{ $log->action }}</span></td>
+                        <td><span class="crm-chip crm-chip--cyan" title="{{ $log->action }}">{{ \App\Support\EnumLabels::label('audit_action', $log->action) }}</span><div class="text-secondary small mt-1">{{ $log->action }}</div></td>
                         <td class="text-secondary small">
                             @if ($log->object_type !== null)
                                 <span class="fw-semibold text-body">{{ $log->object_type }}</span> #{{ $log->object_id }}

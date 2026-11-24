@@ -217,8 +217,7 @@
                     </form>
                 @endif
                 @if ($canArchive && in_array($document->status->value, ['registered', 'signed'], true))
-                    <form method="post" action="{{ route('documents.archive', $document) }}" class="d-inline" data-submit-guard
-                          onsubmit="return confirm('{{ __('Отправить документ') }} «{{ $document->title }}» {{ __('в архив? Восстановить его можно будет только через администратора') }}.')">
+                    <form method="post" action="{{ route('documents.archive', $document) }}" class="d-inline" data-submit-guard data-confirm="{{ __('Отправить документ') }} «{{ $document->title }}» {{ __('в архив? Восстановить его можно будет только через администратора') }}." data-confirm-danger="1">
                         @csrf
                         <button class="btn btn-ghost-secondary"><i class="ti ti-archive me-1"></i>{{ __('В архив') }}</button>
                     </form>

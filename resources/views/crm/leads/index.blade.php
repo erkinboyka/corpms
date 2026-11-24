@@ -112,15 +112,13 @@
                                         <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Квалифицировать") }}"><i class="ti ti-check"></i></button>
                                     </form>
                                 @endif
-                                <form method="post" action="{{ route('crm.leads.lose', $lead) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ __('Отметить лид') }} «{{ $lead->title }}» {{ __('потерянным') }}?')">
+                                <form method="post" action="{{ route('crm.leads.lose', $lead) }}" class="d-inline" data-confirm="{{ __('Отметить лид') }} «{{ $lead->title }}» {{ __('потерянным') }}?" data-confirm-danger="1">
                                     @csrf
                                     <button class="btn btn-sm btn-ghost-danger" title="{{ __("Потерян") }}"><i class="ti ti-x"></i></button>
                                 </form>
                                 @endcan
                                 @can('checkBoxPermission', 'crm.deals.manage')
-                                <form method="post" action="{{ route('crm.leads.convert', $lead) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ __('Сконвертировать лид') }} «{{ $lead->title }}» {{ __('в клиента и сделку') }}?')">
+                                <form method="post" action="{{ route('crm.leads.convert', $lead) }}" class="d-inline" data-confirm="{{ __('Сконвертировать лид') }} «{{ $lead->title }}» {{ __('в клиента и сделку') }}?" data-confirm-danger="1">
                                     @csrf
                                     <button class="btn btn-sm btn-primary" title="{{ __("Конвертировать в сделку") }}"><i class="ti ti-arrow-right me-1"></i>{{ __('Сделка') }}</button>
                                 </form>

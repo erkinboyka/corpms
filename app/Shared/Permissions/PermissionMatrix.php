@@ -52,6 +52,8 @@ final class PermissionMatrix
         'employees.view_props' => ['Просмотр профилей', 'hr'],
         'employees.manage' => ['Управление сотрудниками', 'hr'],
         'employees.roles' => ['Назначение ролей', 'hr'],
+        'onboarding.view' => ['Просмотр онбординга', 'hr'],
+        'onboarding.manage' => ['Управление онбордингом', 'hr'],
         'schedules.view' => ['Просмотр графиков', 'hr'],
         'schedules.manage' => ['Управление графиками', 'hr'],
         'holidays.manage' => ['Управление праздниками', 'hr'],

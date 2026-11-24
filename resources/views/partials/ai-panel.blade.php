@@ -1,4 +1,6 @@
-<div class="bm-pet d-print-none" data-ai-companion data-state="idle" data-crm-palette-background>
+@php($biMode = request()->routeIs('bi.index', 'bi.dashboards.show'))
+<div class="bm-pet d-print-none" data-ai-companion data-state="idle" data-crm-palette-background
+     @if($biMode) data-bi-mode data-bi-generate-url="{{ route('bi.dashboards.generate') }}" @endif>
     <button type="button" class="bm-pet__handle" data-ai-toggle aria-controls="ai-panel" aria-expanded="false"
             aria-label="{{ __("Bumi Mini. Открыть чат") }}" aria-description="{{ __("Перемещайте стрелками или перетаскивайте. Escape вернёт Bumi на место.") }}">
         <svg class="bm-mini-actor" viewBox="53 9 368 395" aria-hidden="true" focusable="false">
@@ -16,6 +18,7 @@
                 </g></g>
             </g></g></g>
         </svg>
+        @if($biMode)<span class="bm-pet__papers" aria-hidden="true"><i></i><i></i><i></i><i></i></span>@endif
     </button>
     <div class="bm-mini-dock">
         <button type="button" data-ai-write aria-label="{{ __("Написать Bumi") }}" aria-controls="ai-panel" aria-expanded="false"><i class="ti ti-edit" aria-hidden="true"></i></button>
@@ -26,7 +29,7 @@
     <section id="ai-panel" class="bm-mini-editor" aria-label="{{ __("Чат Bumi Mini") }}" hidden>
         <div class="ai-panel" data-mini-thread hidden>
             <header class="ai-panel__header">
-                <h2 class="ai-panel__title">Bumi Mini</h2>
+                <h2 class="ai-panel__title">{{ $biMode ? 'Bumi · BI' : 'Bumi Mini' }}</h2>
                 <span class="ai-panel__state" data-ai-pet-status role="status"></span>
                 @unless (request()->routeIs('ai.index'))
                     <a class="ai-panel__icon" href="{{ route('ai.index') }}" aria-label="{{ __("История диалогов") }}"><i class="ti ti-history" aria-hidden="true"></i></a>
@@ -37,8 +40,9 @@
                 <div class="ai-typing" id="ai-typing" hidden role="status" aria-label="{{ __("Ассистент печатает") }}"></div>
             </div>
         </div>
-        <form class="bm-mini-compose" id="ai-form" method="post" action="{{ route('ai.message') }}" autocomplete="off">
+        <form class="bm-mini-compose" id="ai-form" method="post" action="{{ $biMode ? route('bi.dashboards.generate') : route('ai.message') }}" autocomplete="off" data-message-url="{{ route('ai.message') }}">
             @csrf
+            @if($biMode)<input type="hidden" name="instruction" value="">@endif
             <button type="button" class="mini-plus" data-mini-actions aria-expanded="false" aria-controls="mini-actions" aria-label="{{ __("Действия") }}"><i class="ti ti-plus" aria-hidden="true"></i></button>
             <div id="mini-actions" class="mini-actions" hidden>
                 <button type="button" data-ai-voice aria-pressed="false"><i class="ti ti-microphone" aria-hidden="true"></i> <span data-mini-voice-label>{{ __('Диктовать') }}</span></button>
@@ -46,7 +50,9 @@
                 <button type="button" data-ai-example><i class="ti ti-list-check" aria-hidden="true"></i> {{ __('Задачи на сегодня') }}</button>
                 <button type="button" data-mini-fold><i class="ti ti-chevron-up" aria-hidden="true"></i> {{ __('Свернуть') }}</button>
             </div>
-            <textarea rows="1" id="ai-input" name="question" minlength="3" maxlength="500" required placeholder="{{ __("Начать новый чат") }}" aria-label="{{ __("Сообщение для Bumi") }}" aria-description="{{ __("Enter — отправить, Shift+Enter — новая строка") }}"></textarea>
+            <textarea rows="1" id="ai-input" name="question" minlength="3" maxlength="{{ $biMode ? 2000 : 500 }}" required
+                      placeholder="{{ $biMode ? __('Опиши BI-дашборд: метрики, графики, период…') : __('Начать новый чат') }}"
+                      aria-label="{{ __("Сообщение для Bumi") }}" aria-description="{{ __("Enter — отправить, Shift+Enter — новая строка") }}"></textarea>
             <button type="submit" class="mini-send" id="ai-send" aria-label="{{ __("Отправить") }}" disabled><i class="ti ti-arrow-up" aria-hidden="true"></i></button>
             <span class="mini-voice-status" data-ai-voice-status role="status" hidden></span>
         </form>

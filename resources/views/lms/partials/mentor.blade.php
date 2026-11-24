@@ -3,7 +3,7 @@
         <div class="lms-mentor__head">
             <span class="lms-mentor__face"><i class="ti ti-sparkles" aria-hidden="true"></i></span>
             <div>
-                <div class="lms-mentor__title">{{ __('Бumi подсказывает') }}</div>
+                <div class="lms-mentor__title">{{ __('Bumi подсказывает') }}</div>
                 <div class="lms-mentor__sub">{{ __('Наставник видит пульс группы и ваш прогресс') }}</div>
             </div>
         </div>

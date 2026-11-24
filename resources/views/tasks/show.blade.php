@@ -88,7 +88,7 @@
                 <a class="btn btn-ghost-secondary" href="{{ route('tasks.index') }}"><i class="ti ti-arrow-left me-1"></i>{{ __('К задачам') }}</a>
                 @if ($canEditTask)
                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTask"><i class="ti ti-pencil me-1"></i>{{ __('Изменить') }}</button>
-                    <form method="post" action="{{ route('tasks.destroy', $task) }}" onsubmit="return confirm('{{ __('Удалить задачу                    ? Открытые подзадачи запрещают удаление') }}.')" title="{{ __("Удалить") }}">
+                    <form method="post" action="{{ route('tasks.destroy', $task) }}" data-confirm="{{ __('Удалить задачу                    ? Открытые подзадачи запрещают удаление') }}." data-confirm-danger="1" title="{{ __("Удалить") }}">
                         @csrf @method('DELETE')
                         <button class="btn btn-ghost-danger"><i class="ti ti-trash"></i></button>
                     </form>
@@ -427,8 +427,7 @@
                             {{ number_format($attachment->size / 1024, 0) }} {{ __('КБ') }} · {{ $attachment->employee?->last_name }} · {{ $attachment->created_at?->format('d.m H:i') }}
                         </span>
                         @if ($canDeleteFile)
-                            <form method="post" action="{{ route('tasks.attachments.destroy', [$task, $attachment]) }}" class="ms-auto"
-                                  onsubmit="return confirm('{{ __('Удалить файл') }} «{{ $attachment->original_name }}»?')">
+                            <form method="post" action="{{ route('tasks.attachments.destroy', [$task, $attachment]) }}" class="ms-auto" data-confirm="{{ __('Удалить файл') }} «{{ $attachment->original_name }}»?" data-confirm-danger="1">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить файл") }}"><i class="ti ti-trash"></i></button>
                             </form>

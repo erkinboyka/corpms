@@ -48,8 +48,7 @@
                         </td>
                         <td class="text-end">
                             @can('checkBoxPermission', 'finance.manage')
-                            <form method="post" action="{{ route('finance.categories.toggle', $category) }}" class="d-inline"
-                                  onsubmit="return confirm('{{ $category->is_active ? __('Выключить') : __('Включить') }} {{ __('статью') }} «{{ $category->name }}»?')">
+                            <form method="post" action="{{ route('finance.categories.toggle', $category) }}" class="d-inline" data-confirm="{{ $category->is_active ? __('Выключить') : __('Включить') }} {{ __('статью') }} «{{ $category->name }}»?" data-confirm-danger="1">
                                 @csrf
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ $category->is_active ? __('Выключить') : __('Включить') }}">
                                     <i class="ti ti-{{ $category->is_active ? 'toggle-right' : 'toggle-left' }}"></i>

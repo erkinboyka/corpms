@@ -35,54 +35,75 @@
 <div class="crm-toolbar">
     <div class="input-icon">
         <input type="search" class="form-control crm-search-input" placeholder="{{ __("Поиск по названию, коду, ИНН…") }}" aria-label="{{ __("Поиск компаний") }}"
-               data-crm-filter=".crm-companies > *" data-crm-filter-count="#companies-count">
+               data-crm-filter=".crm-companies [data-crm-filter-item], .crm-companies tbody tr" data-crm-filter-count="#companies-count">
         <span class="input-icon-addon"><i class="ti ti-search"></i></span>
     </div>
     <div class="crm-toolbar__spacer"></div>
+    <div class="crm-switch" data-crm-switch="companies" role="group" aria-label="{{ __("Вид списка") }}">
+        <button type="button" data-view="list"><i class="ti ti-list"></i>{{ __('Список') }}</button>
+        <button type="button" data-view="cards"><i class="ti ti-layout-grid"></i>{{ __('Карты') }}</button>
+    </div>
     <span class="crm-toolbar__count" id="companies-count">{{ __('Показано') }} {{ $companies->count() }}</span>
 </div>
 
-<div class="row row-cards g-3 crm-companies">
-    @forelse ($companyCards as $entry)
-        @php
-            $company = $entry['company'];
-        @endphp
-        <div class="col-12 col-md-6 col-xl-4">
-            <div class="crm-entity h-100">
-                <div class="crm-entity__head">
-                    <span class="crm-entity__logo">{{ $entry['initials'] }}</span>
-                    <div class="min-w-0">
-                        <div class="crm-entity__name">{{ $company->name }}</div>
-                        <div class="crm-entity__sub">{{ __('код') }} {{ $company->code }}@if (! $company->is_active) · <span class="crm-chip crm-chip--grey">{{ __('архив') }}</span>@endif</div>
+<div class="crm-companies" data-crm-view-container="companies" data-view-default="cards">
+    <div data-view-only="cards">
+        <div class="row row-cards g-3">
+            @forelse ($companyCards as $entry)
+                @php $company = $entry['company']; @endphp
+                <div class="col-12 col-md-6 col-xl-4" data-crm-filter-item>
+                    <div class="crm-entity h-100">
+                        <div class="crm-entity__head">
+                            <span class="crm-entity__logo">{{ $entry['initials'] }}</span>
+                            <div class="min-w-0">
+                                <div class="crm-entity__name">{{ $company->name }}</div>
+                                <div class="crm-entity__sub">{{ __('код') }} {{ $company->code }}@if (! $company->is_active) · <span class="crm-chip crm-chip--grey">{{ __('архив') }}</span>@endif</div>
+                            </div>
+                        </div>
+                        <div class="crm-entity__meta">
+                            <span><i class="ti ti-map-pin me-1"></i>{{ $company->region ?? __('регион не указан') }}</span>
+                            <span><i class="ti ti-clock me-1"></i>{{ $company->timezone ?? '—' }}</span>
+                            @if ($company->inn)<span><i class="ti ti-building-bank me-1"></i>{{ __('ИНН') }} {{ $company->inn }}</span>@endif
+                        </div>
+                        <div class="crm-entity__footer">
+                            <div class="d-flex gap-1 flex-wrap">
+                                <span class="crm-chip">{{ $company->departments_count }} {{ __('отдел(ов)') }}</span>
+                                <span class="crm-chip">{{ $company->employees_count }} {{ __('сотр') }}</span>
+                            </div>
+                            @can('checkBoxPermission', 'companies.manage')
+                            <div class="d-inline-flex gap-1 crm-row-actions">
+                                <button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="modal" data-bs-target="#editCompany-{{ $company->id }}"><i class="ti ti-pencil"></i></button>
+                                <form method="post" action="{{ route('companies.destroy', $company) }}" data-confirm="{{ __('Удалить компанию') }} «{{ $company->name }}»?" data-confirm-danger="1">@csrf @method('DELETE')<button class="btn btn-sm btn-ghost-danger"><i class="ti ti-trash"></i></button></form>
+                            </div>
+                            @endcan
+                        </div>
                     </div>
                 </div>
-                <div class="crm-entity__meta">
-                    <span><i class="ti ti-map-pin me-1"></i>{{ $company->region ?? __('регион не указан') }}</span>
-                    <span><i class="ti ti-clock me-1"></i>{{ $company->timezone ?? '—' }}</span>
-                    @if ($company->inn)<span><i class="ti ti-building-bank me-1"></i>{{ __('ИНН') }} {{ $company->inn }}</span>@endif
-                </div>
-                <div class="crm-entity__footer">
-                    <div class="d-flex gap-1 flex-wrap">
-                        <span class="crm-chip">{{ $company->departments_count }} {{ __('отдел(ов)') }}</span>
-                        <span class="crm-chip">{{ $company->employees_count }} {{ __('сотр') }}</span>
-                    </div>
-                    @can('checkBoxPermission', 'companies.manage')
-                    <div class="d-inline-flex gap-1 crm-row-actions">
-                        <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Изменить компанию") }}" data-bs-toggle="modal" data-bs-target="#editCompany-{{ $company->id }}"><i class="ti ti-pencil"></i></button>
-                        <form method="post" action="{{ route('companies.destroy', $company) }}" onsubmit="return confirm('{{ __('Удалить компанию') }} «{{ $company->name }}»? {{ __('Возможна только для пустой компании') }}.')" title="{{ __("Удалить") }}">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить компанию") }}"><i class="ti ti-trash"></i></button>
-                        </form>
-                    </div>
-                    @endcan
-                </div>
-            </div>
+            @empty
+                <div class="col-12">@include('partials.empty-state', ['icon' => 'building', 'title' => __('Компаний пока нет'), 'text' => __('Добавьте первое юридическое лицо, чтобы начать структуру организации.')])</div>
+            @endforelse
         </div>
-    @empty
-        <div class="col-12">
-            @include('partials.empty-state', ['icon' => 'building', 'title' => __('Компаний пока нет'), 'text' => __('Добавьте первое юридическое лицо, чтобы начать структуру организации.')])
-        </div>
-    @endforelse
+    </div>
+    <div data-view-only="list">
+        <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table table-hover">
+            <thead><tr><th>{{ __('Компания') }}</th><th>{{ __('Код') }}</th><th>{{ __('Регион') }}</th><th>{{ __('ИНН') }}</th><th>{{ __('Структура') }}</th><th class="w-1"></th></tr></thead>
+            <tbody>
+            @forelse ($companyCards as $entry)
+                @php $company = $entry['company']; @endphp
+                <tr data-crm-filter-item>
+                    <td><div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm rounded">{{ $entry['initials'] }}</span><div><div class="fw-medium">{{ $company->name }}</div><div class="text-secondary small">{{ $company->timezone ?? '—' }}@if (! $company->is_active) · {{ __('архив') }}@endif</div></div></div></td>
+                    <td class="text-secondary">{{ $company->code }}</td>
+                    <td class="text-secondary">{{ $company->region ?? '—' }}</td>
+                    <td class="text-secondary">{{ $company->inn ?? '—' }}</td>
+                    <td><span class="crm-chip">{{ $company->departments_count }} {{ __('отд.') }}</span> <span class="crm-chip">{{ $company->employees_count }} {{ __('сотр.') }}</span></td>
+                    <td>@can('checkBoxPermission', 'companies.manage')<div class="d-inline-flex gap-1 crm-row-actions"><button class="btn btn-sm btn-ghost-secondary" data-bs-toggle="modal" data-bs-target="#editCompany-{{ $company->id }}"><i class="ti ti-pencil"></i></button><form method="post" action="{{ route('companies.destroy', $company) }}" data-confirm="{{ __('Удалить компанию') }} «{{ $company->name }}»?" data-confirm-danger="1">@csrf @method('DELETE')<button class="btn btn-sm btn-ghost-danger"><i class="ti ti-trash"></i></button></form></div>@endcan</td>
+                </tr>
+            @empty
+                <tr><td colspan="6">@include('partials.empty-state', ['icon' => 'building', 'title' => __('Компаний пока нет'), 'text' => __('Добавьте первое юридическое лицо, чтобы начать структуру организации.')])</td></tr>
+            @endforelse
+            </tbody>
+        </table></div></div>
+    </div>
 </div>
 
 @can('checkBoxPermission', 'companies.manage')

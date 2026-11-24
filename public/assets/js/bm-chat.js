@@ -804,11 +804,16 @@
     }
 
     function deleteMessage(id) {
-        if (!window.confirm('Удалить сообщение?')) { return; }
-
-        method(routeBase + '/messages/' + id, 'DELETE')
-            .then(function () { removeMessage(id); refreshUnread(); })
-            .catch(function (err) { notify(err.message || 'Не удалось удалить', true); });
+        var doDelete = function () {
+            method(routeBase + '/messages/' + id, 'DELETE')
+                .then(function () { removeMessage(id); refreshUnread(); })
+                .catch(function (err) { notify(err.message || 'Не удалось удалить', true); });
+        };
+        if (window.crmConfirm) {
+            window.crmConfirm('Удалить сообщение?', { title: 'Удаление сообщения', confirmText: 'Удалить', danger: true }).then(function (ok) { if (ok) { doDelete(); } });
+            return;
+        }
+        doDelete();
     }
 
     var QUICK_EMOJI = ['👍', '❤️', '😄', '🎉', '🙏', '👀'];
@@ -1100,7 +1105,13 @@
 
     document.querySelectorAll('form[data-chat-confirm]').forEach(function (form) {
         form.addEventListener('submit', function (event) {
-            if (!window.confirm(form.dataset.chatConfirm)) { event.preventDefault(); }
+            if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
+            event.preventDefault();
+            var msg = form.dataset.chatConfirm || 'Подтвердите действие';
+            var submit = function () { form.dataset.confirmed = '1'; if (typeof form.requestSubmit === 'function') { form.requestSubmit(); } else { form.submit(); } };
+            if (window.crmConfirm) {
+                window.crmConfirm(msg, { title: 'Подтверждение', confirmText: 'Подтвердить', danger: true }).then(function (ok) { if (ok) { submit(); } });
+            } else { submit(); }
         });
     });
     document.querySelectorAll('[data-chat-image-preview]').forEach(function (input) {

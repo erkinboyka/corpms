@@ -92,8 +92,7 @@
                         <td class="text-end">
                             <a class="btn btn-sm btn-ghost-secondary" href="{{ route('crm.clients.show', $client) }}" title="{{ __("Открыть") }}"><i class="ti ti-eye"></i></a>
                             @can('checkBoxPermission', 'crm.manage')
-                            <form method="post" action="{{ route('crm.clients.toggle', $client) }}" class="d-inline"
-                                  onsubmit="return confirm('{{ $client->status->value === 'active' ? __('Отправить клиента «').$client->name.__('» в архив?') : __('Вернуть клиента «').$client->name.__('» в работу?') }}')">
+                            <form method="post" action="{{ route('crm.clients.toggle', $client) }}" class="d-inline" data-confirm="{{ $client->status->value === 'active' ? __('Отправить клиента «').$client->name.__('» в архив?') : __('Вернуть клиента «').$client->name.__('» в работу?') }}" data-confirm-danger="1">
                                 @csrf
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ $client->status->value === 'active' ? __('В архив') : __('В работу') }}">
                                     <i class="ti ti-{{ $client->status->value === 'active' ? 'archive' : 'archive-off' }}"></i>

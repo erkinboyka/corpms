@@ -122,8 +122,7 @@
                                 <td class="{{ $task->deadline && $task->deadline->isPast() && $task->status->value !== 'completed' ? 'text-danger' : 'text-secondary' }} small">{{ $task->deadline?->format('d.m.Y') ?? '—' }}</td>
                                 <td class="text-end">
                                     @can('checkBoxPermission', 'projects.manage')
-                                    <form method="post" action="{{ route('projects.tasks.detach', [$project, $task]) }}"
-                                          onsubmit="return confirm('{{ __('Отвязать задачу') }} «{{ $task->title }}» {{ __('от проекта') }}?')">
+                                    <form method="post" action="{{ route('projects.tasks.detach', [$project, $task]) }}" data-confirm="{{ __('Отвязать задачу') }} «{{ $task->title }}» {{ __('от проекта') }}?" data-confirm-danger="1">
                                         @csrf
                                         @method('delete')
                                         <button class="btn btn-sm btn-ghost-danger" title="{{ __("Отвязать") }}"><i class="ti ti-unlink"></i></button>
@@ -186,8 +185,7 @@
                             <div class="text-secondary small">{{ $crm_label('project_member_role', $member->role->value) }} {{ __('загрузка') }} {{ $member->allocation_percent }}%</div>
                         </div>
                         @can('checkBoxPermission', 'projects.manage')
-                        <form method="post" action="{{ route('projects.members.destroy', [$project, $member]) }}"
-                              onsubmit="return confirm(__('Удалить участника из проекта?'))">
+                        <form method="post" action="{{ route('projects.members.destroy', [$project, $member]) }}" data-confirm="__('Удалить участника из проекта?')" data-confirm-danger="1">
                             @csrf
                             @method('delete')
                             <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"><i class="ti ti-trash"></i></button>
@@ -238,8 +236,7 @@
                                 <i class="ti ti-{{ $milestone->isCompleted() ? 'rotate' : 'check' }}"></i>
                             </button>
                         </form>
-                        <form method="post" action="{{ route('projects.milestones.destroy', [$project, $milestone]) }}" class="d-inline"
-                              onsubmit="return confirm('{{ __('Удалить веху') }} «{{ $milestone->title }}»?')">
+                        <form method="post" action="{{ route('projects.milestones.destroy', [$project, $milestone]) }}" class="d-inline" data-confirm="{{ __('Удалить веху') }} «{{ $milestone->title }}»?" data-confirm-danger="1">
                             @csrf
                             @method('delete')
                             <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"><i class="ti ti-trash"></i></button>

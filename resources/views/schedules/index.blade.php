@@ -56,7 +56,7 @@
                         @if ($canManage)
                             <span class="d-flex gap-1">
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Изменить график") }}" data-bs-toggle="modal" data-bs-target="#editSchedule-{{ $schedule->id }}"><i class="ti ti-pencil"></i></button>
-                                <form method="post" action="{{ route('schedules.destroy', $schedule) }}" onsubmit="return confirm('{{ __('Удалить график') }} «{{ $schedule->name }}»? {{ __('Допустимо только без назначений сотрудникам') }}.')" data-submit-guard>
+                                <form method="post" action="{{ route('schedules.destroy', $schedule) }}" data-confirm="{{ __('Удалить график') }} «{{ $schedule->name }}»? {{ __('Допустимо только без назначений сотрудникам') }}." data-confirm-danger="1" data-submit-guard>
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить график") }}"><i class="ti ti-trash"></i></button>
                                 </form>

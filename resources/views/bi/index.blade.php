@@ -1,4 +1,5 @@
 @extends('layouts.tabler')
+@section('body_class', 'bi-page')
 @section('workspace_layout', 'overview')
 
 @section('title', __('BI — Дашборды'))
@@ -19,7 +20,8 @@
                 <input type="hidden" name="month" value="{{ $month }}">
                 <button class="btn btn-ghost-secondary"><i class="ti ti-refresh me-1"></i>{{ __('Пересобрать витрину') }}</button>
             </form>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDashboard"><i class="ti ti-plus me-1"></i>{{ __('Новый дашборд') }}</button>
+            <button class="btn btn-primary me-1" data-bi-generate><i class="ti ti-sparkles me-1"></i>{{ __('Сгенерировать ИИ') }}</button>
+            <button class="btn btn-ghost-secondary" data-bs-toggle="modal" data-bs-target="#newDashboard"><i class="ti ti-plus me-1"></i>{{ __('Новый дашборд') }}</button>
             @endcan
         </div>
     </div>
@@ -60,6 +62,9 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="crm-table__main">{{ $dashboard->name }}</div>
+                        @if ($dashboard->status === 'generating')<span class="crm-chip">{{ __('генерация…') }}</span>@endif
+                        @if ($dashboard->status === 'error')<span class="crm-chip crm-chip--red" title="{{ $dashboard->last_error }}">{{ __('ошибка') }}</span>@endif
+                        @if ($dashboard->origin === 'ai')<span class="crm-chip crm-chip--green">{{ __('ИИ') }}</span>@endif
                         @if ($dashboard->is_default)<span class="crm-chip crm-chip--green">{{ __('по умолчанию') }}</span>@endif
                     </div>
                     <div class="text-secondary small mt-1">{{ __('Виджетов') }} {{ $dashboard->widgets_count }}</div>
@@ -97,4 +102,13 @@
     </div>
 </div>
 @endcan
+
+@push('styles')
+<link rel="stylesheet" href="/assets/css/bumi-bi.css?v=9">
+@endpush
+
+@push('scripts')
+<script>document.body.classList.add('bi-page');</script>
+<script src="/assets/js/bumi-bi-panel.js?v=5"></script>
+@endpush
 @endsection

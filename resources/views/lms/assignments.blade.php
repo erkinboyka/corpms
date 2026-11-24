@@ -32,10 +32,10 @@
         </div>
     </div>
 
-    @include('lms.partials.assignment-board', ['board' => $board, 'canManage' => $canManage])
+    @include('lms.partials.assignment-board', ['board' => $board, 'canReview' => $canManage || ($canTeach ?? false)])
 </div>
 
-@if ($canManage)
+@if ($canManage || ($canTeach ?? false))
     <div class="modal modal-blur fade" id="lmsAssignmentModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">

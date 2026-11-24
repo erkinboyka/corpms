@@ -1,0 +1,382 @@
+/**
+ * BI-витрина: спокойные минималистичные карточки без неонового свечения.
+ * Акцент только в точке заголовка и в самих графиках.
+ */
+
+.bi-art-grid {
+    position: relative;
+    isolation: isolate;
+}
+
+.bi-art-cell {
+    min-width: 0;
+}
+
+.card.bi-art-card {
+    /* Акцент задаётся на ячейке через inline style; не перебиваем его здесь. */
+    --art-accent: inherit;
+    position: relative;
+    overflow: hidden;
+    min-height: 164px;
+    border: 1px solid var(--crm-border, rgba(0, 0, 0, .09));
+    border-radius: 14px;
+    background: var(--crm-surface-solid, #fff);
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .045);
+    transition: box-shadow .25s ease, border-color .25s ease;
+}
+
+.card.bi-art-card:hover {
+    border-color: color-mix(in srgb, var(--art-accent) 32%, var(--crm-border, rgba(0, 0, 0, .09)));
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+}
+
+.bi-art-card__header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 15px 16px 0;
+}
+
+.bi-art-card__heading {
+    min-width: 0;
+}
+
+.bi-art-card__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .9rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--crm-text, #1d273b);
+    overflow-wrap: anywhere;
+}
+
+.bi-art-card__title::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--art-accent);
+    opacity: .8;
+}
+
+.bi-art-card__tools {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bi-art-card__remove {
+    width: 27px;
+    height: 27px;
+    padding: 0;
+    border-radius: 9px;
+    opacity: .55;
+}
+
+.bi-art-card__remove:hover {
+    opacity: 1;
+}
+
+.bi-art-card__body {
+    position: relative;
+    padding: 10px 16px 16px;
+}
+
+/* KPI как крупный экспонат */
+.bi-kpi {
+    position: relative;
+    min-height: 96px;
+}
+
+.bi-kpi__value {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    font-size: clamp(1.9rem, 3.1vw, 2.6rem);
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+    color: var(--crm-text, #1d273b);
+}
+
+.bi-kpi__meta {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: 9px;
+    font-size: .75rem;
+    color: var(--crm-muted, #667085);
+}
+
+.bi-kpi__unit {
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--art-accent) 12%, transparent);
+    color: var(--art-accent);
+    font-weight: 600;
+}
+
+.bi-kpi__bars {
+    position: absolute;
+    right: 0;
+    bottom: 4px;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    height: 52px;
+    opacity: .55;
+}
+
+.bi-kpi__bars i {
+    width: 7px;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(var(--art-accent), color-mix(in srgb, var(--art-accent) 22%, transparent));
+    animation: bi-bar-rise 2.6s ease-in-out infinite alternate;
+}
+
+.bi-kpi__bars i:nth-child(1) { height: 34%; animation-delay: -.4s; }
+.bi-kpi__bars i:nth-child(2) { height: 62%; animation-delay: -.8s; }
+.bi-kpi__bars i:nth-child(3) { height: 45%; animation-delay: -1.2s; }
+.bi-kpi__bars i:nth-child(4) { height: 82%; animation-delay: -1.6s; }
+.bi-kpi__bars i:nth-child(5) { height: 58%; animation-delay: -2s; }
+
+/* Тренд с мягкой заливкой */
+.bi-trend__chart {
+    display: block;
+    width: 100%;
+    height: 84px;
+    overflow: visible;
+}
+
+.bi-trend__area {
+    opacity: .8;
+}
+
+.bi-trend__line {
+    fill: none;
+    stroke: var(--art-accent);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    stroke-dasharray: 700;
+    stroke-dashoffset: 700;
+    animation: bi-line-draw 1.8s ease-out forwards;
+}
+
+.bi-trend__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: .75rem;
+    color: var(--crm-muted, #667085);
+}
+
+.bi-trend__footer strong {
+    color: var(--crm-text, #1d273b);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Состояния генерации и ошибки: скелетон в виде растущего графика */
+.bi-art-loading,
+.bi-art-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 96px;
+    font-size: .82rem;
+    color: var(--crm-muted, #667085);
+}
+
+.bi-skeleton {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 7px;
+    width: 100%;
+    height: 84px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 16%, transparent);
+    border-radius: 14px;
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 6%, transparent) 1px, transparent 1px) 0 0 / 24px 100%,
+        linear-gradient(color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 6%, transparent) 1px, transparent 1px) 0 100% / 100% 22px,
+        color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 4%, transparent);
+    overflow: hidden;
+}
+
+.bi-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, .35) 50%, transparent 64%);
+    transform: translateX(-110%);
+    animation: bi-skeleton-sweep 3s ease-in-out infinite;
+}
+
+.bi-skeleton__bar {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-width: 6px;
+    height: 30%;
+    border-radius: 5px 5px 0 0;
+    background: linear-gradient(color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 70%, transparent), color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 18%, transparent));
+    transform-origin: bottom;
+    animation: bi-skeleton-bar 1.5s ease-in-out infinite alternate;
+}
+
+.bi-skeleton__bar:nth-child(1) { animation-delay: -.1s; }
+.bi-skeleton__bar:nth-child(2) { animation-delay: -.45s; }
+.bi-skeleton__bar:nth-child(3) { animation-delay: -.8s; }
+.bi-skeleton__bar:nth-child(4) { animation-delay: -1.15s; }
+.bi-skeleton__bar:nth-child(5) { animation-delay: -.65s; }
+.bi-skeleton__bar:nth-child(6) { animation-delay: -.25s; }
+
+.bi-skeleton__line {
+    position: absolute;
+    z-index: 2;
+    left: 12px;
+    right: 12px;
+    bottom: 10px;
+    width: calc(100% - 24px);
+    height: 34px;
+    overflow: visible;
+}
+
+.bi-skeleton__line polyline {
+    fill: none;
+    stroke: color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 85%, #fff);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 160;
+    stroke-dashoffset: 160;
+    animation: bi-skeleton-draw 2.2s ease-in-out infinite;
+}
+
+.bi-art-error {
+    color: #d63939;
+}
+
+/* AI-виджеты: аккуратно вписываем ApexCharts в карточку-экспонат */
+.bi-art-card .bi-widget {
+    position: relative;
+    z-index: 1;
+}
+
+.bi-art-card .apexcharts-canvas {
+    margin: 0 auto;
+}
+
+.bi-art-card .apexcharts-gridline {
+    stroke: color-mix(in srgb, var(--art-accent) 10%, transparent);
+}
+
+.bi-art-card .apexcharts-xaxis-texts-g text,
+.bi-art-card .apexcharts-yaxis-texts-g text {
+    fill: var(--crm-muted, #667085);
+    font-size: 10px;
+}
+
+.bi-art-card .apexcharts-tooltip,
+.bi-art-card .apexcharts-tooltip.apexcharts-theme-light {
+    border: 1px solid color-mix(in srgb, var(--art-accent) 30%, transparent) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .16) !important;
+}
+
+.bi-art-card .bi-counter-card {
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--art-accent) 16%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--art-accent) 5%, transparent);
+}
+
+.bi-art-card .bi-counter-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.03em;
+}
+
+.bi-art-card .bi-table th {
+    color: var(--art-accent);
+    font-size: .72rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+/* Прогноз — отдельный «стол экспозиции» */
+.card.bi-art-forecast {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--crm-border, rgba(0, 0, 0, .09));
+    border-radius: 14px;
+    background: var(--crm-surface-solid, #fff);
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .045);
+}
+
+.bi-art-forecast .card-header {
+    border-bottom: 1px solid var(--crm-border, rgba(0, 0, 0, .09));
+}
+
+.bi-art-forecast .table thead th {
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--crm-muted, #667085);
+}
+
+.bi-art-forecast .table tbody td {
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes bi-bar-rise {
+    from { transform: scaleY(.72); }
+    to { transform: scaleY(1); }
+}
+
+@keyframes bi-line-draw {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes bi-skeleton-bar {
+    from { transform: scaleY(.35); opacity: .55; }
+    to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes bi-skeleton-sweep {
+    0% { transform: translateX(-110%); }
+    60%, 100% { transform: translateX(110%); }
+}
+
+@keyframes bi-skeleton-draw {
+    0% { stroke-dashoffset: 160; opacity: .35; }
+    55%, 82% { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: -160; opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bi-kpi__bars i,
+    .bi-trend__line,
+    .bi-skeleton__bar,
+    .bi-skeleton::after,
+    .bi-skeleton__line polyline {
+        animation: none;
+        transition: none;
+    }
+
+    .bi-trend__line,
+    .bi-skeleton__line polyline { stroke-dashoffset: 0; }
+}

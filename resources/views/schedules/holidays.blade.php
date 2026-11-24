@@ -112,8 +112,23 @@
                                 if ($holiday?->kind->value === 'operating') { $classes[] = 'is-workday'; }
                                 if ($isCurrentMonth && $day === $todayDay) { $classes[] = 'is-today'; }
                             @endphp
-                            <div class="{{ implode(' ', $classes) }}"
-                                 @if ($holiday !== null) title="{{ $holiday->name }} — {{ $holiday->date->format('d.m') }}" @endif>
+                            @php
+                                $dayPayload = collect($dayHolidays)->map(fn($h) => [
+                                    'name' => $h->name,
+                                    'date' => $h->date->format('d.m.Y'),
+                                    'kind' => $crm_label('holiday_kind', $h->kind->value),
+                                    'kindValue' => $h->kind->value,
+                                    'transferred' => $h->transferred_from ? \Carbon\Carbon::parse($h->transferred_from)->format('d.m.Y') : null,
+                                ])->values()->all();
+                                $dateObj = $first->copy()->day($day);
+                                $dayTitle = $dateObj->locale(app()->getLocale())->isoFormat('D MMMM YYYY, dddd');
+                            @endphp
+                            <div class="{{ implode(' ', $classes) }} crm-cal__day-btn"
+                                 role="button" tabindex="0"
+                                 data-holiday-day="{{ $day }}"
+                                 data-holiday-month="{{ $monthName }}"
+                                 data-day-title="{{ $dayTitle }}"
+                                 data-holidays='@json($dayPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_TAG)'>
                                 <span class="crm-cal__day">{{ $day }}</span>
                                 @if ($holiday !== null)
                                     <span class="crm-cal__dot" style="background: {{ $kindTones[$holiday->kind->value] ?? 'var(--crm-text-secondary)' }};"></span>
@@ -146,7 +161,7 @@
                 </div>
                 <span class="crm-chip {{ $kindChips[$holiday->kind->value] ?? 'crm-chip--grey' }}">{{ $crm_label('holiday_kind', $holiday->kind->value) }}</span>
                 @if ($canManage)
-                    <form method="post" action="{{ route('holidays.destroy', $holiday) }}" onsubmit="return confirm('{{ __('Удалить праздник') }} «{{ $holiday->name }}»?')" data-submit-guard>
+                    <form method="post" action="{{ route('holidays.destroy', $holiday) }}" data-confirm="{{ __('Удалить праздник') }} «{{ $holiday->name }}»?" data-confirm-danger="1" data-submit-guard>
                         @csrf @method('DELETE')
                         <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить праздник") }}"><i class="ti ti-trash"></i></button>
                     </form>
@@ -204,4 +219,70 @@
     </div>
 </div>
 @endif
+
+<div class="modal modal-blur fade" id="holidayDayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="holidayDayModalTitle">{{ __('Праздник') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Закрыть') }}"></button>
+            </div>
+            <div class="modal-body" id="holidayDayModalBody"></div>
+        </div>
+    </div>
+</div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('holidayDayModal');
+    if (!modalEl) return;
+    var title = document.getElementById('holidayDayModalTitle');
+    var body = document.getElementById('holidayDayModalBody');
+    function openDay(el) {
+        var raw = el.getAttribute('data-holidays') || '[]';
+        var items = [];
+        try { items = JSON.parse(raw); } catch (e) { items = []; }
+        var day = el.getAttribute('data-holiday-day') || '';
+        var month = el.getAttribute('data-holiday-month') || '';
+        var dayTitle = el.getAttribute('data-day-title') || (day + ' ' + month);
+        title.textContent = dayTitle;
+        body.innerHTML = '';
+        if (!items.length) {
+            var empty = document.createElement('div');
+            empty.className = 'text-secondary';
+            empty.textContent = '{{ __('Праздников в этот день нет.') }}';
+            body.appendChild(empty);
+        } else {
+            items.forEach(function (h) {
+                var row = document.createElement('div');
+                row.className = 'd-flex align-items-start gap-3 p-3 rounded-3 border mb-2';
+                var dot = document.createElement('span');
+                dot.style.cssText = 'width:10px;height:10px;border-radius:50%;margin-top:6px;flex:0 0 10px;background:' + ({public:'var(--crm-danger)',operating:'var(--crm-info)',shortened:'var(--crm-warning)'}[h.kindValue]||'var(--crm-text-secondary)');
+                var content = document.createElement('div');
+                var name = document.createElement('div');
+                name.className = 'fw-semibold';
+                name.textContent = h.name || '';
+                var meta = document.createElement('div');
+                meta.className = 'text-secondary small mt-1';
+                meta.textContent = (h.kind || '') + (h.date ? ' · ' + h.date : '') + (h.transferred ? ' · перенос с ' + h.transferred : '');
+                content.appendChild(name); content.appendChild(meta);
+                row.appendChild(dot); row.appendChild(content);
+                body.appendChild(row);
+            });
+        }
+        if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+    document.addEventListener('click', function (e) {
+        var el = e.target.closest('[data-holidays]');
+        if (el) openDay(el);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var el = e.target.closest('[data-holidays]');
+        if (!el) return;
+        e.preventDefault(); openDay(el);
+    });
+});
+</script>
+@endpush
 @endsection

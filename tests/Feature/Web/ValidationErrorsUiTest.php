@@ -122,13 +122,13 @@ class ValidationErrorsUiTest extends TestCase
         $this->post('/payroll/periods/'.$period->id.'/calculate')->assertRedirect();
         $this->get('/payroll/periods/'.$period->id)
             ->assertOk()
-            ->assertSee("confirm('Согласовать ведомость", false);
+            ->assertSee('data-confirm="Согласовать ведомость', false);
 
         // approved: кнопка «Выплатить» с confirm()
         $this->post('/payroll/periods/'.$period->id.'/approve')->assertRedirect();
         $this->get('/payroll/periods/'.$period->id)
             ->assertOk()
-            ->assertSee("confirm('Выплатить ведомость", false);
+            ->assertSee('data-confirm="Выплатить ведомость', false);
     }
 
     /** Архивация документа требует подтверждения. */
@@ -148,7 +148,7 @@ class ValidationErrorsUiTest extends TestCase
         $document = Document::query()->where('title', 'Договор поставки')->sole();
         $this->get('/documents/'.$document->id)
             ->assertOk()
-            ->assertSee("confirm('Отправить документ", false);
+            ->assertSee('data-confirm="Отправить документ', false);
     }
 
     /** Сброс пароля пользователю требует подтверждения. */
@@ -156,6 +156,6 @@ class ValidationErrorsUiTest extends TestCase
     {
         $this->get('/users')
             ->assertOk()
-            ->assertSee("confirm('Сбросить пароль для", false);
+            ->assertSee('data-confirm="Сбросить пароль для', false);
     }
 }

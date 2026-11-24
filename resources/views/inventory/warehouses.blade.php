@@ -60,8 +60,7 @@
                         </td>
                         <td class="text-end">
                             @can('checkBoxPermission', 'inventory.manage')
-                            <form method="post" action="{{ route('inventory.warehouses.toggle', $warehouse) }}" class="d-inline"
-                                  onsubmit="return confirm('{{ $warehouse->is_active ? __('Выключить') : __('Включить') }} {{ __('склад') }} «{{ $warehouse->name }}»?')">
+                            <form method="post" action="{{ route('inventory.warehouses.toggle', $warehouse) }}" class="d-inline" data-confirm="{{ $warehouse->is_active ? __('Выключить') : __('Включить') }} {{ __('склад') }} «{{ $warehouse->name }}»?" data-confirm-danger="1">
                                 @csrf
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ $warehouse->is_active ? __('Выключить') : __('Включить') }}">
                                     <i class="ti ti-{{ $warehouse->is_active ? 'toggle-right' : 'toggle-left' }}"></i>

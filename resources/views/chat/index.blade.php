@@ -214,7 +214,7 @@
                                 @if ($canManageChat && ! $active->isCompanyWide() && $member->employee_id !== $me->id
                                     && $member->role !== \App\Shared\Enums\ConversationRole::Owner && ($chatOwner || ! $member->role->isAdmin()))
                                     <form method="post" action="{{ route('chat.members.destroy', [$active, $member->employee_id]) }}"
-                                          data-chat-confirm="{{ __("Исключить сотрудника из диалога?") }}">
+                                          data-confirm="{{ __("Исключить сотрудника из диалога?") }}" data-confirm-danger="1" data-confirm-ok="{{ __('Удалить') }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="bm-chat__tool bm-chat__tool--danger" title="{{ __("Исключить участника") }}" aria-label="{{ __('Исключить') }} {{ $member->employee?->first_name }} {{ $member->employee?->last_name }}">

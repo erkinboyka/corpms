@@ -443,6 +443,9 @@ class PayrollHttpTest extends TestCase
         $workerA = $this->makeEmployee('E-2', 'Пётр', 'Сидоров', null, $deptA->id);
         $workerB = $this->makeEmployee('E-3', 'Павел', 'Петров', null, $deptB->id);
 
+        // Имя пользователя в шапке не должно случайно содержать "Петров".
+        User::findOrFail($director->user_id)->update(['name' => 'Директор Тестового Отдела']);
+
         foreach ([$workerA, $workerB] as $worker) {
             EmployeeSalary::create([
                 'employee_id' => $worker->id,
@@ -470,6 +473,7 @@ class PayrollHttpTest extends TestCase
             ->get('/payroll/periods/'.$period->id)
             ->assertOk()
             ->assertSee('Сидоров')
+            ->assertDontSee('Павел')
             ->assertDontSee('Петров');
     }
 

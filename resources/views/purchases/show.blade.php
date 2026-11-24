@@ -23,12 +23,10 @@
                     </form>
                 @endif
                 @if (in_array($order->status->value, ['draft', 'ordered'], true))
-                    <form method="post" action="{{ route('purchases.receive', $order) }}" class="d-inline"
-                          onsubmit="return confirm('{{ __('Принять заказ                      на склад? Будут созданы движения прихода') }}.')">@csrf
+                    <form method="post" action="{{ route('purchases.receive', $order) }}" class="d-inline" data-confirm="{{ __('Принять заказ                      на склад? Будут созданы движения прихода') }}." data-confirm-danger="1">@csrf
                         <button class="btn btn-primary me-1"><i class="ti ti-package-import me-1"></i>{{ __('Принять на склад') }}</button>
                     </form>
-                    <form method="post" action="{{ route('purchases.cancel', $order) }}" class="d-inline"
-                          onsubmit="return confirm('{{ __('Отменить заказ') }} {{ $order->number }}?')">@csrf
+                    <form method="post" action="{{ route('purchases.cancel', $order) }}" class="d-inline" data-confirm="{{ __('Отменить заказ') }} {{ $order->number }}?" data-confirm-danger="1">@csrf
                         <button class="btn btn-ghost-danger"><i class="ti ti-x me-1"></i>{{ __('Отменить') }}</button>
                     </form>
                 @endif
@@ -71,6 +69,112 @@
     </div>
 </div>
 
+@if ($obligation)
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">{{ __('Финансовое обязательство') }} {{ $obligation->number }}</div>
+        <span class="crm-chip {{ $obligation->status->value === 'paid' ? 'crm-chip--green' : ($obligation->status->isPayable() ? '' : 'crm-chip--red') }}">
+            {{ $crm_label('purchase_obligation_status', $obligation->status->value) }}
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="crm-metric__label">{{ __('Сумма') }}</div>
+                <div class="crm-metric__value">{{ number_format((float) $obligation->amount, 2, ',', ' ') }} {{ $obligation->currency }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="crm-metric__label">{{ __('Оплачено') }}</div>
+                <div class="crm-metric__value">{{ number_format($obligation->paidAmount(), 2, ',', ' ') }} {{ $obligation->currency }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="crm-metric__label">{{ __('Остаток') }}</div>
+                <div class="crm-metric__value">{{ number_format($obligation->remainingAmount(), 2, ',', ' ') }} {{ $obligation->currency }}</div>
+            </div>
+        </div>
+
+        @forelse ($obligation->payments as $payment)
+            @if ($loop->first)
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm table-vcenter card-table">
+                        <thead><tr>
+                            <th>{{ __('Платёжка') }}</th>
+                            <th>{{ __('Дата') }}</th>
+                            <th>{{ __('Счёт') }}</th>
+                            <th class="text-end">{{ __('Сумма') }}</th>
+                        </tr></thead>
+                        <tbody>
+            @endif
+                        <tr>
+                            <td>{{ $payment->reference }}</td>
+                            <td>{{ $payment->paid_at?->format('d.m.Y') ?? '—' }}</td>
+                            <td>{{ $payment->account?->name ?? '—' }}</td>
+                            <td class="text-end">{{ number_format((float) $payment->amount, 2, ',', ' ') }} {{ $obligation->currency }}</td>
+                        </tr>
+            @if ($loop->last)
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        @empty
+        @endforelse
+
+        @if ($canPay && $obligation->status->isPayable() && $accounts->isNotEmpty())
+            <form method="post" action="{{ route('purchases.obligations.payments.store', $order) }}" class="row g-3 mt-3" data-submit-guard>
+                @csrf
+                <div class="col-md-3">
+                    <label class="form-label" for="obl-account">{{ __('Счёт') }}<span class="req">*</span></label>
+                    <select id="obl-account" name="account_id" class="form-select" required>
+                        <option value="">{{ __('Выберите счёт') }}</option>
+                        @foreach ($accounts as $account)
+                            <option value="{{ $account->id }}" @selected(old('account_id') == $account->id)>{{ $account->name }} · {{ $account->currency }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="obl-category">{{ __('Статья расхода') }}</label>
+                    <select id="obl-category" name="category_id" class="form-select">
+                        <option value="">{{ __('Без статьи') }}</option>
+                        @foreach ($categories as $category)
+                            <option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="obl-amount">{{ __('Сумма') }}<span class="req">*</span></label>
+                    <input id="obl-amount" name="amount" type="number" step="0.01" min="0.01" max="{{ $obligation->remainingAmount() }}" class="form-control" value="{{ old('amount') }}" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="obl-paid-at">{{ __('Дата оплаты') }}<span class="req">*</span></label>
+                    <input id="obl-paid-at" name="paid_at" type="date" class="form-control" value="{{ old('paid_at', now()->toDateString()) }}" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="obl-method">{{ __('Способ') }}<span class="req">*</span></label>
+                    <select id="obl-method" name="method" class="form-select" required>
+                        <option value="bank_transfer">{{ __('Банковский перевод') }}</option>
+                        <option value="cash">{{ __('Наличные') }}</option>
+                        <option value="card">{{ __('Карта') }}</option>
+                        <option value="other">{{ __('Другое') }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="obl-reference">{{ __('Номер платёжки') }}<span class="req">*</span></label>
+                    <input id="obl-reference" name="reference" type="text" maxlength="64" class="form-control" value="{{ old('reference') }}" placeholder="PAY-…" required>
+                    <div class="form-text">{{ __('Повтор того же номера не создаст вторую оплату') }}</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="obl-notes">{{ __('Примечание') }}</label>
+                    <input id="obl-notes" name="notes" type="text" maxlength="1000" class="form-control" value="{{ old('notes') }}">
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary"><i class="ti ti-cash me-1"></i>{{ __('Провести оплату') }}</button>
+                </div>
+            </form>
+        @endif
+    </div>
+</div>
+@endif
+
 <div class="card">
     <div class="card-header">
         <div class="card-title">{{ __('Позиции заказа') }}</div>
@@ -100,8 +204,7 @@
                         <td class="text-end"><strong>{{ number_format((float) $item->quantity * (float) $item->unit_price, 2, ',', ' ') }}</strong></td>
                         @if ($canManage && $order->status->value === 'draft')
                             <td class="text-end">
-                                <form method="post" action="{{ route('purchases.items.remove', [$order, $item->id]) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ __('Убрать позицию') }} «{{ $item->product?->name ?? '' }}» {{ __('из заказа') }}?')">@csrf
+                                <form method="post" action="{{ route('purchases.items.remove', [$order, $item->id]) }}" class="d-inline" data-confirm="{{ __('Убрать позицию') }} «{{ $item->product?->name ?? '' }}» {{ __('из заказа') }}?" data-confirm-danger="1">@csrf
                                     <button class="btn btn-sm btn-ghost-danger" title="{{ __("Убрать") }}"><i class="ti ti-trash"></i></button>
                                 </form>
                             </td>

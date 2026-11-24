@@ -7,21 +7,24 @@ namespace App\Domains\Ai\Services;
 use App\Domains\Analytics\Services\AnalyticsService;
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Models\DocumentRagIndex;
+use App\Models\DocumentVersion;
 use App\Models\Employee;
 use App\Support\AiEndpointGuard;
 use App\Support\PermissionService;
 use App\Support\SettingsService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
  * D4 (RAG): релевантные фрагменты документов компании для ответов AI.
  *
- * Индексация: чанкинг текста документа (title/номер/body) + вектор через
- * OpenAI-совместимый /embeddings (corpms.ai.embeddings_model). Если
- * провайдер недоступен — чанки хранятся без вектора, поиск деградирует
- * до keyword-сопоставления токенов.
+ * Индексация: чанкинг текста документа (title/номер/body), текстовый слой
+ * PDF/DOCX и OCR сканов/изображений + вектор через OpenAI-совместимый
+ * /embeddings (corpms.ai.embeddings_model). Если провайдер недоступен —
+ * чанки хранятся без вектора, поиск деградирует до keyword-сопоставления.
  *
  * Права доступа применяются при поиске: documents.view в scope вызывающего
  * (company/department/own — та же логика, что в поиске документов).
@@ -45,39 +48,128 @@ class DocumentRagService
     public function __construct(
         protected AnalyticsService $analytics,
         protected PermissionService $permissions,
+        protected AttachmentTextExtractor $extractor,
     ) {}
 
     /* -------------------- индексация -------------------- */
 
-    /** Переиндексация одного документа. Возвращает число чанков. */
-    public function indexDocument(Document $document): int
+    /**
+     * Индексация документа: title/body + текст или OCR вложения PDF/DOCX/изображения.
+     * Повтор без изменений и без --force не пересоздаёт чанки и не вызывает
+     * embeddings; при изменении отпечатка поколение индекса увеличивается.
+     */
+    public function indexDocument(Document $document, bool $force = false): int
     {
         // embeddings-настройки — в контексте компании документа
         app(SettingsService::class)->useCompany(
             $document->company_id !== null ? (int) $document->company_id : null,
         );
 
-        $chunks = $this->chunkText($this->textOf($document));
+        $version = $document->current_version_id !== null
+            ? DocumentVersion::query()
+                ->whereKey((int) $document->current_version_id)
+                ->where('document_id', $document->id)
+                ->first()
+            : null;
 
-        DocumentChunk::query()->where('document_id', $document->id)->delete();
+        $fingerprint = hash('sha256', implode("\0", [
+            (string) $document->title,
+            (string) $document->document_number,
+            (string) $document->body,
+            (string) $version?->sha256,
+            (string) $version?->id,
+        ]));
 
-        if ($chunks === []) {
-            return 0;
+        $state = DocumentRagIndex::query()->firstOrNew(['document_id' => $document->id]);
+        $existingChunks = (int) DocumentChunk::query()->where('document_id', $document->id)->count();
+
+        if (! $force
+            && $state->exists
+            && $state->fingerprint === $fingerprint
+            && $existingChunks > 0) {
+            return $existingChunks;
         }
 
-        $vectors = $this->embed($chunks);
+        $generation = $state->exists ? (int) $state->index_version + 1 : 1;
+        $extraction = $this->extraction($version);
+        $chunks = [];
 
-        foreach ($chunks as $index => $content) {
-            DocumentChunk::create([
-                'company_id' => $document->company_id,
-                'document_id' => $document->id,
-                'chunk_index' => $index,
+        foreach ($this->chunkText($this->textOf($document)) as $content) {
+            $chunks[] = [
                 'content' => $content,
-                'embedding' => $vectors[$index] ?? null,
-            ]);
+                'source' => 'document',
+                'source_version' => null,
+                'document_version_id' => null,
+                'metadata' => null,
+            ];
         }
+
+        if ($extraction['text'] !== '' && $extraction['source'] !== null) {
+            foreach ($this->chunkText($extraction['text']) as $content) {
+                $chunks[] = [
+                    'content' => $content,
+                    'source' => $extraction['source'],
+                    'source_version' => $version?->sha256,
+                    'document_version_id' => $version?->id,
+                    'metadata' => [
+                        'file_name' => (string) $version?->file_name,
+                        'mime_type' => (string) $version?->mime_type,
+                        'document_version' => (int) ($version?->version ?? 0),
+                        'ocr' => $extraction['status'] === AttachmentTextExtractor::OCR,
+                    ],
+                ];
+            }
+        }
+
+        $vectors = $chunks === [] ? null : $this->embed(array_column($chunks, 'content'));
+
+        foreach ($chunks as $index => $chunk) {
+            $chunks[$index]['company_id'] = $document->company_id;
+            $chunks[$index]['document_id'] = $document->id;
+            $chunks[$index]['chunk_index'] = $index;
+            $chunks[$index]['index_version'] = $generation;
+            $chunks[$index]['embedding'] = $vectors[$index] ?? null;
+        }
+
+        // Общий статус описывает результат индексации; причина отсутствия
+        // текста из вложения лежит в extraction_status (text/ocr/empty/unsupported/failed).
+        $status = 'indexed';
+        if ($chunks === []) {
+            $status = 'empty';
+        } elseif ($extraction['status'] === AttachmentTextExtractor::UNSUPPORTED) {
+            $status = 'unsupported';
+        }
+
+        DB::transaction(function () use ($document, $state, $chunks, $fingerprint, $generation, $status, $extraction): void {
+            DocumentChunk::query()->where('document_id', $document->id)->delete();
+
+            foreach ($chunks as $chunk) {
+                DocumentChunk::create($chunk);
+            }
+
+            $state->fill([
+                'company_id' => $document->company_id,
+                'fingerprint' => $fingerprint,
+                'index_version' => $generation,
+                'status' => $status,
+                'extraction_status' => $extraction['status'],
+                'error' => $extraction['error'],
+                'extracted_at' => $extraction['status'] === null ? null : now(),
+            ]);
+            $state->save();
+        });
 
         return count($chunks);
+    }
+
+    /** @return array{text:string,status:?string,source:?string,error:?string} */
+    private function extraction(?DocumentVersion $version): array
+    {
+        if ($version === null || $version->file_path === null || $version->file_path === '') {
+            return ['text' => '', 'status' => null, 'source' => null, 'error' => null];
+        }
+
+        return $this->extractor->extract($version);
     }
 
     /**
@@ -90,7 +182,7 @@ class DocumentRagService
             ->where('company_id', $companyId)
             ->whereDoesntHave('chunks')
             ->limit(self::SELF_HEAL_LIMIT)
-            ->get(['id', 'company_id', 'title', 'document_number', 'reg_number', 'body']);
+            ->get(['id', 'company_id', 'title', 'document_number', 'reg_number', 'body', 'current_version_id']);
 
         $count = 0;
         foreach ($documents as $document) {
@@ -100,16 +192,19 @@ class DocumentRagService
         return $count;
     }
 
-    /** Массовая переиндексация (artisan ai:index-documents). */
-    public function reindexAll(?int $companyId = null): int
+    /**
+     * Массовая переиндексация (artisan ai:index-documents).
+     * $force=true принудительно поднимает поколение индекса у всех документов.
+     */
+    public function reindexAll(?int $companyId = null, bool $force = false): int
     {
         $count = 0;
 
         Document::query()
             ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId))
-            ->chunkById(50, function (Collection $documents) use (&$count): void {
+            ->chunkById(50, function (Collection $documents) use (&$count, $force): void {
                 foreach ($documents as $document) {
-                    $count += $this->indexDocument($document);
+                    $count += $this->indexDocument($document, $force);
                 }
             });
 
@@ -122,7 +217,7 @@ class DocumentRagService
      * Топ-N фрагментов документов, доступных вызывающему, по релевантности
      * запросу (векторный поиск, при недоступности embeddings — keyword).
      *
-     * @return array<int, array{document_id: int, title: string, number: string, score: float, content: string}>
+     * @return array<int, array{document_id: int, title: string, number: string, score: float, content: string, source: string, source_version: ?string, document_version_id: ?int, index_version: int}>
      */
     public function retrieve(Employee $asker, string $query, int $limit = self::RETRIEVE_LIMIT): array
     {
@@ -179,7 +274,20 @@ class DocumentRagService
             return [];
         }
 
-        usort($scored, fn (array $a, array $b): int => $b['score'] <=> $a['score']);
+        // Reranking: базовая оценка остаётся в score, но порядок дополнительно
+        // учитывает совпадение в заголовке и текст из вложения.
+        foreach ($scored as &$item) {
+            $item['final'] = (float) $item['score'] + $this->rerankBoost(
+                $query,
+                $item['chunk']->document,
+                $item['chunk'],
+            );
+        }
+        unset($item);
+
+        usort($scored, static function (array $a, array $b): int {
+            return ($b['final'] <=> $a['final']) ?: ($b['score'] <=> $a['score']);
+        });
 
         $results = [];
         $seenDocuments = [];
@@ -196,12 +304,17 @@ class DocumentRagService
             }
             $seenDocuments[$documentId] = true;
 
+            $chunk = $item['chunk'];
             $results[] = [
                 'document_id' => $documentId,
                 'title' => (string) $document->title,
                 'number' => (string) $document->document_number,
                 'score' => round((float) $item['score'], 4),
-                'content' => mb_substr((string) $item['chunk']->content, 0, 400),
+                'content' => mb_substr((string) $chunk->content, 0, 400),
+                'source' => (string) ($chunk->source ?? 'document'),
+                'source_version' => $chunk->source_version !== null ? (string) $chunk->source_version : null,
+                'document_version_id' => $chunk->document_version_id !== null ? (int) $chunk->document_version_id : null,
+                'index_version' => (int) ($chunk->index_version ?? 1),
             ];
 
             if (count($results) >= $limit) {
@@ -328,6 +441,49 @@ class DocumentRagService
         }
 
         return $vectors;
+    }
+
+    /**
+     * Детерминированный reranking: совпадение запроса в заголовке документа и
+     * в тексте вложения поднимает фрагмент при равной базовой оценке.
+     * Боном не меняет score (совместимость с existing vector/keyword-тестами).
+     */
+    protected function rerankBoost(string $query, ?Document $document, DocumentChunk $chunk): float
+    {
+        $tokens = array_values(array_filter(
+            preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($query), -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            static fn (string $token): bool => mb_strlen($token) >= 3,
+        ));
+
+        if ($tokens === []) {
+            return 0.0;
+        }
+
+        $boost = 0.0;
+
+        if ($document !== null) {
+            $title = mb_strtolower((string) $document->title);
+            $hits = 0;
+            foreach ($tokens as $token) {
+                if (str_contains($title, $token)) {
+                    $hits++;
+                }
+            }
+            $boost += 0.10 * ($hits / count($tokens));
+        }
+
+        if (str_starts_with((string) $chunk->source, 'file:')) {
+            $content = mb_strtolower((string) $chunk->content);
+            foreach ($tokens as $token) {
+                if (str_contains($content, $token)) {
+                    $boost += 0.05;
+
+                    break;
+                }
+            }
+        }
+
+        return $boost;
     }
 
     /** Косинусное сходство; размерности разной длины безопасно усекаются. */

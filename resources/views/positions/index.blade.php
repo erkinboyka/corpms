@@ -56,7 +56,7 @@
                     @can('checkBoxPermission', 'positions.manage')
                     <div class="d-inline-flex gap-1 crm-row-actions">
                         <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Изменить должность") }}" data-bs-toggle="modal" data-bs-target="#editPosition-{{ $position->id }}"><i class="ti ti-pencil"></i></button>
-                        <form method="post" action="{{ route('positions.destroy', $position) }}" onsubmit="return confirm('{{ __('Удалить должность') }} «{{ $position->name }}»? {{ __('Допустимо только если за ней не закреплены сотрудники') }}.')" title="{{ __("Удалить") }}">
+                        <form method="post" action="{{ route('positions.destroy', $position) }}" data-confirm="{{ __('Удалить должность') }} «{{ $position->name }}»? {{ __('Допустимо только если за ней не закреплены сотрудники') }}." data-confirm-danger="1" title="{{ __("Удалить") }}">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить должность") }}"><i class="ti ti-trash"></i></button>
                         </form>

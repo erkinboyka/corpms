@@ -65,8 +65,7 @@
                         </td>
                         <td class="text-end">
                             @can('checkBoxPermission', 'accounting.manage')
-                            <form method="post" action="{{ route('accounting.documents.destroy', $document) }}"
-                                  onsubmit="return confirm('{{ __('Удалить документ                        ? Проводка останется') }}.')">
+                            <form method="post" action="{{ route('accounting.documents.destroy', $document) }}" data-confirm="{{ __('Удалить документ                        ? Проводка останется') }}." data-confirm-danger="1">
                                 @csrf
                                 @method('delete')
                                 <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"><i class="ti ti-trash"></i></button>

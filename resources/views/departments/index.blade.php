@@ -70,7 +70,7 @@
                             @can('checkBoxPermission', 'departments.manage')
                             <div class="d-inline-flex gap-1 align-items-center crm-row-actions">
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ __("Изменить отдел") }}" data-bs-toggle="modal" data-bs-target="#editDept-{{ $department->id }}"><i class="ti ti-pencil"></i></button>
-                                <form method="post" action="{{ route('departments.destroy', $department) }}" onsubmit="return confirm('{{ __('Удалить отдел') }} «{{ $department->name }}»? {{ __('Допустимо только без дочерних отделов и сотрудников') }}.')" title="{{ __("Удалить") }}">
+                                <form method="post" action="{{ route('departments.destroy', $department) }}" data-confirm="{{ __('Удалить отдел') }} «{{ $department->name }}»? {{ __('Допустимо только без дочерних отделов и сотрудников') }}." data-confirm-danger="1" title="{{ __("Удалить") }}">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить отдел") }}"><i class="ti ti-trash"></i></button>
                                 </form>

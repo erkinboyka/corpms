@@ -104,12 +104,7 @@
                             @endif
                         </td>
                         <td>
-                            <form method="post" action="{{ route('users.password', $user) }}" data-submit-guard class="d-flex gap-2"
-                                  onsubmit="return confirm('{{ __('Сбросить пароль для                   ? Пользователь потеряет доступ до установки нового пароля') }}.')">
-                                @csrf
-                                <input type="password" name="password" class="form-control form-control-sm" placeholder="{{ __("новый пароль") }}" title="{{ __("Оставьте пустым — пароль будет сгенерирован") }}" aria-label="{{ __('Новый пароль для') }} {{ $user->email }}">
-                                <button class="btn btn-sm btn-outline-secondary text-nowrap" style="flex: none;" title="{{ __("Сбросить или задать пароль") }}">{{ __('Сбросить') }}</button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-ghost-secondary" data-bs-toggle="modal" data-bs-target="#resetPassword-{{ $user->id }}" title="{{ __("Сбросить или задать пароль") }}"><i class="ti ti-key me-1"></i>{{ __('Пароль') }}</button>
                         </td>
                     </tr>
                 @empty
@@ -169,7 +164,10 @@
                         <div class="crm-form__desc">{{ __('Можно задать сразу — минимум 12 символов') }}</div>
                         <div class="crm-form__field mb-0">
                             <label class="form-label" for="user-password">{{ __('Пароль (опционально)') }}</label>
-                            <input type="password" id="user-password" name="password" class="form-control" minlength="12" autocomplete="new-password" placeholder="{{ __("оставьте пустым — сгенерируем") }}">
+                            <div class="input-group crm-password-field">
+                                <input type="password" id="user-password" name="password" data-password-input class="form-control" minlength="12" autocomplete="new-password" placeholder="{{ __("оставьте пустым — сгенерируем") }}">
+                                <button type="button" class="btn btn-outline-secondary" data-password-toggle aria-label="{{ __('Показать пароль') }}" title="{{ __('Показать пароль') }}"><i class="ti ti-eye" aria-hidden="true"></i></button>
+                            </div>
                             <div class="form-hint">{{ __('если пусто, одноразовый пароль покажется в сообщении после создания') }}</div>
                         </div>
                     </div>
@@ -182,4 +180,36 @@
         </div>
     </div>
 </div>
+
+{{-- ===== Сброс пароля ===== --}}
+@foreach ($users as $user)
+<div class="modal modal-blur fade" id="resetPassword-{{ $user->id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <form class="modal-content" method="post" action="{{ route('users.password', $user) }}" data-submit-guard data-confirm="{{ __('Сбросить пароль для') }} {{ $user->email }}? {{ __('Пользователь потеряет доступ до установки нового пароля') }}." data-confirm-danger="1">
+            @csrf
+            <div class="modal-header">
+                <h5 class="modal-title">{{ __('Пароль') }} · {{ $user->email }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __("Закрыть") }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="crm-form__section mb-0">
+                    <h3>{{ __('Новый пароль') }}</h3>
+                    <div class="crm-form__desc">{{ __('Оставьте пустым — сгенерируем одноразовый пароль') }}</div>
+                    <div class="crm-form__field mb-0">
+                        <label class="form-label" for="reset-password-{{ $user->id }}">{{ __('Пароль') }}</label>
+                        <div class="input-group crm-password-field">
+                            <input type="password" id="reset-password-{{ $user->id }}" name="password" data-password-input class="form-control" minlength="12" autocomplete="new-password" placeholder="{{ __("новый пароль") }}">
+                            <button type="button" class="btn btn-outline-secondary" data-password-toggle aria-label="{{ __('Показать пароль') }}" title="{{ __('Показать пароль') }}"><i class="ti ti-eye" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">{{ __('Отмена') }}</button>
+                <button type="submit" class="btn btn-primary"><i class="ti ti-key me-1"></i>{{ __('Сбросить') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endforeach
 @endsection

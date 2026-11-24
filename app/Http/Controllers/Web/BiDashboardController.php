@@ -7,6 +7,10 @@ namespace App\Http\Controllers\Web;
 use App\Domains\Audit\Services\AuditService;
 use App\Domains\Bi\Jobs\RebuildBiMart;
 use App\Domains\Bi\Services\BiService;
+use App\Domains\DashboardGen\Jobs\GenerateAiDashboard;
+use App\Domains\DashboardGen\Services\AiClient;
+use App\Domains\DashboardGen\Services\BiInstructionGuard;
+use App\Domains\DashboardGen\Services\WidgetQueryRunner;
 use App\Http\Controllers\Controller;
 use App\Models\BiDashboard;
 use App\Models\BiWidget;
@@ -15,8 +19,10 @@ use App\Support\PermissionService;
 use App\Support\SingleFlightLock;
 use App\Support\TenantGuard;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -87,10 +93,20 @@ class BiDashboardController extends Controller
             ->orderBy('position')
             ->orderBy('id')
             ->get()
-            ->map(fn (BiWidget $widget): array => [
-                'widget' => $widget,
-                'data' => $this->bi->widgetData($widget, $companyId, $from, $to),
-            ]);
+            ->map(function (BiWidget $widget) use ($companyId, $from, $to): array {
+                // SQL-виджет, сгенерированный ИИ: данные из query_spec, не из витрины
+                if ($widget->isAiWidget()) {
+                    return [
+                        'widget' => $widget,
+                        'data' => $this->aiWidgetData($widget, $companyId),
+                    ];
+                }
+
+                return [
+                    'widget' => $widget,
+                    'data' => $this->bi->widgetData($widget, $companyId, $from, $to),
+                ];
+            });
 
         $forecasts = [];
 
@@ -116,6 +132,38 @@ class BiDashboardController extends Controller
         ]);
     }
 
+    /**
+     * Живой прогресс генерации для Bumi на странице дашборда.
+     * Отдаёт только статусы и названия виджетов — без SQL и данных.
+     */
+    public function generationStatus(Request $request, BiDashboard $dashboard): JsonResponse
+    {
+        $me = $request->user()->employee;
+        \assert($me !== null);
+        TenantGuard::ensure($dashboard, $me);
+
+        $widgets = $dashboard->widgets()
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get(['id', 'title', 'status', 'query_spec'])
+            ->map(fn (BiWidget $widget): array => [
+                'id' => (int) $widget->id,
+                'title' => (string) $widget->title,
+                'status' => (string) $widget->status,
+                'ready' => $widget->status === 'ready' && filled($widget->query_spec),
+            ])
+            ->all();
+
+        return response()->json([
+            'status' => (string) $dashboard->status,
+            'instruction' => $dashboard->instruction,
+            'last_error' => $dashboard->last_error,
+            'widgets' => $widgets,
+            'ready' => count(array_filter($widgets, static fn (array $widget): bool => $widget['ready'])),
+            'total' => count($widgets),
+        ]);
+    }
+
     /** Создание дашборда. */
     public function store(Request $request): RedirectResponse
     {
@@ -138,6 +186,114 @@ class BiDashboardController extends Controller
         ]);
 
         return redirect()->route('bi.dashboards.show', $dashboard)->with('status', __('Дашборд «').$dashboard->name.__('» создан'));
+    }
+
+    /**
+     * Генерация дашборда по текстовой инструкции ИИ: создаётся дашборд
+     * в статусе generating, сборка уходит в очередь.
+     */
+    public function generate(Request $request): RedirectResponse
+    {
+        $me = $request->user()->employee;
+        \assert($me !== null);
+
+        $validated = $request->validate([
+            'instruction' => ['required', 'string', 'max:2000'],
+        ], [], ['instruction' => __('запрос')]);
+
+        if (! app(BiInstructionGuard::class)->isRelevant($validated['instruction'])) {
+            return back()->withInput()->withErrors([
+                'instruction' => __('Запрос не относится к данным BI. Спросите о доходах, расходах, сделках, клиентах, задачах, метриках или других показателях компании.'),
+            ]);
+        }
+
+        if (! app(AiClient::class)->enabled()) {
+            return back()->with('error', __('AI не настроен: проверьте AI_BASE_URL и AI_API_KEY.'));
+        }
+
+        $lock = \Illuminate\Support\Facades\Cache::lock('bi-generate:company:'.$me->company_id, 15);
+
+        if (!$lock->get()) {
+            return back()->with('error', __('Генерация уже запущена. Дождитесь завершения текущего запроса.'));
+        }
+
+        $dashboard = null;
+
+        try {
+            $dashboard = BiDashboard::query()->create([
+                'company_id' => $me->company_id,
+                'name' => Str::limit($validated['instruction'], 255, ''),
+                'is_default' => false,
+                'created_by' => $me->user_id,
+                'origin' => 'ai',
+                'status' => 'generating',
+                'instruction' => $validated['instruction'],
+            ]);
+
+            GenerateAiDashboard::dispatch(
+                $dashboard->id,
+                (int) $me->company_id,
+                (int) $me->user_id,
+                $validated['instruction'],
+            );
+
+            $this->audit->log($request->user(), 'bi.dashboard_generate_queued', 'bi_dashboard', $dashboard->id, null, [
+                'instruction' => $validated['instruction'],
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            if ($dashboard !== null) {
+                $dashboard->update(['status' => 'error', 'last_error' => Str::limit($e->getMessage(), 1000, '')]);
+            }
+
+            return back()->with('error', __('Не удалось поставить генерацию в очередь.'));
+        } finally {
+            $lock->release();
+        }
+
+        return redirect()->route('bi.dashboards.show', $dashboard)
+            ->with('status', __('Генерация дашборда запущена — обновите страницу через минуту.'));
+    }
+
+    /**
+     * Данные SQL-виджета: выполняет query_spec и отдаёт форму контента
+     * фронтендеру (BiWidgets.render). Ошибки не роняют страницу — виджет
+     * показывает текст ошибки сам.
+     *
+     * @return array<string, mixed>
+     */
+    private function aiWidgetData(BiWidget $widget, int $companyId): array
+    {
+        $base = [
+            'family' => $widget->widget_family,
+            'type' => $widget->widget_type,
+            'status' => $widget->status,
+            'last_error' => $widget->last_error,
+        ];
+
+        if ($widget->status === 'generating' || $widget->status === 'pending') {
+            return $base + ['content' => null];
+        }
+
+        $spec = $widget->query_spec;
+
+        if (!is_array($spec) || $spec === []) {
+            return $base + ['content' => null, 'last_error' => $widget->last_error ?? __('Спецификация запроса отсутствует.')];
+        }
+
+        $runner = new WidgetQueryRunner(companyId: $companyId);
+        $result = $runner->run($spec, (string) $widget->widget_family, $widget->widget_type);
+
+        if (!($result['ok'] ?? false)) {
+            return $base + ['content' => null, 'last_error' => (string) ($result['error'] ?? __('Ошибка запроса.'))];
+        }
+
+        return $base + [
+            'content' => $result['data'],
+            'meta' => $result['meta'] ?? [],
+            'last_error' => null,
+        ];
     }
 
     /** Добавление виджета на дашборд. */

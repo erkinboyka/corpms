@@ -39,7 +39,7 @@ class BumiActions
     /** Local operations return typed artifacts. Only reviewed forms reach business write routes. */
     public function prepare(Employee $me, string $question, array $facts, callable $writeText): ?array
     {
-        $q = trim(preg_replace('/^(?:(?:буми|bumi|пожалуйста|можешь|можно|помоги мне|прошу)[\s,:]+)+/iu', '', trim($question)));
+        $q = trim(preg_replace('/^(?:(?:Bumi|bumi|пожалуйста|можешь|можно|помоги мне|прошу)[\s,:]+)+/iu', '', trim($question)));
         if (preg_match('/^(?:подпиши(?:те)?|подписать|хочу подписать|покажи документы на подпись|что (?:у меня )?на подпись)\b(.*)$/iu', $q, $m)) {
             $filter = trim(preg_replace('/^(?:мне\s+)?(?:этот\s+)?(?:документ(?:ы)?|договор)?\s*/iu', '', trim($m[1])), " \t:№«»\"?!.");
 

@@ -6,9 +6,14 @@ namespace App\Http\Controllers\Web;
 
 use App\Domains\Audit\Services\AuditService;
 use App\Domains\Inventory\Services\InventoryService;
+use App\Domains\Purchasing\Services\PurchaseObligationService;
 use App\Http\Controllers\Controller;
+use App\Models\FinAccount;
+use App\Models\FinCategory;
+use App\Models\PurchaseObligationPayment;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Shared\Enums\PurchaseObligationStatus;
 use App\Shared\Enums\PurchaseOrderStatus;
 use App\Support\PermissionService;
 use App\Support\TenantGuard;
@@ -16,6 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use InvalidArgumentException;
 use LogicException;
 
 /**
@@ -30,6 +36,7 @@ class PurchaseController extends Controller
         protected InventoryService $inventory,
         protected PermissionService $permissions,
         protected AuditService $audit,
+        protected PurchaseObligationService $obligations,
     ) {}
 
     /** Список закупочных заказов компании. */
@@ -75,10 +82,14 @@ class PurchaseController extends Controller
         \assert($me !== null);
         TenantGuard::ensure($order, $me);
 
-        $order->load(['supplier', 'warehouse', 'items.product']);
+        $order->load(['supplier', 'warehouse', 'items.product', 'obligation.payments']);
 
         return view('purchases.show', [
             'order' => $order,
+            'obligation' => $order->obligation,
+            'accounts' => FinAccount::query()->where('company_id', $me->company_id)->where('is_active', true)->orderBy('name')->get(),
+            'categories' => FinCategory::query()->where('company_id', $me->company_id)->where('is_active', true)->where('direction', 'expense')->orderBy('name')->get(),
+            'canPay' => $this->permissions->check($request->user(), 'finance.manage'),
             'canManage' => $this->permissions->check($request->user(), 'purchases.manage'),
             'products' => $this->inventory->productsWithStock((int) $me->company_id),
         ]);
@@ -174,12 +185,88 @@ class PurchaseController extends Controller
             $order->status = PurchaseOrderStatus::Ordered;
             $order->save();
 
+            // PROC-01: обязательство появляется в той же транзакции, что и статус.
+            $this->obligations->ensureForOrder($order, $request->user());
+
             $this->audit->log($request->user(), 'purchase.ordered', 'purchase_order', $order->id, null, [
                 'number' => $order->number,
             ]);
 
             return back()->with('status', 'Заказ '.$order->number.' размещён');
         });
+    }
+
+    /**
+     * PROC-01: оплата обязательства расходом из журнала финансов.
+     * Повтор того же reference не создаёт вторую операцию (идемпотентность).
+     */
+    public function payObligation(Request $request, PurchaseOrder $order): RedirectResponse
+    {
+        $me = $request->user()->employee;
+        \assert($me !== null);
+        TenantGuard::ensure($order, $me);
+
+        $obligation = $order->obligation()->first();
+
+        if ($obligation === null) {
+            return back()->withErrors(['status' => __('У заказа нет финансового обязательства')]);
+        }
+
+        TenantGuard::ensure($obligation, $me);
+
+        $validated = $request->validate([
+            'account_id' => ['required', 'integer'],
+            'category_id' => ['nullable', 'integer'],
+            'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
+            'paid_at' => ['required', 'date'],
+            'method' => ['required', 'in:cash,bank_transfer,card,other'],
+            'reference' => ['required', 'string', 'max:64'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ], [], [
+            'account_id' => __('счёт'), 'amount' => __('сумма'), 'reference' => __('номер платёжки'),
+        ]);
+
+        TenantGuard::ensureReference('fin_accounts', (int) $validated['account_id'], $me);
+
+        $categoryId = $validated['category_id'] ?? null;
+
+        if ($categoryId !== null && $categoryId !== '') {
+            TenantGuard::ensureReference('fin_categories', (int) $categoryId, $me);
+
+            $category = FinCategory::query()->find((int) $categoryId);
+
+            if ($category === null || $category->direction->value !== 'expense') {
+                return back()->withErrors(['category_id' => __('Статья должна быть расходной')])->withInput();
+            }
+        }
+
+        $account = FinAccount::query()->findOrFail((int) $validated['account_id']);
+
+        if ($account->currency !== $obligation->currency) {
+            return back()->withErrors(['account_id' => __('Валюта счёта не совпадает с валютой обязательства')])->withInput();
+        }
+
+        $reference = trim((string) $validated['reference']);
+        $duplicate = PurchaseObligationPayment::query()
+            ->where('obligation_id', $obligation->id)
+            ->where('reference', $reference)
+            ->exists();
+
+        if (! $duplicate && round((float) $validated['amount'], 2) > $obligation->remainingAmount()) {
+            return back()->withErrors(['amount' => __('Сумма превышает задолженность по обязательству')])->withInput();
+        }
+
+        try {
+            $payment = $this->obligations->pay($obligation, [
+                ...$validated,
+                'category_id' => $categoryId,
+                'reference' => $reference,
+            ], $request->user());
+        } catch (InvalidArgumentException $e) {
+            return back()->withErrors(['amount' => $e->getMessage()])->withInput();
+        }
+
+        return back()->with('status', 'Оплата '.$payment->reference.' проведена');
     }
 
     /** Приём заказа на склад: движения in, статус → received. */
@@ -214,6 +301,17 @@ class PurchaseController extends Controller
 
             if (! in_array($order->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
                 return back()->withErrors(['status' => __('Отменить можно только черновик или размещённый заказ')]);
+            }
+
+            $obligation = $order->obligation()->first();
+
+            // PROC-01: оплаченное обязательство нельзя тихо «забыть» при отмене заказа.
+            if ($obligation !== null && ($obligation->payments()->exists() || $obligation->status === PurchaseObligationStatus::PartiallyPaid)) {
+                return back()->withErrors(['status' => __('Нельзя отменить заказ с оплаченным обязательством')]);
+            }
+
+            if ($obligation !== null && $obligation->status->isPayable()) {
+                $this->obligations->cancel($obligation, $request->user());
             }
 
             $order->status = PurchaseOrderStatus::Cancelled;

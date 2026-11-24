@@ -31,15 +31,13 @@
                     </form>
                 @endif
                 @if ($canApprove && $period->status->value === 'calculated')
-                    <form method="post" action="{{ route('payroll.approve', $period) }}" class="d-inline" data-submit-guard
-                          onsubmit="return confirm('{{ __('Согласовать ведомость                       ? После согласования будет доступна выплата') }}.')">
+                    <form method="post" action="{{ route('payroll.approve', $period) }}" class="d-inline" data-submit-guard data-confirm="{{ __('Согласовать ведомость                       ? После согласования будет доступна выплата') }}." data-confirm-danger="1">
                         @csrf
                         <button class="btn btn-primary"><i class="ti ti-check me-1"></i>{{ __('Согласовать') }}</button>
                     </form>
                 @endif
                 @if ($canApprove && $period->status->value === 'approved')
-                    <form method="post" action="{{ route('payroll.pay', $period) }}" class="d-inline" data-submit-guard
-                          onsubmit="return confirm('{{ __('Выплатить ведомость                        на сумму                                                 ? Действие необратимо') }}.')">
+                    <form method="post" action="{{ route('payroll.pay', $period) }}" class="d-inline" data-submit-guard data-confirm="{{ __('Выплатить ведомость                        на сумму                                                 ? Действие необратимо') }}." data-confirm-danger="1">
                         @csrf
                         <button class="btn btn-primary"><i class="ti ti-cash me-1"></i>{{ __('Выплатить') }}</button>
                     </form>

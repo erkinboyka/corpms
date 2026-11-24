@@ -62,12 +62,12 @@
     <div class="crm-metric">
         <div class="crm-metric__label"><i class="ti ti-clock-play"></i>{{ __('Отработано') }}</div>
         <div class="crm-metric__value">{{ $workedHours }}<small> {{ __('ч') }}</small></div>
-        <div class="crm-metric__hint">{{ $totals['worked'] }} {{ __('мин. фактически') }}</div>
+        <div class="crm-metric__hint">{{ $totals['worked'] }} {{ __('мин. всего') }}</div>
     </div>
     <div class="crm-metric">
         <div class="crm-metric__label"><i class="ti ti-calendar-stats"></i>{{ __('План') }}</div>
         <div class="crm-metric__value">{{ $planHours }}<small> {{ __('ч') }}</small></div>
-        <div class="crm-metric__hint">{{ $totals['planned'] }} {{ __('мин. по графику') }}</div>
+        <div class="crm-metric__hint">{{ $totals['planned'] }} {{ __('мин. по плану') }}</div>
         <div class="progress mt-2" style="height: 5px;">
             <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $fill }}%"></div>
         </div>
@@ -75,26 +75,26 @@
     <div class="crm-metric">
         <div class="crm-metric__label"><i class="ti ti-alarm"></i>{{ __('Опоздания') }}</div>
         <div class="crm-metric__value" data-count="{{ $totals['late'] }}">{{ $totals['late'] }}<small> {{ __('мин') }}</small></div>
-        <div class="crm-metric__hint">{{ __('суммарно за месяц') }}</div>
+        <div class="crm-metric__hint">{{ __('Суммарно за месяц') }}</div>
     </div>
     <div class="crm-metric">
-        <div class="crm-metric__label"><i class="ti ti-clock-up"></i>{{ __('Переработки') }}</div>
+        <div class="crm-metric__label"><i class="ti ti-clock-up"></i>{{ __('Переработка') }}</div>
         <div class="crm-metric__value" data-count="{{ $totals['overtime'] }}">{{ $totals['overtime'] }}<small> {{ __('мин') }}</small></div>
-        <div class="crm-metric__hint">{{ __('сверх графика') }}</div>
+        <div class="crm-metric__hint">{{ __('Сверх плана') }}</div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h2 class="card-title bm-section-title">{{ __('Сетка за месяц') }}</h2>
+        <h2 class="card-title bm-section-title">{{ __('Дни за месяц') }}</h2>
         <span class="crm-chip ms-auto">{{ count($grid) }} {{ __('дней') }}</span>
     </div>
     <div class="table-responsive">
         <table data-record-key="0" class="table table-hover table-vcenter card-table mb-0">
             <thead>
                 <tr>
-                    <th scope="col">{{ __('День') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col">{{ __('Вход') }}</th><th scope="col">{{ __('Выход') }}</th>
-                    <th scope="col" class="text-end">{{ __('Отраб') }}</th><th scope="col" class="text-end">{{ __('Опозд') }}</th><th scope="col" class="text-end">{{ __('Ранний уход') }}</th><th scope="col" class="text-end">{{ __('Сверх') }}</th>
+                    <th scope="col">{{ __('Дата') }}</th><th scope="col">{{ __('Статус') }}</th><th scope="col">{{ __('Вход') }}</th><th scope="col">{{ __('Выход') }}</th>
+                    <th scope="col" class="text-end">{{ __('Отраб.') }}</th><th scope="col" class="text-end">{{ __('Опозд.') }}</th><th scope="col" class="text-end">{{ __('Ранний уход') }}</th><th scope="col" class="text-end">{{ __('Перер.') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -123,7 +123,7 @@
                             <td class="text-end crm-table-num">{{ $cell['record']->early_leave_minutes }}</td>
                             <td class="text-end crm-table-num @if($cell['record']->overtime_minutes > 0) text-success fw-semibold @endif">{{ $cell['record']->overtime_minutes }}</td>
                         @else
-                            <td colspan="7" class="text-secondary">{{ $cell['is_off'] ? __('выходной') : __('нет данных') }}</td>
+                            <td colspan="7" class="text-secondary">{{ $cell['is_off'] ? __('Выходной') : __('Нет отметок') }}</td>
                         @endif
                     </tr>
                 @endforeach

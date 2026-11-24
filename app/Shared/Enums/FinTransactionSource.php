@@ -8,4 +8,5 @@ enum FinTransactionSource: string
 {
     case Manual = 'manual';
     case InvoicePayment = 'invoice_payment';
+    case PurchaseObligationPayment = 'purchase_obligation_payment';
 }

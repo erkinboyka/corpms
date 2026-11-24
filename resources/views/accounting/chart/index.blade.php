@@ -81,8 +81,7 @@
                         </td>
                         <td class="text-end">
                             @can('checkBoxPermission', 'accounting.manage')
-                            <form method="post" action="{{ route('accounting.chart.toggle', $account) }}" class="d-inline"
-                                  onsubmit="return confirm('{{ $account->is_active ? __('Выключить') : __('Включить') }} {{ __('счёт') }} {{ $account->code }}?')">
+                            <form method="post" action="{{ route('accounting.chart.toggle', $account) }}" class="d-inline" data-confirm="{{ $account->is_active ? __('Выключить') : __('Включить') }} {{ __('счёт') }} {{ $account->code }}?" data-confirm-danger="1">
                                 @csrf
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ $account->is_active ? __('Выключить') : __('Включить') }}">
                                     <i class="ti ti-{{ $account->is_active ? 'toggle-right' : 'toggle-left' }}"></i>

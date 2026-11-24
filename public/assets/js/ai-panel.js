@@ -585,8 +585,9 @@
         ignoreClick = false;
         clearTimeout(landingTimer);
         companion.removeAttribute('data-landing');
-        const rect = companion.getBoundingClientRect();
-        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, left: rect.left, top: rect.top, moved: false };
+        // Используем базовые left/top, а не rect: во время генерации Bumi
+        // может быть смещён CSS-анимацией по странице.
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, left: companion.offsetLeft, top: companion.offsetTop, moved: false };
         toggleBtn.setPointerCapture(event.pointerId);
     });
     toggleBtn.addEventListener('pointermove', event => {
@@ -635,8 +636,7 @@
         if (!Object.hasOwn(shifts, event.key)) return;
         event.preventDefault();
         const [dx, dy] = shifts[event.key];
-        const rect = companion.getBoundingClientRect();
-        movePet(rect.left + dx * 20, rect.top + dy * 20);
+        movePet(companion.offsetLeft + dx * 20, companion.offsetTop + dy * 20);
         savePosition();
         showReaction('Я здесь!');
     });
@@ -818,7 +818,8 @@
 
     async function send(question, fromInput = false) {
         question = String(question || '').trim();
-        if (question.length < 3 || question.length > 500 || inFlight) return;
+        var maxLen = Number(input.getAttribute('maxlength') || (form.dataset.biMode ? 2000 : 500));
+        if (question.length < 3 || question.length > maxLen || inFlight) return;
         const token = form.querySelector('input[name="_token"]').value;
         cancelVoice();
         thread.hidden = false;

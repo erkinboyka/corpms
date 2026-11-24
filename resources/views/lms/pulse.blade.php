@@ -1,5 +1,5 @@
 @extends('layouts.tabler')
-@section('title', __('Пульс Бumi'))
+@section('title', __('Пульс Bumi'))
 @section('content')
 @php
     $typeIcons = [
@@ -12,7 +12,7 @@
      data-lms-pulse-page
      data-poll-ms="{{ $pollMs }}"
      data-url-events="{{ route('lms.pulse.events') }}">
-    <x-page-header :eyebrow="__('Обучение')" :title="__('Пульс Бumi')" :subtitle="__('Живая карта активности команды и подсказки наставника — то, чего нет в обычных LMS')">
+    <x-page-header :eyebrow="__('Обучение')" :title="__('Пульс Bumi')" :subtitle="__('Живая карта активности команды и подсказки наставника — то, чего нет в обычных LMS')">
         <a href="{{ route('lms.index') }}" class="btn btn-outline-secondary"><i class="ti ti-arrow-left me-1"></i>{{ __('К курсам') }}</a>
         <span class="lms-live-badge"><span></span>{{ __('live') }}</span>
     </x-page-header>
@@ -34,7 +34,7 @@
                 <div class="card-body">
                     <div class="lms-pulse-map" id="lmsPulseMap">
                         <div class="lms-pulse-map__grid" aria-hidden="true"></div>
-                        <div class="lms-pulse-map__core"><i class="ti ti-sparkles"></i><span>{{ __('Бumi') }}</span></div>
+                        <div class="lms-pulse-map__core"><i class="ti ti-sparkles"></i><span>{{ __('Bumi') }}</span></div>
                         @forelse ($activities as $activity)
                             @php
                                 $angle = ($loop->index * 137.5) * (pi() / 180);

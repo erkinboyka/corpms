@@ -88,8 +88,7 @@
                                     data-bs-toggle="modal" data-bs-target="#editProduct{{ $product->id }}">
                                 <i class="ti ti-pencil"></i>
                             </button>
-                            <form method="post" action="{{ route('inventory.products.toggle', $product) }}" class="d-inline"
-                                  onsubmit="return confirm('{{ $product->is_active ? __('Выключить') : __('Включить') }} «{{ $product->name }}»? {{ __('История закупок и движений сохранится') }}.')">
+                            <form method="post" action="{{ route('inventory.products.toggle', $product) }}" class="d-inline" data-confirm="{{ $product->is_active ? __('Выключить') : __('Включить') }} «{{ $product->name }}»? {{ __('История закупок и движений сохранится') }}." data-confirm-danger="1">
                                 @csrf
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ $product->is_active ? __('Выключить') : __('Включить') }}">
                                     <i class="ti ti-{{ $product->is_active ? 'toggle-right' : 'toggle-left' }}"></i>

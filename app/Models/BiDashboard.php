@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Кастомный дашборд BI: набор виджетов по метрикам витрины.
+ *
+ * Поля генерации (AI): status = draft|generating|ready|error, origin =
+ * manual|ai, instruction — запрос пользователя, по которому собран дашборд.
  */
 class BiDashboard extends Model
 {
@@ -21,6 +24,7 @@ class BiDashboard extends Model
     {
         return [
             'is_default' => 'boolean',
+            'version' => 'integer',
         ];
     }
 

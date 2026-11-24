@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * ДоменTraining: курсы, прогресс, вайтборд, WebRTC-сигналинг и «Пульс Бumi».
+ * ДоменTraining: курсы, прогресс, вайтборд, WebRTC-сигналинг и «Пульс Bumi».
  *
  * Все записи хранят company_id, поэтому tenant-isolation работает без
  * дополнительных исключений. WebRTC-сигналинг намеренно живёт в БД: офису
@@ -701,7 +701,7 @@ class LmsService
             $tips[] = [
                 'icon' => 'school',
                 'title' => __('Первый шаг'),
-                'text' => __('Выберите курс и нажмите «Записаться» — Бumi построит личный маршрут.'),
+                'text' => __('Выберите курс и нажмите «Записаться» — Bumi построит личный маршрут.'),
                 'url' => route('lms.index'),
             ];
         }
@@ -719,7 +719,7 @@ class LmsService
             $tips[] = [
                 'icon' => 'brain',
                 'title' => __('Продолжить маршрут'),
-                'text' => __('Курс «:course»: осталось :count обязательных уроков. Бumi рекомендует не прерывать серию.', ['course' => $enrollment->course->title, 'count' => $remaining]),
+                'text' => __('Курс «:course»: осталось :count обязательных уроков. Bumi рекомендует не прерывать серию.', ['course' => $enrollment->course->title, 'count' => $remaining]),
                 'url' => route('lms.courses.show', $enrollment->course),
             ];
         }

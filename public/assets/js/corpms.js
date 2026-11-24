@@ -763,6 +763,8 @@
                         blocks[i].hidden = !visible;
                         blocks[i].classList.toggle('crm-view-enter', visible && animate);
                     }
+                    var input = document.querySelector('[data-crm-view-input="' + key + '"]') || document.querySelector('input[name="view"][data-crm-view-input]');
+                    if (input) { input.value = view; }
                     try { localStorage.setItem('crm-view-' + key, view); } catch (e) { /* private */ }
                 };
                 var saved = null;
@@ -977,8 +979,8 @@
             if (!form || !form.matches || !form.matches('form[data-submit-guard]')) { return; }
             if (form.dataset.crmSubmitting === '1') { event.preventDefault(); return; }
             form.dataset.crmSubmitting = '1';
-            // S9: запоминаем модалку-отправителя, чтобы после редиректа
-            // с ошибками валидации открыть именно её (см. layouts/tabler)
+            // S9: маркер модалки живёт только до конца страницы — если ошибок
+            // не было, он устарел и не должен открывать чужую модалку дальше
             var ownerModal = form.closest('.modal');
             if (ownerModal && ownerModal.id) {
                 try { sessionStorage.setItem('crm-invalid-modal', ownerModal.id); } catch (e) { /* private mode */ }
@@ -1047,21 +1049,189 @@
         });
     }
 
-    /* --- Экспорт CSV/Excel: видимое подтверждение, что файл скачивается --- */
-    function crmToast(message, icon) {
-        var el = document.createElement('div');
-        el.className = 'crm-toast';
-        el.setAttribute('role', 'status');
-        el.innerHTML = '<i class="ti ti-' + (icon || 'download') + '"></i><span></span>';
-        el.querySelector('span').textContent = message;
-        document.body.appendChild(el);
-        requestAnimationFrame(function () { el.classList.add('crm-toast--show'); });
-        window.setTimeout(function () {
-            el.classList.remove('crm-toast--show');
-            window.setTimeout(function () { el.remove(); }, 300);
-        }, 2600);
+    /* --- Системные уведомления (toast) --- */
+    var toastStack = null;
+    function ensureToastStack() {
+        if (toastStack && toastStack.isConnected) { return toastStack; }
+        toastStack = document.querySelector('.crm-toast-stack');
+        if (!toastStack) {
+            toastStack = document.createElement('div');
+            toastStack.className = 'crm-toast-stack';
+            toastStack.setAttribute('aria-live', 'polite');
+            toastStack.setAttribute('aria-atomic', 'false');
+            document.body.appendChild(toastStack);
+        } else if (toastStack.parentNode !== document.body) {
+            document.body.appendChild(toastStack);
+        }
+        return toastStack;
     }
-    window.crmToast = crmToast; /* доступно из других обработчиков (канбан и т.п.) */
+
+    var TOAST_ICONS = {
+        success: 'circle-check', error: 'alert-triangle', danger: 'alert-triangle',
+        warning: 'alert-circle', info: 'info-circle', download: 'download',
+        check: 'circle-check', 'alert-circle': 'alert-circle', 'alert-triangle': 'alert-triangle'
+    };
+
+    function crmToast(message, type) {
+        type = type || 'info';
+        var icon = TOAST_ICONS[type] || type || 'info-circle';
+        var tone = ({ check: 'success', download: 'info', 'alert-triangle': 'error', 'alert-circle': 'warning' })[type] || type;
+        if (['success', 'error', 'danger', 'warning', 'info'].indexOf(tone) === -1) { tone = 'info'; }
+
+        var stack = ensureToastStack();
+        var el = document.createElement('div');
+        el.className = 'crm-toast crm-toast--' + tone;
+        el.setAttribute('role', tone === 'error' || tone === 'danger' ? 'alert' : 'status');
+        el.innerHTML = ''
+            + '<span class="crm-toast__icon"><i class="ti ti-' + icon + '"></i></span>'
+            + '<div class="crm-toast__body"></div>'
+            + '<button type="button" class="crm-toast__close" aria-label="Закрыть"><i class="ti ti-x"></i></button>';
+        el.querySelector('.crm-toast__body').textContent = String(message || '');
+        stack.appendChild(el);
+
+        var closed = false;
+        function close() {
+            if (closed) { return; }
+            closed = true;
+            el.classList.remove('crm-toast--show');
+            window.setTimeout(function () { if (el.parentNode) { el.parentNode.removeChild(el); } }, 260);
+        }
+        el.querySelector('.crm-toast__close').addEventListener('click', close);
+        requestAnimationFrame(function () { el.classList.add('crm-toast--show'); });
+        var ttl = tone === 'error' || tone === 'danger' ? 5200 : 3200;
+        window.setTimeout(close, ttl);
+        return { close: close, el: el };
+    }
+    window.crmToast = crmToast;
+
+    /* --- Системное подтверждение (вместо window.confirm) --- */
+    function ensureConfirmModal() {
+        var modal = document.getElementById('crm-confirm-modal');
+        if (modal) { return modal; }
+        modal = document.createElement('div');
+        modal.className = 'modal modal-blur fade';
+        modal.id = 'crm-confirm-modal';
+        modal.tabIndex = -1;
+        modal.setAttribute('aria-hidden', 'true');
+        modal.innerHTML = ''
+            + '<div class="modal-dialog modal-sm modal-dialog-centered" role="document">'
+            + '  <div class="modal-content">'
+            + '    <div class="modal-status bg-danger" data-crm-confirm-status></div>'
+            + '    <div class="modal-body py-4">'
+            + '      <div class="d-flex align-items-start gap-3">'
+            + '        <div class="text-danger"><i class="ti ti-alert-triangle icon" style="font-size:1.5rem"></i></div>'
+            + '        <div class="flex-fill">'
+            + '          <h3 class="mb-2" data-crm-confirm-title>Подтверждение</h3>'
+            + '          <div class="text-secondary" data-crm-confirm-body></div>'
+            + '        </div>'
+            + '      </div>'
+            + '    </div>'
+            + '    <div class="modal-footer">'
+            + '      <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal" data-crm-confirm-cancel>Отмена</button>'
+            + '      <button type="button" class="btn btn-danger" data-crm-confirm-ok>Подтвердить</button>'
+            + '    </div>'
+            + '  </div>'
+            + '</div>';
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    function crmConfirm(message, opts) {
+        opts = opts || {};
+        return new Promise(function (resolve) {
+            var modal = ensureConfirmModal();
+            if (typeof bootstrap === 'undefined' || !bootstrap.Modal) { resolve(window.confirm(String(message || ''))); return; }
+            var title = modal.querySelector('[data-crm-confirm-title]');
+            var body = modal.querySelector('[data-crm-confirm-body]');
+            var okBtn = modal.querySelector('[data-crm-confirm-ok]');
+            var status = modal.querySelector('[data-crm-confirm-status]');
+            var danger = opts.danger !== false;
+            if (title) { title.textContent = opts.title || 'Подтверждение'; }
+            if (body) { body.textContent = String(message || ''); }
+            if (status) { status.className = 'modal-status ' + (danger ? 'bg-danger' : 'bg-primary'); }
+            if (okBtn) {
+                okBtn.textContent = opts.confirmText || 'Подтвердить';
+                okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+            }
+            var cancelBtn = modal.querySelector('[data-crm-confirm-cancel]');
+            if (cancelBtn) { cancelBtn.textContent = opts.cancelText || 'Отмена'; }
+
+            var done = false;
+            function finish(val) {
+                if (done) { return; }
+                done = true;
+                okBtn.removeEventListener('click', onOk);
+                modal.removeEventListener('hidden.bs.modal', onHide);
+                resolve(val);
+            }
+            function onOk() { finish(true); bootstrap.Modal.getOrCreateInstance(modal).hide(); }
+            function onHide() { finish(false); }
+            okBtn.addEventListener('click', onOk);
+            modal.addEventListener('hidden.bs.modal', onHide, { once: true });
+            try {
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            } catch (e) {
+                resolve(window.confirm(String(message || '')));
+            }
+        });
+    }
+    window.crmConfirm = crmConfirm;
+
+    function initConfirmForms() {
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!form || !form.matches || !form.matches('form[data-confirm]')) { return; }
+            if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') { event.stopImmediatePropagation(); }
+            var msg = form.getAttribute('data-confirm') || 'Подтвердите действие';
+            var danger = form.getAttribute('data-confirm-danger') !== '0';
+            var confirmText = form.getAttribute('data-confirm-ok') || 'Подтвердить';
+            crmConfirm(msg, { danger: danger, confirmText: confirmText }).then(function (ok) {
+                if (!ok) { return; }
+                form.dataset.confirmed = '1';
+                delete form.dataset.crmSubmitting;
+                var submitBtn = form.querySelector('[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    if (submitBtn.dataset.crmLabel) { submitBtn.innerHTML = submitBtn.dataset.crmLabel; }
+                }
+                if (typeof form.requestSubmit === 'function') { form.requestSubmit(); }
+                else { form.submit(); }
+            });
+        }, true);
+
+        document.addEventListener('click', function (event) {
+            var btn = event.target.closest && event.target.closest('[data-confirm-click]');
+            if (!btn || btn.dataset.confirmed === '1') { return; }
+            var msg = btn.getAttribute('data-confirm-click') || 'Подтвердите действие';
+            event.preventDefault();
+            event.stopPropagation();
+            crmConfirm(msg, { danger: btn.getAttribute('data-confirm-danger') !== '0', confirmText: btn.getAttribute('data-confirm-ok') || 'Подтвердить' }).then(function (ok) {
+                if (!ok) { return; }
+                btn.dataset.confirmed = '1';
+                btn.click();
+                window.setTimeout(function () { delete btn.dataset.confirmed; }, 0);
+            });
+        }, true);
+    }
+
+    function initFlashToasts() {
+        var nodes = document.querySelectorAll('[data-crm-flashes]');
+        for (var i = 0; i < nodes.length; i++) {
+            var raw = nodes[i].getAttribute('data-crm-flashes');
+            if (!raw) { continue; }
+            try {
+                var items = JSON.parse(raw);
+                for (var j = 0; j < items.length; j++) {
+                    var it = items[j] || {};
+                    if (it.message) { crmToast(it.message, it.tone || 'info'); }
+                }
+            } catch (e) { /* ignore */ }
+            nodes[i].remove();
+        }
+    }
 
     function initExportFeedback() {
         document.addEventListener('click', function (event) {
@@ -1374,7 +1544,8 @@
     }
 
     function attachSelect2(select) {
-        if (select.dataset.crmSelect2 === '1') { return; }
+        if (select.dataset.crmSelect2 === '1' || select.dataset.crmSelect2 === 'ready') { return; }
+        if (select.classList.contains('crm-select__native') || select.closest('.crm-select')) { return; }
         select.dataset.crmSelect2 = '1';
 
         var modal = select.closest('.modal');
@@ -2704,6 +2875,25 @@
         refreshRzEdges();
     }
 
+    function initPasswordToggles() {
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest && event.target.closest('[data-password-toggle]');
+            if (!button) { return; }
+            var group = button.closest('.input-group') || button.parentElement;
+            var input = group && group.querySelector('[data-password-input]');
+            if (!input) { return; }
+            var reveal = input.type === 'password';
+            input.type = reveal ? 'text' : 'password';
+            button.setAttribute('aria-label', reveal ? 'Скрыть пароль' : 'Показать пароль');
+            button.setAttribute('title', reveal ? 'Скрыть пароль' : 'Показать пароль');
+            var icon = button.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('ti-eye', !reveal);
+                icon.classList.toggle('ti-eye-off', reveal);
+            }
+        });
+    }
+
     function initAll() {
         ensureUtilStyles();
         ensureSectionStyles();
@@ -2712,6 +2902,8 @@
         initCommandPalette();
         initTabJump();
         initModalAnchor();
+        initConfirmForms();
+        initFlashToasts();
         initScrollMemory();
         initClock();
         initCountUp();
@@ -2726,6 +2918,7 @@
         initSelect2Fields();
         initTagFields();
         initInputMasks();
+        initPasswordToggles();
         initSectionConfig();
         initAdaptiveSections();
         initResizableSections();

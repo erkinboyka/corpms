@@ -40,6 +40,7 @@ use App\Http\Controllers\Web\LmsController;
 use App\Http\Controllers\Web\LocaleController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\OnboardingController;
+use App\Http\Controllers\Web\OnboardingFlowController;
 use App\Http\Controllers\Web\PayrollController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\ProjectMemberController;
@@ -109,6 +110,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
     Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
+    Route::get('/onboarding/flows', [OnboardingFlowController::class, 'index'])->middleware('permission:onboarding.view')->name('onboarding.flows.index');
+    Route::post('/onboarding/flows', [OnboardingFlowController::class, 'store'])->middleware('permission:onboarding.manage@company')->name('onboarding.flows.store');
+    Route::get('/onboarding/flows/{flow}', [OnboardingFlowController::class, 'show'])->middleware('permission:onboarding.view')->name('onboarding.flows.show');
+    Route::post('/onboarding/flows/{flow}/run', [OnboardingFlowController::class, 'run'])->middleware('permission:onboarding.manage@company')->name('onboarding.flows.run');
+    Route::post('/onboarding/flows/{flow}/steps/{step}/retry', [OnboardingFlowController::class, 'retry'])->middleware('permission:onboarding.manage@company')->name('onboarding.flows.steps.retry');
+    Route::post('/onboarding/flows/{flow}/revoke', [OnboardingFlowController::class, 'revoke'])->middleware('permission:onboarding.manage@company')->name('onboarding.flows.revoke');
     Route::get('/profile', [UserController::class, 'profile'])->name('profile.show');
     Route::put('/profile/password', [UserController::class, 'changePassword'])->name('profile.password');
     Route::get('/profile/2fa', [TwoFactorController::class, 'index'])->name('profile.2fa');
@@ -201,6 +208,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/purchases', [PurchaseController::class, 'store'])->middleware('permission:purchases.manage@company')->name('purchases.store');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->middleware('permission:purchases.view')->name('purchases.show');
     Route::post('/purchases/{order}/order', [PurchaseController::class, 'order'])->middleware('permission:purchases.manage@company')->name('purchases.order');
+    Route::post('/purchases/{order}/obligation/payments', [PurchaseController::class, 'payObligation'])->middleware('permission:finance.manage@company')->name('purchases.obligations.payments.store');
     Route::post('/purchases/{order}/receive', [PurchaseController::class, 'receive'])->middleware('permission:purchases.manage@company')->name('purchases.receive');
     Route::post('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->middleware('permission:purchases.manage@company')->name('purchases.cancel');
     Route::post('/purchases/{order}/items', [PurchaseController::class, 'addItem'])->middleware('permission:purchases.manage@company')->name('purchases.items.store');
@@ -291,6 +299,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/bi/metrics', [BiMetricsController::class, 'index'])->middleware('permission:bi.view')->name('bi.metrics.index');
     Route::post('/bi/rebuild', [BiDashboardController::class, 'rebuild'])->middleware(['permission:bi.manage@company', 'throttle:1,1,bi.rebuild'])->name('bi.rebuild');
     Route::post('/bi/dashboards', [BiDashboardController::class, 'store'])->middleware('permission:bi.manage@company')->name('bi.dashboards.store');
+    Route::post('/bi/dashboards/generate', [BiDashboardController::class, 'generate'])->middleware(['permission:bi.manage@company', 'throttle:5,1,bi.generate'])->name('bi.dashboards.generate');
+    Route::get('/bi/dashboards/{dashboard}/generation-status', [BiDashboardController::class, 'generationStatus'])->middleware(['permission:bi.view', 'throttle:30,1'])->name('bi.dashboards.generation-status');
     Route::get('/bi/dashboards/{dashboard}', [BiDashboardController::class, 'show'])->middleware('permission:bi.view')->name('bi.dashboards.show');
     Route::post('/bi/dashboards/{dashboard}/widgets', [BiDashboardController::class, 'storeWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.store');
     Route::delete('/bi/dashboards/{dashboard}/widgets/{widget}', [BiDashboardController::class, 'destroyWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.destroy');
@@ -424,7 +434,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks/{task}/attachments/{attachment}', [TaskController::class, 'downloadAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.download');
     Route::delete('/tasks/{task}/attachments/{attachment}', [TaskController::class, 'destroyAttachment'])->middleware('permission:tasks.view')->name('tasks.attachments.destroy');
 
-    /* ---------- LMS: обучение, доска, задания, WebRTC и Пульс Бumi ---------- */
+    /* ---------- LMS: обучение, доска, задания, WebRTC и Пульс Bumi ---------- */
     Route::prefix('lms')->group(function (): void {
         Route::middleware(['permission:lms.view', 'throttle:180,1'])->group(function (): void {
             Route::get('/', [LmsController::class, 'index'])->name('lms.index');
@@ -438,11 +448,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/pulse/events', [LmsController::class, 'pulseEvents'])->name('lms.pulse.events');
         });
 
-        Route::middleware(['permission:lms.manage', 'throttle:60,1'])->group(function (): void {
+        Route::middleware(['permission:lms.manage|lms.teach', 'throttle:60,1'])->group(function (): void {
             Route::post('/courses', [LmsController::class, 'storeCourse'])->name('lms.courses.store');
             Route::post('/courses/{course}/lessons', [LmsController::class, 'storeLesson'])->name('lms.lessons.store');
             Route::post('/assignments', [LmsController::class, 'storeAssignment'])->name('lms.assignments.store');
             Route::post('/assignments/{submission}/review', [LmsController::class, 'reviewAssignment'])->name('lms.assignments.review');
+            Route::post('/meetings', [LmsController::class, 'createMeeting'])->name('lms.meetings.store');
         });
 
         Route::middleware(['permission:lms.join', 'throttle:240,1'])->group(function (): void {
@@ -456,7 +467,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/whiteboards/{whiteboard}/presence', [LmsController::class, 'presenceList'])->name('lms.whiteboards.presence');
             Route::post('/whiteboards/{whiteboard}/presence', [LmsController::class, 'presence'])->name('lms.whiteboards.presence.store');
 
-            Route::post('/meetings', [LmsController::class, 'createMeeting'])->name('lms.meetings.store');
             Route::post('/meetings/{meeting}/join', [LmsController::class, 'joinMeeting'])->name('lms.meetings.join');
             Route::post('/meetings/{meeting}/leave', [LmsController::class, 'leaveMeeting'])->name('lms.meetings.leave');
             Route::get('/meetings/{meeting}/signals', [LmsController::class, 'signals'])->name('lms.meetings.signals');

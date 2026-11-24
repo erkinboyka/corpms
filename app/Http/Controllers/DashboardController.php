@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Domains\Analytics\Services\AnalyticsService;
+use App\Domains\Analytics\Services\DashboardMetricsService;
 use App\Models\AttendanceRecord;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEvent;
@@ -31,6 +32,7 @@ class DashboardController extends Controller
     public function __construct(
         protected AnalyticsService $analytics,
         protected PermissionService $permissions,
+        protected DashboardMetricsService $dashboardMetrics,
     ) {}
 
     public function index(): View
@@ -236,6 +238,6 @@ class DashboardController extends Controller
             'waitingSignatures', 'waitingApprovals', 'pendingLeaves', 'todayRecord', 'biometrics',
             'trend', 'heatmap', 'heatmapTotal', 'heatmapFrom', 'heatmapTo',
             'userActivity', 'activityTotal',
-        ));
+        ))->with('metricGroups', $this->dashboardMetrics->for($user));
     }
 }

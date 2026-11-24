@@ -53,6 +53,24 @@ class EntityPhotoService
 
     public function url(?string $path): ?string
     {
-        return ($path === null || $path === '') ? null : Storage::disk('public')->url($path);
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        $url = Storage::disk('public')->url($path);
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return $url;
+        }
+
+        // Storage::disk('public')->url() строит абсолютный URL из APP_URL.
+        // Приложение может открываться под другим хостом, поэтому отдаём
+        // путь, относительный текущего домена, чтобы фото рендерилось везде.
+        $relative = $parts['path'] ?? $url;
+        if (isset($parts['query']) && $parts['query'] !== '') {
+            $relative .= '?' . $parts['query'];
+        }
+
+        return $relative;
     }
 }

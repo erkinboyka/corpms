@@ -28,8 +28,7 @@
                     <button class="btn btn-primary me-1" data-bs-toggle="modal" data-bs-target="#payInvoice"><i class="ti ti-cash me-1"></i>{{ __('Принять оплату') }}</button>
                 @endif
                 @if ($invoice->status->isClosed() === false)
-                    <form method="post" action="{{ route('finance.invoices.cancel', $invoice) }}" class="d-inline"
-                          onsubmit="return confirm('{{ __('Отменить счёт') }} {{ $invoice->number }}?')">@csrf
+                    <form method="post" action="{{ route('finance.invoices.cancel', $invoice) }}" class="d-inline" data-confirm="{{ __('Отменить счёт') }} {{ $invoice->number }}?" data-confirm-danger="1">@csrf
                         <button class="btn btn-ghost-danger"><i class="ti ti-x me-1"></i>{{ __('Отменить') }}</button>
                     </form>
                 @endif

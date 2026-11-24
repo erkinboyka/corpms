@@ -26,6 +26,7 @@ class Sidebar
         'documents.show' => 'documents.index',
         'employees.show' => 'employees.index',
         'employees.subordinates' => 'employees.index',
+        'onboarding.flows.show' => 'onboarding.flows.index',
         'finance.invoices.show' => 'finance.invoices.index',
         'lms.courses.show' => 'lms.index',
         'lms.lessons.show' => 'lms.index',
@@ -61,7 +62,7 @@ class Sidebar
         ['module', 'Обучение', 'school', 'lms.view', [
             ['lms.index', 'Курсы и доски', 'book', null],
             ['lms.assignments.index', 'Практика', 'list-check', null],
-            ['lms.pulse', 'Пульс Бumi', 'pulse', null],
+            ['lms.pulse', 'Пульс Bumi', 'pulse', null],
         ]],
         ['projects.index', 'Проекты', 'folders', 'projects.view'],
         ['module', 'Графики и отпуска', 'calendar-time', null, [
@@ -73,6 +74,7 @@ class Sidebar
 
         ['_', 'Люди', 'users'],
         ['employees.index', 'Сотрудники', 'users', 'employees.view'],
+        ['onboarding.flows.index', 'Онбординг найма', 'user-plus', 'onboarding.view'],
         ['module', 'Организация', 'building', null, [
             ['departments.index', 'Отделы', 'sitemap', 'departments.view'],
             ['positions.index', 'Должности', 'briefcase', 'positions.view'],

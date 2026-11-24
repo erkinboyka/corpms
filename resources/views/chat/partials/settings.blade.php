@@ -85,12 +85,11 @@
 
                 @if ($active->isDirect() || $chatOwner)
                     <form class="bm-chat-settings__danger" method="post" action="{{ route('chat.conversations.destroy', $active) }}"
-                          data-chat-confirm="{{ $active->isDirect() ? __('Убрать этот диалог из вашего списка?') : __('Удалить диалог и закрыть доступ к нему для всех участников?') }}">
+                          data-confirm="{{ $active->isDirect() ? __('Скрыть этот диалог из вашей ленты?') : __('Удалить чат и очистить всю его историю для всех участников?') }}" data-confirm-danger="1" data-confirm-ok="{{ $active->isDirect() ? __('Скрыть') : __('Удалить') }}">
                         @csrf
                         @method('DELETE')
-                        <button class="btn btn-ghost-danger" type="submit">
+                        <button class="btn btn-ghost-danger" type="submit" title="{{ $active->isDirect() ? __('Bumi?? Bumi?? ? Bumi') : __('Bumi??? Bumi??') }}" aria-label="{{ $active->isDirect() ? __('Bumi?? Bumi?? ? Bumi') : __('Bumi??? Bumi??') }}">
                             <i class="ti {{ $active->isDirect() ? 'ti-eye-off' : 'ti-trash' }}" aria-hidden="true"></i>
-                            {{ $active->isDirect() ? __('Скрыть диалог у себя') : __('Удалить диалог') }}
                         </button>
                     </form>
                 @endif

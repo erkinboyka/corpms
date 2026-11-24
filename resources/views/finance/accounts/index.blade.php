@@ -76,8 +76,7 @@
                         <td class="text-end">
                             <a class="btn btn-sm btn-ghost-secondary" href="{{ route('finance.transactions.index', ['account' => $account->id]) }}" title="{{ __("Операции") }}"><i class="ti ti-receipt"></i></a>
                             @can('checkBoxPermission', 'finance.manage')
-                            <form method="post" action="{{ route('finance.accounts.toggle', $account) }}" class="d-inline"
-                                  onsubmit="return confirm('{{ $account->is_active ? __('Выключить') : __('Включить') }} {{ __('счёт') }} «{{ $account->name }}»? {{ __('История операций сохранится') }}.')">
+                            <form method="post" action="{{ route('finance.accounts.toggle', $account) }}" class="d-inline" data-confirm="{{ $account->is_active ? __('Выключить') : __('Включить') }} {{ __('счёт') }} «{{ $account->name }}»? {{ __('История операций сохранится') }}." data-confirm-danger="1">
                                 @csrf
                                 <button class="btn btn-sm btn-ghost-secondary" title="{{ $account->is_active ? __('Выключить') : __('Включить') }}">
                                     <i class="ti ti-{{ $account->is_active ? 'toggle-right' : 'toggle-left' }}"></i>

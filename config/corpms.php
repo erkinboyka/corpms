@@ -23,6 +23,15 @@ return [
         'max_subtask_depth' => env('CORPMS_TASKS_MAX_SUBTASK_DEPTH', 3),
     ],
 
+    'onboarding' => [
+        // ONB-01: роли, которые выдаёт оркестратор найма; отзываются только они
+        'roles' => ['employee'],
+        // ONB-01: код категории служебных документов онбординга
+        'document_category_code' => env('CORPMS_ONBOARDING_DOC_CATEGORY', 'onboarding'),
+        // ONB-01: заголовок служебной задачи адаптации (можно переопределить при запуске)
+        'task_title' => 'Онбординг: ознакомление с регламентами',
+    ],
+
     'documents' => [
         // лимиты
         'max_file_size_mb' => env('CORPMS_DOC_MAX_FILE_MB', 25),
@@ -67,6 +76,20 @@ return [
         // D4 (RAG): модель OpenAI-совместимого /embeddings; пусто — RAG
         // работает в keyword-режиме без векторного поиска
         'embeddings_model' => env('AI_EMBEDDINGS_MODEL', 'text-embedding-3-small'),
+        // RAG-01: извлечение текста вложений. OCR через Tesseract + Poppler:
+        // скан-PDF rasterизируется pdftoppm, изображения читаются напрямую.
+        // Пустые пути = автопоиск бинарников в PATH и стандартных каталогах.
+        'rag' => [
+            'max_file_bytes' => max(1, (int) env('AI_RAG_MAX_FILE_BYTES', 20 * 1024 * 1024)),
+            'max_extract_chars' => max(1000, (int) env('AI_RAG_MAX_EXTRACT_CHARS', 500000)),
+            'tesseract_path' => env('AI_RAG_TESSERACT_PATH', ''),
+            'pdftoppm_path' => env('AI_RAG_PDFTOPPM_PATH', ''),
+            'ocr_lang' => env('AI_RAG_OCR_LANG', 'eng+rus'),
+            'ocr_dpi' => max(72, (int) env('AI_RAG_OCR_DPI', 200)),
+            'ocr_psm' => max(3, min(13, (int) env('AI_RAG_OCR_PSM', 6))),
+            'ocr_max_pages' => max(1, (int) env('AI_RAG_OCR_MAX_PAGES', 10)),
+            'ocr_timeout' => max(5, (int) env('AI_RAG_OCR_TIMEOUT', 120)),
+        ],
         // D5 (tool calling): белый список backend-инструментов для LLM;
         // false — инструменты не предлагаются модели и не исполняются
         'tools' => env('AI_TOOLS', true),

@@ -152,38 +152,57 @@
     </div>
 
     {{-- ===== Вид: календарь ===== --}}
-    <div data-view-only="calendar">
+        <div data-view-only="calendar">
         <div class="row g-3">
-            <div class="col-xl-8" data-crm-sec="cal" data-crm-sec-label="{{ __("Календарь") }}">
+            <div class="col-xl-8" data-crm-sec="cal" data-crm-sec-label="{{ __('Календарь') }}">
                 <div class="crm-cal">
-                    <div class="crm-cal__head">
-                        @foreach ([__('Пн'), __('Вт'), __('Ср'), __('Чт'), __('Пт'), __('Сб'), __('Вс')] as $dow)
-                            <div>{{ $dow }}</div>
-                        @endforeach
-                    </div>
                     <div class="crm-cal__grid">
+                        @foreach ([__('Пн'), __('Вт'), __('Ср'), __('Чт'), __('Пт'), __('Сб'), __('Вс')] as $dow)
+                            <div class="crm-cal__dow">{{ $dow }}</div>
+                        @endforeach
                         @for ($i = 0; $i < $calLead; $i++)
                             <div class="is-out"></div>
                         @endfor
                         @for ($day = 1; $day <= $calDaysInMonth; $day++)
                             @php
-                                $dow = \Carbon\Carbon::create($calStart->year, $calStart->month, $day)->dayOfWeekIso;
-                                $isToday = $day === (int) now()->format('d');
+                                $date = \Carbon\Carbon::create($calStart->year, $calStart->month, $day);
+                                $dow = $date->dayOfWeekIso;
+                                $isToday = $date->isToday();
+                                $dayTasks = collect($calByDay[$day] ?? []);
+                                $payload = [
+                                    'title' => $date->locale(app()->getLocale())->isoFormat('D MMMM YYYY, dddd'),
+                                    'items' => $dayTasks->map(fn($task) => [
+                                        'title' => $task->title,
+                                        'number' => $task->number,
+                                        'status' => $crm_label('task_status', $task->status->value),
+                                        'priority' => $crm_label('task_priority', $task->priority->value),
+                                        'deadline' => $task->deadline?->format('d.m.Y H:i'),
+                                        'url' => route('tasks.show', $task),
+                                        'overdue' => $task->deadline !== null && $task->deadline->isPast() && ! in_array($task->status->value, ['completed','cancelled'], true),
+                                    ])->values()->all(),
+                                ];
+                                $classes = ['crm-cal__day-btn'];
+                                if ($dow >= 6) $classes[] = 'is-weekend';
+                                if ($isToday) $classes[] = 'is-today';
                             @endphp
-                            <div class="{{ $dow >= 6 ? 'is-weekend' : '' }}{{ $isToday ? ' is-today' : '' }}">
-                                <span class="crm-cal__day">{{ $day }}</span>
-                                @foreach (($calByDay[$day] ?? []) as $task)
-                                    <a class="crm-event" href="{{ route('tasks.show', $task) }}" title="{{ $task->title }}">{{ $task->title }}</a>
+                            <div class="{{ implode(' ', $classes) }}" role="button" tabindex="0"
+                                 data-task-day='@json($payload, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_TAG)'>
+                                <span class="crm-cal__num">{{ $day }}</span>
+                                @foreach ($dayTasks->take(3) as $task)
+                                    <span class="crm-cal__event {{ in_array($task->status->value, ['completed','cancelled'], true) ? 'crm-cal__event--off' : ($task->deadline && $task->deadline->isPast() ? 'crm-cal__event--holiday' : 'crm-cal__event--work') }}" title="{{ $task->title }}">{{ \Illuminate\Support\Str::limit($task->title, 22) }}</span>
                                 @endforeach
+                                @if($dayTasks->count() > 3)
+                                    <span class="crm-cal__event crm-cal__event--off">+{{ $dayTasks->count() - 3 }}</span>
+                                @endif
                             </div>
                         @endfor
                     </div>
                 </div>
             </div>
-            <div class="col-xl-4" data-crm-sec="upcoming" data-crm-sec-label="{{ __("Ближайшие сроки") }}">
+            <div class="col-xl-4" data-crm-sec="upcoming" data-crm-sec-label="{{ __('Ближайшие сроки') }}">
                 <div class="crm-form__section">
                     <h3>{{ __('Ближайшие сроки') }}</h3>
-                    <div class="crm-form__desc">{{ __('Незакрытые задачи с дедлайном впереди') }}</div>
+                    <div class="crm-form__desc">{{ __('Открытые задачи с ближайшим сроком') }}</div>
                     <div class="crm-queue">
                         @forelse ($upcoming as $task)
                             <a class="crm-queue__item text-reset text-decoration-none" style="--c: {{ $task->deadline->isPast() ? 'var(--crm-danger)' : 'var(--crm-success)' }};" href="{{ route('tasks.show', $task) }}">
@@ -191,13 +210,13 @@
                                     <div class="crm-queue__title">{{ $task->title }}</div>
                                     <div class="crm-queue__sub">
                                         {{ $task->deadline->format('d.m.Y') }}
-                                        @if ($task->deadline->isPast())· <span class="text-danger fw-semibold">{{ __('просрочено') }}</span>@endif
+                                        @if ($task->deadline->isPast()) <span class="text-danger fw-semibold">{{ __('просрочено') }}</span>@endif
                                     </div>
                                 </div>
                                 <span class="crm-chip {{ $prioChips[$task->priority->value] ?? 'crm-chip--grey' }}">{{ $crm_label('task_priority', $task->priority->value) }}</span>
                             </a>
                         @empty
-                            <div class="crm-queue__sub">{{ __('Сроков в этом месяце нет') }}</div>
+                            <div class="crm-queue__sub">{{ __('Нет задач с ближайшим сроком') }}</div>
                         @endforelse
                     </div>
                 </div>
@@ -205,4 +224,61 @@
         </div>
     </div>
 </div>
+
+<div class="modal modal-blur fade" id="taskDayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskDayTitle">{{ __('День') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Закрыть') }}"></button>
+            </div>
+            <div class="modal-body" id="taskDayBody"></div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('taskDayModal');
+    var title = document.getElementById('taskDayTitle');
+    var body = document.getElementById('taskDayBody');
+    function openDay(el) {
+        if (!modalEl) return;
+        var raw = el.getAttribute('data-task-day') || '{}';
+        var d = {};
+        try { d = JSON.parse(raw); } catch (e) { d = {}; }
+        title.textContent = d.title || '{{ __('День') }}';
+        body.innerHTML = '';
+        var items = d.items || [];
+        if (!items.length) {
+            var empty = document.createElement('div');
+            empty.className = 'text-secondary';
+            empty.textContent = '{{ __('На этот день задач нет.') }}';
+            body.appendChild(empty);
+        } else {
+            items.forEach(function (it) {
+                var a = document.createElement('a');
+                a.className = 'd-flex align-items-start gap-3 p-3 rounded-3 border mb-2 text-reset text-decoration-none';
+                a.href = it.url || '#';
+                var dot = document.createElement('span');
+                var tone = it.overdue ? 'var(--crm-danger)' : 'rgba(34,197,94,.9)';
+                dot.style.cssText = 'width:10px;height:10px;border-radius:50%;margin-top:6px;flex:0 0 10px;background:' + tone;
+                var c = document.createElement('div');
+                c.style.minWidth = '0';
+                var n = document.createElement('div'); n.className = 'fw-semibold'; n.textContent = (it.number ? '#' + it.number + ' ' : '') + (it.title || '');
+                var m = document.createElement('div'); m.className = 'text-secondary small mt-1';
+                m.textContent = [it.status, it.priority, it.deadline].filter(Boolean).join(' · ');
+                c.appendChild(n); c.appendChild(m);
+                a.appendChild(dot); a.appendChild(c);
+                body.appendChild(a);
+            });
+        }
+        if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+    document.addEventListener('click', function (e) { var el = e.target.closest('[data-task-day]'); if (el) openDay(el); });
+    document.addEventListener('keydown', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; var el = e.target.closest('[data-task-day]'); if (!el) return; e.preventDefault(); openDay(el); });
+});
+</script>
+@endpush
 @endsection

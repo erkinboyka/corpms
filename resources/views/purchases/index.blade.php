@@ -81,8 +81,7 @@
                                     </form>
                                 @endif
                                 @if (in_array($order->status->value, ['draft', 'ordered'], true))
-                                    <form method="post" action="{{ route('purchases.cancel', $order) }}" class="d-inline"
-                                          onsubmit="return confirm('{{ __('Отменить заказ') }} {{ $order->number }}?')">@csrf
+                                    <form method="post" action="{{ route('purchases.cancel', $order) }}" class="d-inline" data-confirm="{{ __('Отменить заказ') }} {{ $order->number }}?" data-confirm-danger="1">@csrf
                                         <button class="btn btn-sm btn-ghost-danger" title="{{ __("Отменить") }}"><i class="ti ti-x"></i></button>
                                     </form>
                                 @endif

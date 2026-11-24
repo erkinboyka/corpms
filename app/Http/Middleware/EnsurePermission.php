@@ -29,25 +29,36 @@ class EnsurePermission
             abort(401);
         }
 
-        $slug = $permission;
-        $required = null;
-
+        $scope = null;
         if (str_contains($permission, '@')) {
-            [$slug, $scopeName] = explode('@', $permission, 2);
-            $required = PermissionScope::tryFrom($scopeName);
+            [$permission, $scopeName] = explode('@', $permission, 2);
+            $scope = PermissionScope::tryFrom($scopeName);
 
-            if ($required === null || $slug === '') {
-                // ошибка конфигурации маршрута: лучше упасть, чем молча пропустить
-                abort(500, 'Некорректный scope в праве маршрута: '.$permission);
+            if ($scope === null || $permission === '') {
+                abort(500, 'Некорректный scope в праве маршрута: '.$permission.'@'.$scopeName);
             }
         }
 
-        $allowed = $required === null
-            ? $this->permissions->check($user, $slug)
-            : $this->permissions->checkScope($user, $slug, $required);
+        $slugs = array_values(array_filter(array_map('trim', explode('|', $permission)), static fn (string $slug): bool => $slug !== ''));
 
-        if ($allowed === false) {
-            abort(403, 'Недостаточно прав: '.$permission);
+        if ($slugs === []) {
+            abort(500, 'Некорректное право маршрута: '.$permission);
+        }
+
+        $allowed = false;
+        foreach ($slugs as $slug) {
+            $ok = $scope === null
+                ? $this->permissions->check($user, $slug)
+                : $this->permissions->checkScope($user, $slug, $scope);
+
+            if ($ok) {
+                $allowed = true;
+                break;
+            }
+        }
+
+        if (! $allowed) {
+            abort(403, 'Недостаточно прав: '.implode('|', $slugs));
         }
 
         return $next($request);

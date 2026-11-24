@@ -20,6 +20,7 @@ class DocumentChunk extends Model
     {
         return [
             'embedding' => 'array',
+            'metadata' => 'array',
         ];
     }
 

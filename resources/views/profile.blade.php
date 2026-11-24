@@ -263,7 +263,7 @@
             if (!file) { return; }
 
             if (file.size > 2 * 1024 * 1024) {
-                window.alert(@json(__('Фото больше 2 МБ. Выберите файл меньшего размера (JPEG/PNG/WebP).')));
+                if(window.crmToast){window.crmToast(@json(__('Фото больше 2 МБ. Выберите файл меньшего размера (JPEG/PNG/WebP).')),'error');}
                 input.value = '';
                 return;
             }

@@ -110,7 +110,7 @@
 
             <div class="card lms-side-card">
                 <div class="card-header d-flex align-items-center justify-content-between">
-                    <h2 class="card-title mb-0"><i class="ti ti-pulse me-2"></i>{{ __('Пульс Бumi') }}</h2>
+                    <h2 class="card-title mb-0"><i class="ti ti-pulse me-2"></i>{{ __('Пульс Bumi') }}</h2>
                     <span class="lms-live-badge"><span></span>{{ __('live') }}</span>
                 </div>
                 <div class="card-body p-0">

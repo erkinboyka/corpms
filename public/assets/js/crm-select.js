@@ -28,6 +28,7 @@
         if (!select || enhanced.has(select) || select.multiple) return;
         if (SKIP_IDS.indexOf(select.id) !== -1) return;
         if (select.hasAttribute('data-crm-phone-country') || select.hasAttribute('data-no-crm-select')) return;
+        if (select.dataset.crmSelect2 || select.classList.contains('select2-hidden-accessible')) return;
         if (select.closest('.select2-container, .crm-select')) return;
         if (!select.matches('select.form-select')) return;
 

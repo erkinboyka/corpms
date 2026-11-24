@@ -187,8 +187,7 @@
                                         </form>
                                     @endif
                                     @if ($canEnroll && $profile->status->value !== 'deleted')
-                                        <form method="post" action="{{ route('biometrics.profile.delete', $profile) }}" class="d-inline"
-                                              onsubmit="return confirm(__('Удалить профиль?'))" data-submit-guard>
+                                        <form method="post" action="{{ route('biometrics.profile.delete', $profile) }}" class="d-inline" data-confirm="__('Удалить профиль?')" data-confirm-danger="1" data-submit-guard>
                                             @csrf
                                             <button class="btn btn-sm btn-ghost-danger" title="{{ __("Удалить") }}"><i class="ti ti-trash"></i></button>
                                         </form>

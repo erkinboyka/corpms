@@ -8,6 +8,7 @@ use App\Shared\Enums\PurchaseOrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Закупочный заказ поставщику.
@@ -53,5 +54,11 @@ class PurchaseOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseOrderItem::class, 'purchase_order_id');
+    }
+
+    /** PROC-01: финансовое обязательство по размещённому заказу. */
+    public function obligation(): HasOne
+    {
+        return $this->hasOne(PurchaseObligation::class, 'purchase_order_id');
     }
 }
