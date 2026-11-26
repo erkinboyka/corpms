@@ -113,6 +113,24 @@
         </div>
 
         <div class="col-lg-4">
+            @if ($canTeach || $canManage)
+                <form method="post" action="{{ route('lms.courses.bumi-scenario', $course) }}" class="card lms-side-card">
+                    @csrf
+                    <div class="card-header">
+                        <h2 class="card-title mb-0"><i class="ti ti-brain me-2"></i>{{ __('Сценарий Bumi') }}</h2>
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label" for="lms-course-bumi-scenario">{{ __('Как Bumi помогает на уроках') }}</label>
+                        <textarea id="lms-course-bumi-scenario" name="bumi_scenario" class="form-control" rows="5" maxlength="20000"
+                                  placeholder="{{ __('Сначала спроси, что уже ясно; потом дай подсказку; объясняй только по материалам курса') }}">{{ old('bumi_scenario', $course->bumi_scenario) }}</textarea>
+                        <div class="form-hint">{{ __('Изменение попадёт в историю курса и уведомление автору.') }}</div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary w-100" type="submit"><i class="ti ti-device-floppy me-1"></i>{{ __('Сохранить сценарий') }}</button>
+                    </div>
+                </form>
+            @endif
+
             @include('lms.partials.mentor', ['tips' => $tips])
 
             <div class="card lms-side-card mt-3">

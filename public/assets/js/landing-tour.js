@@ -58,6 +58,7 @@ export function createGuide(assembly,button,quote,dayFrame,sections,i18n) {
     function speak(mood,line) {
         clearTimeout(timer);clearTimeout(textTimer);
         narrator.dataset.mood=mood;button.dataset.mood=mood;quote.hidden=false;
+        window.CorpMsBumi?.set(mood,line,'landing_tour','landing');
         if(touring) {
             narrator.dataset.speaking='false';
             textTimer=setTimeout(()=>{

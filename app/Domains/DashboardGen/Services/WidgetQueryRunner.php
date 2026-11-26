@@ -57,10 +57,11 @@ class WidgetQueryRunner
 
         $truncated = false;
         $rows = [];
+        $extraBindings = is_array($spec['bindings'] ?? null) ? $spec['bindings'] : [];
 
         try {
             foreach ($queries as $sql) {
-                $prepared = $this->prepare($sql);
+                $prepared = $this->prepare($sql, $extraBindings);
                 $fetched = $this->fetch($prepared);
 
                 $truncated = $truncated || $fetched['truncated'];
@@ -101,11 +102,15 @@ class WidgetQueryRunner
         ];
     }
 
-    /** Проба запроса: возвращает колонки результата или ошибку. */
-    public function probe(string $sql): array
+    /**
+     * Проба запроса: возвращает колонки результата или ошибку.
+     *
+     * @param  array<string, mixed>  $extraBindings  параметры BiQuerySpec (:p0, :p1…)
+     */
+    public function probe(string $sql, array $extraBindings = []): array
     {
         try {
-            $applied = $this->binder->apply($sql, $this->placeholderValues($sql));
+            $applied = $this->binder->apply($sql, $this->placeholderValues($sql, $extraBindings));
             $safe = ReadOnlySqlGuard::sanitize($applied['sql'], null);
         } catch (RuntimeException $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
@@ -157,11 +162,12 @@ class WidgetQueryRunner
     }
 
     /**
+     * @param  array<string, mixed>  $extraBindings
      * @return array{sql: string, bindings: array<int, mixed>}
      */
-    private function prepare(string $sql): array
+    private function prepare(string $sql, array $extraBindings = []): array
     {
-        $applied = $this->binder->apply($sql, $this->placeholderValues($sql));
+        $applied = $this->binder->apply($sql, $this->placeholderValues($sql, $extraBindings));
 
         $clean = ReadOnlySqlGuard::sanitize($applied['sql'], null);
 
@@ -171,17 +177,20 @@ class WidgetQueryRunner
     /**
      * Значения для всех плейсхолдеров запроса. :company_id всегда подставлен —
      * если тенант неизвестен, подставляется NULL (ничего не совпадёт), а не
-     * ошибка синтаксиса и не пропуск данных.
+     * ошибка синтаксиса и не пропуск данных. Остальные параметры приходят
+     * из BiQuerySpec (значения фильтров и литералов).
      *
+     * @param  array<string, mixed>  $extraBindings
      * @return array<string, mixed>
      */
-    private function placeholderValues(string $sql): array
+    private function placeholderValues(string $sql, array $extraBindings = []): array
     {
-        $values = ['company_id' => $this->companyId];
+        $values = $extraBindings;
+        $values['company_id'] = $this->companyId;
 
         foreach ($this->placeholderNames($sql) as $name) {
             if (!array_key_exists($name, $values)) {
-                throw new RuntimeException("Неизвестный плейсхолдер :{$name}. Разрешён только :company_id.");
+                throw new RuntimeException("Неизвестный плейсхолдер :{$name}. Проверьте спецификацию запроса.");
             }
         }
 
@@ -257,9 +266,15 @@ class WidgetQueryRunner
 
         return match ($family) {
             'table' => $this->validateTableContent($data),
-            'mini-counters', 'radial' => $this->validateCountersContent($data, $type === 'with-progress'),
-            'pie', 'funnel', 'treemap' => $this->validateSeriesValuesContent($data),
-            'bar', 'line', 'radar', 'combo', 'heatmap' => $this->validateSeriesMatrixContent($data),
+            'mini-counters' => $this->validateCountersContent($data, $type === 'with-progress'),
+            // radial — series_values; treemap/heatmap используют вложенные точки.
+            'pie', 'funnel', 'radial' => $this->validateSeriesValuesContent($data),
+            'radar' => $type === 'polar-area'
+                ? $this->validateSeriesValuesContent($data)
+                : $this->validateSeriesMatrixContent($data),
+            'treemap' => $this->validateTreemapContent($data),
+            'heatmap' => $this->validateHeatmapContent($data),
+            'bar', 'line', 'combo' => $this->validateSeriesMatrixContent($data),
             'scatter' => $this->validatePointsContent($data, $type === 'bubble'),
             default => null,
         };
@@ -306,6 +321,50 @@ class WidgetQueryRunner
         foreach ($s as $v) {
             if (!is_numeric($v)) return 'Значения series должны быть числами.';
         }
+        return null;
+    }
+
+    /** @param array<string,mixed> $data */
+    private function validateTreemapContent(array $data): ?string
+    {
+        $series = $data['series'] ?? null;
+        if (!is_array($series)) {
+            return 'Treemap должен содержать series[].';
+        }
+
+        foreach ($series as $i => $item) {
+            if (!is_array($item) || !is_array($item['data'] ?? null)) {
+                return "Серия {$i} должна содержать data[].";
+            }
+            foreach ($item['data'] as $point) {
+                if (!is_array($point) || !is_numeric($point['y'] ?? null)) {
+                    return "Точка {$i} должна содержать числовое y.";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** @param array<string,mixed> $data */
+    private function validateHeatmapContent(array $data): ?string
+    {
+        $series = $data['series'] ?? null;
+        if (!is_array($series)) {
+            return 'Heatmap должен содержать series[].';
+        }
+
+        foreach ($series as $i => $item) {
+            if (!is_array($item) || !is_array($item['data'] ?? null)) {
+                return "Серия {$i} должна содержать data[].";
+            }
+            foreach ($item['data'] as $point) {
+                if (!is_array($point) || !is_numeric($point['y'] ?? null)) {
+                    return "Ячейка {$i} должна содержать числовое y.";
+                }
+            }
+        }
+
         return null;
     }
 

@@ -71,6 +71,9 @@ final class PermissionMatrix
         'attendance.correct' => ['Корректировка посещаемости', 'attendance'],
         'attendance.corrections.approve' => ['Согласование корректировок', 'attendance'],
         'attendance.dashboard.view' => ['Дашборд посещаемости', 'attendance'],
+        'attendance.offsite.view' => ['Просмотр заявок на удалённую работу', 'attendance'],
+        'attendance.offsite.request' => ['Заявка на удалённую работу', 'attendance'],
+        'attendance.offsite.approve' => ['Согласование удалённой работы', 'attendance'],
 
         // --- Биометрия ---
         'biometry.dashboard.view' => ['Статистика биометрии', 'biometry'],
@@ -133,6 +136,8 @@ final class PermissionMatrix
         // --- Аналитика ---
         'analytics.view' => ['Просмотр аналитики', 'analytics'],
         'analytics.ai.use' => ['AI-аномалитики', 'analytics'],
+        'bumi.view' => ['Настройки Bumi: просмотр', 'analytics'],
+        'bumi.manage' => ['Настройки Bumi: изменение каналов и автоответов', 'analytics'],
 
         // --- Отчёты ---
         'reports.view' => ['Просмотр отчётов', 'reports'],
@@ -204,6 +209,7 @@ final class PermissionMatrix
             'inventory.view', 'inventory.manage', 'inventory.move', 'purchases.view', 'purchases.manage',
             'crm.view', 'crm.manage', 'crm.deals.manage', 'finance.view', 'finance.manage', 'finance.invoices.manage',
             'accounting.view', 'accounting.manage', 'projects.view', 'projects.manage', 'bi.view', 'bi.manage',
+            'bumi.view', 'bumi.manage',
             'users.manage', 'integrations.manage', 'positions.manage', 'schedules.manage', 'holidays.manage',
             'documents.templates.manage', 'documents.categories.manage', 'workflows.manage',
         ], true);

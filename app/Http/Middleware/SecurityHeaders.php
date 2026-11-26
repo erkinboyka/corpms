@@ -20,10 +20,26 @@ class SecurityHeaders
         $response = $next($request);
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+
+        // Микрофон-релей открывается в iframe с http://corpms.local, поэтому
+        // для этого одного endpoint'а XFO снимается, а frame-ancestors сужается
+        // до явного белого списка родительских origin (CSP replaces XFO).
+        $relayParents = $this->relayParents($request);
+        if ($relayParents === []) {
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        } else {
+            $response->headers->remove('X-Frame-Options');
+        }
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        // LMS video calls need camera/microphone/screen capture on this origin only.
-        $response->headers->set('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self), geolocation=()');
+
+        // LMS video calls need camera/microphone/screen capture on this origin.
+        // На http://corpms.local микрофон недоступен, поэтому доверенный
+        // localhost-relay получает право через явный allowlist, а не через '*'.
+        $relayOrigin = $this->relayOrigin();
+        $microphone = $relayOrigin !== ''
+            ? 'microphone=(self '.$relayOrigin.')'
+            : 'microphone=(self)';
+        $response->headers->set('Permissions-Policy', 'camera=(self), '.$microphone.', display-capture=(self), geolocation=()');
 
         // Content-Security-Policy (P1-4 аудита): ресурсы — только со своих origin,
         // внешние скрипты/фреймы/объекты запрещены. 'unsafe-inline' для script/style
@@ -33,6 +49,11 @@ class SecurityHeaders
         // connect-src: websocket к Reverb — только заданный в .env хост/порт,
         // чтобы realtime-канал не расширял список разрешённых источников.
         $connect = ["'self'"];
+        $frameSources = ["'self'"];
+        $relayUrl = $this->relayOrigin();
+        if ($relayUrl !== '') {
+            $frameSources[] = $relayUrl;
+        }
 
         $reverbHost = (string) config('broadcasting.connections.reverb.options.host');
         $reverbPort = (int) config('broadcasting.connections.reverb.options.port');
@@ -53,7 +74,8 @@ class SecurityHeaders
             "media-src 'self' blob:",
             "worker-src 'self' blob:",
             "object-src 'none'",
-            "frame-ancestors 'self'",
+            'frame-src '.implode(' ', array_values(array_unique($frameSources))),
+            'frame-ancestors '.implode(' ', $relayParents !== [] ? $relayParents : ["'self'"]),
             "base-uri 'self'",
             "form-action 'self'",
         ]));
@@ -63,5 +85,35 @@ class SecurityHeaders
         }
 
         return $response;
+    }
+
+    private function relayOrigin(): string
+    {
+        $url = rtrim((string) config('corpms.bumi.conversation.relay_url', ''), '/');
+        if ($url === '') {
+            return '';
+        }
+
+        $parts = parse_url($url);
+        if (! is_array($parts) || ! isset($parts['scheme'], $parts['host'])) {
+            return '';
+        }
+
+        return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function relayParents(Request $request): array
+    {
+        if (! $request->is('bumi/voice/relay')) {
+            return [];
+        }
+
+        $parent = (string) $request->query('parent', '');
+        $allowed = (array) config('corpms.bumi.conversation.parent_origins', []);
+
+        return in_array($parent, $allowed, true) ? [$parent] : [];
     }
 }

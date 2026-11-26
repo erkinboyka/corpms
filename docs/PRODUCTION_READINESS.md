@@ -80,6 +80,8 @@ AI_BASE_URL=<https://разрешённый LLM-хост>
 AI_ALLOWED_HOSTS=<разрешённые хосты через запятую>
 AI_API_KEY=<секрет из хранилища>
 AI_EMBEDDINGS_MODEL=<модель /embeddings>
+AI_EMBEDDING_MODEL=                    # псевдоним; если задан — имеет приоритет
+AI_EMBEDDING_DIMENSIONS=              # опционально: фиксированная длина вектора
 AI_RAG_TESSERACT_PATH=<абсолютный путь к tesseract>
 AI_RAG_PDFTOPPM_PATH=<абсолютный путь к pdftoppm>
 AI_RAG_OCR_LANG=eng+rus
@@ -89,7 +91,11 @@ AI_RAG_OCR_MAX_PAGES=10
 AI_RAG_OCR_TIMEOUT=120
 ```
 
-Источники ключей: `.env.example:1-8,22-27,36-48,50-55,94-123`, `config/corpms.php:63-91`.
+Источники ключей: `.env.example:1-8,22-27,36-48,50-55,94-123`, `config/corpms.php:63-95`.
+
+При смене модели или размерности векторов переиндексируйте документы:
+`php artisan ai:index-documents --force`. Поиск пропускает чанки с другой
+моделью/длиной и не смешивает векторные пространства.
 
 ## 3. Установка OCR на целевом хосте
 

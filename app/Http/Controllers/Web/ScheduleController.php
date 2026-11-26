@@ -51,6 +51,18 @@ class ScheduleController extends Controller
         return view('schedules.index', compact('schedules', 'canManage'));
     }
 
+    /** @param array<mixed> $days
+     *  @return array<int, int>
+     */
+    private function normalizeWorkDays(array $days): array
+    {
+        $days = array_values(array_unique(array_map('intval', $days)));
+        $days = array_values(array_filter($days, static fn (int $day): bool => $day >= 1 && $day <= 7));
+        sort($days);
+
+        return $days;
+    }
+
     public function storeSchedule(Request $request): RedirectResponse
     {
         $employee = $request->user()->employee;
@@ -59,6 +71,8 @@ class ScheduleController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:128'],
             'type' => ['required', 'in:standard,shift,flexible'],
+            'work_days' => ['sometimes', 'array', 'min:1'],
+            'work_days.*' => ['integer', 'between:1,7', 'distinct'],
             'start_time' => ['required', 'date_format:H:i:s'],
             'end_time' => ['required', 'date_format:H:i:s'],
             'break_start' => ['nullable', 'date_format:H:i:s'],
@@ -67,6 +81,8 @@ class ScheduleController extends Controller
             'min_rest_hours' => ['nullable', 'integer', 'min:0', 'max:24'],
         ]);
 
+        // Старые клиенты не передают дни — сохраняем привычный Пн–Пт.
+        $validated['work_days'] = $this->normalizeWorkDays($validated['work_days'] ?? [1, 2, 3, 4, 5]);
         $validated['company_id'] = $employee->company_id;
 
         $schedule = WorkSchedule::create($validated);
@@ -85,6 +101,8 @@ class ScheduleController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:128'],
             'type' => ['required', 'in:standard,shift,flexible'],
+            'work_days' => ['sometimes', 'array', 'min:1'],
+            'work_days.*' => ['integer', 'between:1,7', 'distinct'],
             'start_time' => ['required', 'date_format:H:i:s'],
             'end_time' => ['required', 'date_format:H:i:s'],
             'break_start' => ['nullable', 'date_format:H:i:s'],
@@ -95,7 +113,11 @@ class ScheduleController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $keys = ['name', 'type', 'start_time', 'end_time', 'break_start', 'break_end', 'grace_minutes', 'min_rest_hours', 'allow_overtime', 'is_active'];
+        if (array_key_exists('work_days', $validated)) {
+            $validated['work_days'] = $this->normalizeWorkDays($validated['work_days']);
+        }
+
+        $keys = ['name', 'type', 'work_days', 'start_time', 'end_time', 'break_start', 'break_end', 'grace_minutes', 'min_rest_hours', 'allow_overtime', 'is_active'];
         $old = $schedule->only($keys);
 
         $schedule->update($validated);

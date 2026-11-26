@@ -446,7 +446,8 @@ class DocumentController extends Controller
         TenantGuard::ensureDocument($document, $me);
 
         try {
-            [$qrRequest, $plainToken, $code] = $this->signatures->prepareQrSignature($me, $document);
+            // Код подтверждения намеренно не попадает в ответ: он уходит только подписанту.
+            [$qrRequest, $plainToken] = $this->signatures->prepareQrSignature($me, $document);
         } catch (LogicException|\RuntimeException $e) {
             return back()->withErrors(['field' => $e->getMessage()]);
         }
@@ -461,7 +462,6 @@ class DocumentController extends Controller
                 'expires_at' => now()->addHours($ttlHours)->format('d.m.Y H:i'),
                 'document' => $document->title,
                 'request_id' => $qrRequest->id,
-                'code' => $code,
             ],
         ]);
     }
@@ -485,7 +485,6 @@ class DocumentController extends Controller
                 'version' => $resolved['document']->currentVersion,
                 'expiresAt' => $resolved['token']->expires_at,
                 'otpExpiresAt' => $otpExpiresAt,
-                'documentBody' => $resolved['document']->body,
             ]);
         }
 

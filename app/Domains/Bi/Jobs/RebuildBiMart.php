@@ -34,7 +34,10 @@ final class RebuildBiMart implements ShouldQueue
         private readonly string $month,
         private readonly string $lockKey,
         private readonly string $lockToken,
-    ) {}
+    ) {
+        $this->onQueue((string) config('worker.pools.bi.queue', 'bi'));
+        $this->timeout = (int) config('worker.pools.bi.timeout', 600);
+    }
 
     public function handle(
         BiService $bi,

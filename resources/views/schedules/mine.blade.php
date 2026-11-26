@@ -16,7 +16,8 @@
     $monthStart = \Carbon\Carbon::create($year, $month, 1);
     $daysInMonth = $monthStart->daysInMonth;
     $firstWeekday = $monthStart->dayOfWeekIso;
-    $workDays = collect($schedule?->work_days ?? [1,2,3,4,5])->map(fn($d)=>(int)$d)->all();
+    $workDays = $schedule?->workingDays() ?? [1,2,3,4,5];
+    $dayNames = [1=>__('Пн'),2=>__('Вт'),3=>__('Ср'),4=>__('Чт'),5=>__('Пт'),6=>__('Сб'),7=>__('Вс')];
     $holidaysByDay = collect($holidays ?? [])->filter(fn($h) => (int) \Carbon\Carbon::parse($h->date)->month === $month)->groupBy(fn($h) => (int) \Carbon\Carbon::parse($h->date)->day);
     $leaveItems = collect($leaves ?? []);
 @endphp
@@ -72,6 +73,10 @@
                     @else
                         <i class="ti ti-coffee me-1"></i>{{ __('Без фиксированного перерыва') }}
                     @endif
+                </div>
+                <div class="text-secondary mt-1">
+                    <i class="ti ti-calendar-week me-1"></i>{{ __('Рабочие дни') }}:
+                    {{ implode(', ', array_map(fn ($day) => $dayNames[$day] ?? (string) $day, $workDays)) }}
                 </div>
             </div>
         </div>

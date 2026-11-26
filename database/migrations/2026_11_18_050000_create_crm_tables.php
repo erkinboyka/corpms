@@ -53,7 +53,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('title');
-            $table->enum('source', ['web', 'call', 'referral', 'event', 'other'])->default('other');
+            $table->enum('source', [
+                'web', 'call', 'referral', 'event', 'telegram', 'instagram', 'whatsapp', 'other',
+            ])->default('other');
             $table->string('contact_name')->nullable();
             $table->string('phone', 32)->nullable();
             $table->string('email')->nullable();

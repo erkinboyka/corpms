@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\DashboardGen\Services;
 
+use App\Domains\DashboardGen\QuerySpec\BiQueryCompiler;
+use App\Domains\DashboardGen\QuerySpec\BiQuerySpec;
 use RuntimeException;
 
 /**
@@ -31,6 +33,7 @@ class WidgetQueryAi
         return $this->ask(
             $this->buildPrompt($instruction, $family, $type, $shape, $tablesScheme),
             $this->systemPrompt(),
+            $tablesScheme,
         );
     }
 
@@ -69,7 +72,7 @@ class WidgetQueryAi
 правильной формы, и объясни причину в поле "message".
 TEXT;
 
-        return $this->ask($prompt, $this->systemPrompt());
+        return $this->ask($prompt, $this->systemPrompt(), $tablesScheme);
     }
 
     private function systemPrompt(): string
@@ -77,34 +80,48 @@ TEXT;
         $dialect = $this->dialectHints()['name'];
 
         return <<<TEXT
-Ты — аналитик, который пишет SQL-запросы для виджетов дашборда на {$dialect}.
+Ты — аналитик, который описывает запросы для виджетов дашборда на {$dialect}.
 
-Твоя работа — запросы, возвращающие ПЛОСКИЕ строки с заранее заданными
-именами колонок. Ты НЕ собираешь вложенный JSON: его соберёт платформа.
+Ты НЕ пишешь SQL вручную. Ты возвращаешь структурированную спецификацию
+"queries", из которой платформа сама соберёт параметризованный SELECT.
 
 Жёсткие правила:
-1. Только SELECT или WITH. Никаких INSERT, UPDATE, DELETE, CREATE и подобного.
-2. В каждом запросе — одна инструкция, без символа ";".
-3. Используй только таблицы и колонки из переданной схемы. Ничего не выдумывай.
-4. Имена выходных колонок задай через AS ровно так, как требует форма.
-5. Запросов может быть несколько: их строки склеиваются в один набор.
-   Если задачу проще решить двумя простыми запросами, чем одним сложным —
-   пиши два. Это не ошибка, а предпочтительный вариант.
-6. Ответ — только JSON, без markdown и без пояснений вне JSON.
-7. Если в WHERE/HAVING нужно сравнить колонку с конкретным текстовым значением
-   (статус, категория, стадия и т.п.) — бери его СЛОВО В СЛОВО из поля
-   "sample_values" этой колонки в схеме. Нет у колонки такого поля или среди
-   значений нет нужного — не пиши условие с придуманным значением (оно не
-   совпадёт ни с одной строкой, и результат окажется пустым); вместо этого
-   верни колонку как есть (GROUP BY/SELECT) без фильтра по значению.
-8. Никогда не пиши %s, ? и подобные заглушки под значения — вставляй сами
-   значения прямо в текст запроса. Единственный разрешённый плейсхолдер —
-   :company_id (см. правило 9).
-9. ТЕНАНТ-ФИЛЬТР ОБЯЗАТЕЛЕН: если в запросе используется хотя бы одна таблица,
-   у которой в схеме есть колонка company_id, запрос обязан её фильтровать:
-   WHERE company_id = :company_id (можно сочетать с другими условиями через AND).
-   Плейсхолдер :company_id подставит платформа — не пиши туда число и не
-   опускай этот фильтр. Без него запрос будет отклонён.
+1. Ответ — только JSON, без markdown и без пояснений вне JSON.
+2. Используй только таблицы и колонки из переданной схемы. Ничего не выдумывай.
+3. Для каждой таблицы с company_id платформа сама добавит фильтр
+   company_id = :company_id. Не надо писать его вручную и нельзя подставлять число.
+4. Значения фильтров передавай в "value" как обычные строки/числа: они уйдут
+   в параметры запроса, а не в текст SQL.
+5. Имена выходных колонок задавай в "as" ровно так, как требует форма виджета
+   (label/value, series/category/value, name/value, x/y, заголовки таблицы).
+6. Если нужно сравнить текст со значением (статус, категория), бери его СЛОВО
+   В СЛОВО из "samples" колонки. Нужного значения нет — не выдумывай фильтр.
+7. Несколько простых запросов лучше одного сложного: их строки склеиваются.
+8. Для дат используй expr "month"/"year"/"date" — платформа учтёт диалект БД.
+9. Лимит строк — от 1 до 5000. Для таблиц лимит можно не задавать.
+
+СТРУКТУРА ОДНОГО ЗАПРОСА:
+{
+  "from": "crm_clients",
+  "alias": "c",
+  "joins": [
+    {"table": "crm_deals", "alias": "d", "type": "left",
+     "on": {"left": "c.id", "right": "d.client_id"}}
+  ],
+  "select": [
+    {"expr": "month", "column": "d.created_at", "as": "category"},
+    {"expr": "count", "as": "value"}
+  ],
+  "where": [
+    {"column": "d.status", "op": "=", "value": "won"}
+  ],
+  "group_by": ["category"],
+  "order_by": [{"column": "category", "dir": "asc"}],
+  "limit": 12
+}
+
+Допустимые expr: column, count, sum, avg, min, max, month, year, date, literal.
+Допустимые op: =, !=, >, >=, <, <=, like, in, not in, is null, is not null.
 TEXT;
     }
 
@@ -155,13 +172,15 @@ TEXT;
 Верни ТОЛЬКО JSON:
 
 {
-  "queries": { "main": "SELECT ..." },
+  "queries": { "main": { "from": "...", "select": [...], "where": [...] } },
   "shape": "{$shape}",
   "presentation": {},
   "message": ""
 }
 
-- "queries.main" — сам запрос одной строкой или с переносами, но без ";".
+- "queries.main" — структурированная спецификация запроса (см. system prompt).
+- Для обратной совместимости разрешается строка SQL без ";", но только с
+  таблицами/колонками из схемы и без подстановки значений в текст.
 - "shape" — строго "{$shape}".
 - "presentation" — только если это нужно форме (см. выше), иначе пустой объект.
 - "message" — заполняй, только если данных не хватило; иначе пустая строка.
@@ -228,7 +247,17 @@ TEXT;
             WidgetShapeMapper::SHAPE_SERIES_VALUES => <<<'JSON'
 {
   "queries": {
-    "main": "SELECT c.name AS label, COUNT(*) AS value FROM crm_clients c WHERE c.company_id = :company_id GROUP BY c.name ORDER BY value DESC LIMIT 10"
+    "main": {
+      "from": "crm_clients",
+      "alias": "c",
+      "select": [
+        {"expr": "column", "column": "c.name", "as": "label"},
+        {"expr": "count", "as": "value"}
+      ],
+      "group_by": ["label"],
+      "order_by": [{"column": "value", "dir": "desc"}],
+      "limit": 10
+    }
   },
   "shape": "series_values"
 }
@@ -237,7 +266,17 @@ JSON,
             WidgetShapeMapper::SHAPE_SERIES_MATRIX => <<<'JSON'
 {
   "queries": {
-    "main": "SELECT 'Выручка' AS series, DATE_FORMAT(t.created_at, '%Y-%m') AS category, SUM(t.amount) AS value FROM fin_transactions t WHERE t.company_id = :company_id GROUP BY DATE_FORMAT(t.created_at, '%Y-%m') ORDER BY category"
+    "main": {
+      "from": "fin_transactions",
+      "alias": "t",
+      "select": [
+        {"expr": "literal", "value": "Выручка", "as": "series"},
+        {"expr": "month", "column": "t.created_at", "as": "category"},
+        {"expr": "sum", "column": "t.amount", "as": "value"}
+      ],
+      "group_by": ["series", "category"],
+      "order_by": [{"column": "category", "dir": "asc"}]
+    }
   },
   "shape": "series_matrix"
 }
@@ -247,7 +286,16 @@ JSON,
                 ? <<<'JSON'
 {
   "queries": {
-    "main": "SELECT 'Сделки' AS series, d.probability AS x, d.amount AS y, 1 AS z FROM crm_deals d WHERE d.company_id = :company_id"
+    "main": {
+      "from": "crm_deals",
+      "alias": "d",
+      "select": [
+        {"expr": "literal", "value": "Сделки", "as": "series"},
+        {"expr": "column", "column": "d.probability", "as": "x"},
+        {"expr": "column", "column": "d.amount", "as": "y"},
+        {"expr": "literal", "value": 1, "as": "z"}
+      ]
+    }
   },
   "shape": "points"
 }
@@ -255,7 +303,15 @@ JSON
                 : <<<'JSON'
 {
   "queries": {
-    "main": "SELECT 'Сделки' AS series, d.probability AS x, d.amount AS y FROM crm_deals d WHERE d.company_id = :company_id"
+    "main": {
+      "from": "crm_deals",
+      "alias": "d",
+      "select": [
+        {"expr": "literal", "value": "Сделки", "as": "series"},
+        {"expr": "column", "column": "d.probability", "as": "x"},
+        {"expr": "column", "column": "d.amount", "as": "y"}
+      ]
+    }
   },
   "shape": "points"
 }
@@ -264,8 +320,23 @@ JSON,
             WidgetShapeMapper::SHAPE_COUNTERS => <<<'JSON'
 {
   "queries": {
-    "deals":  "SELECT 'Сделок' AS name, COUNT(*) AS value FROM crm_deals WHERE company_id = :company_id",
-    "amount": "SELECT 'Сумма' AS name, SUM(amount) AS value, ' TJS' AS suffix FROM crm_deals WHERE company_id = :company_id"
+    "deals": {
+      "from": "crm_deals",
+      "alias": "d",
+      "select": [
+        {"expr": "literal", "value": "Сделок", "as": "name"},
+        {"expr": "count", "as": "value"}
+      ]
+    },
+    "amount": {
+      "from": "crm_deals",
+      "alias": "d",
+      "select": [
+        {"expr": "literal", "value": "Сумма", "as": "name"},
+        {"expr": "sum", "column": "d.amount", "as": "value"},
+        {"expr": "literal", "value": " TJS", "as": "suffix"}
+      ]
+    }
   },
   "shape": "counters"
 }
@@ -274,7 +345,21 @@ JSON,
             WidgetShapeMapper::SHAPE_ROWS => <<<'JSON'
 {
   "queries": {
-    "main": "SELECT o.number AS `Заказ`, o.created_at AS `Дата`, s.name AS `Поставщик`, o.total AS `Сумма` FROM purchase_orders o LEFT JOIN suppliers s ON s.id = o.supplier_id WHERE o.company_id = :company_id ORDER BY o.created_at DESC"
+    "main": {
+      "from": "purchase_orders",
+      "alias": "o",
+      "joins": [
+        {"table": "suppliers", "alias": "s", "type": "left",
+         "on": {"left": "o.supplier_id", "right": "s.id"}}
+      ],
+      "select": [
+        {"expr": "column", "column": "o.number", "as": "number"},
+        {"expr": "column", "column": "o.created_at", "as": "date"},
+        {"expr": "column", "column": "s.name", "as": "supplier"},
+        {"expr": "column", "column": "o.total", "as": "total"}
+      ],
+      "order_by": [{"column": "date", "dir": "desc"}]
+    }
   },
   "shape": "rows"
 }
@@ -357,7 +442,7 @@ JSON,
      * @param  array<string, mixed>  $tablesScheme
      * @return array{spec: ?array, error: ?string, tokens: int}
      */
-    private function ask(string $prompt, string $system): array
+    private function ask(string $prompt, string $system, array $tablesScheme): array
     {
         // SQL-спецификация короткая: 1500 токенов достаточно даже с ремонтом,
         // а лишние токены упираются в лимит провайдера на весь запрос.
@@ -385,20 +470,38 @@ JSON,
             ];
         }
 
+        $spec = [
+            'queries' => $queries,
+            'shape' => $content['shape'] ?? null,
+            'presentation' => is_array($content['presentation'] ?? null)
+                ? $content['presentation']
+                : [],
+        ];
+
+        // Структурированные запросы компилируются в параметризованный SQL.
+        // Строковые запросы из старых спецификаций остаются как есть — их
+        // всё равно проверяет WidgetSpecValidator и ReadOnlySqlGuard.
+        if ($this->hasStructuredQueries($queries)) {
+            try {
+                $compiled = (new BiQueryCompiler($tablesScheme))->compile(
+                    new BiQuerySpec($spec, $tablesScheme, $this->driver),
+                );
+                $spec['queries'] = $compiled['queries'];
+                $spec['bindings'] = $compiled['bindings'];
+                $spec['compiler'] = $compiled['compiler'];
+            } catch (RuntimeException $e) {
+                return ['spec' => null, 'error' => $e->getMessage(), 'tokens' => $answer['tokens']];
+            }
+        }
+
         return [
-            'spec' => [
-                'queries' => $queries,
-                'shape' => $content['shape'] ?? null,
-                'presentation' => is_array($content['presentation'] ?? null)
-                    ? $content['presentation']
-                    : [],
-            ],
+            'spec' => $spec,
             'error' => null,
             'tokens' => $answer['tokens'],
         ];
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, array<string, mixed>|string> */
     private function normalizeQueries(mixed $queries): array
     {
         if (is_string($queries) && trim($queries) !== '') {
@@ -411,12 +514,29 @@ JSON,
 
         $result = [];
 
-        foreach ($queries as $name => $sql) {
-            if (is_string($sql) && trim($sql) !== '') {
-                $result[(string) $name] = trim($sql);
+        foreach ($queries as $name => $query) {
+            if (is_string($query) && trim($query) !== '') {
+                $result[(string) $name] = trim($query);
+                continue;
+            }
+
+            if (is_array($query)) {
+                $result[(string) $name] = $query;
             }
         }
 
         return $result;
+    }
+
+    /** @param array<string, array<string, mixed>|string> $queries */
+    private function hasStructuredQueries(array $queries): bool
+    {
+        foreach ($queries as $query) {
+            if (is_array($query)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

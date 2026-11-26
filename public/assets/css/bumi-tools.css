@@ -10,6 +10,9 @@
 .bumi-tool label,.bumi-tool form {display:grid;gap:.36rem;font-size:.85rem;margin:0;}
 .bumi-tool :is(input,select,textarea) {width:100%;min-width:0;border:1px solid var(--bm-line,var(--tblr-border-color));background:var(--tblr-bg-surface);color:inherit;border-radius:7px;font:inherit;padding:.5rem;}
 .bumi-tool button {justify-self:start;min-height:36px;}
+.bumi-tool__hint {margin:0;font-size:.8rem;opacity:.78;line-height:1.4;}
+.bumi-tool__status {min-height:1.1em;margin:0;font-size:.78rem;color:var(--bm-link,var(--tblr-primary));}
+.bumi-tool__status:empty {display:none;}
 .bumi-fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(115px,100%),1fr));gap:.6rem;}
 .bumi-preview {display:block;width:min(100%,420px);height:auto;border-radius:8px;}
 .bumi-graphic {margin:.65rem 0;min-width:0;}
@@ -31,10 +34,50 @@
     @keyframes bumi-thought {0%,65%,100% {transform:translateY(0);opacity:.5;}32% {transform:translateY(-4px);opacity:1;}}
     .bumi-plot>div i {transform-origin:left;animation:bumi-bar-in .3s ease-out;}
     @keyframes bumi-bar-in {from{transform:scaleX(.05);}}
+
+    /* Новые реплики появляются мягко, а не «вспрыгивают» целиком. */
+    .ai-msg.is-entering {animation:bumi-msg-in .34s cubic-bezier(.22,.8,.25,1) both;}
+    .ai-msg.is-entering .ai-msg__bubble {animation:bumi-bubble-in .34s cubic-bezier(.22,.8,.25,1) both;}
+    @keyframes bumi-msg-in {from{opacity:0;transform:translateY(10px) scale(.985);}to{opacity:1;transform:none;}}
+    @keyframes bumi-bubble-in {from{transform:translateY(2px);}to{transform:none;}}
+
+    /* Мысль Bumi уходит плавно, уступая место ответу. */
+    .bumi-thinking.is-entering {animation:bumi-msg-in .24s ease-out both;}
+    .ai-msg.is-leaving,
+    .bumi-thinking.is-leaving {animation:bumi-msg-out .17s ease-in both;}
+    @keyframes bumi-msg-out {to{opacity:0;transform:translateY(-4px);}}
+
+    /* Карточка шаблонов приезжает следом за репликой Bumi. */
+    .ai-msg.is-entering .bumi-tool[data-bumi-library] {animation:bumi-tool-in .36s .05s ease-out both;}
+    @keyframes bumi-tool-in {from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+    [data-bumi-templates].is-launching,
+    [data-template-use].is-launching {animation:bumi-template-tap .4s ease-out;}
+    @keyframes bumi-template-tap {40%{transform:scale(.95);}100%{transform:none;}}
+    .bumi-tool :is(select,input,textarea,button),
+    [data-bumi-templates] {transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
+    .bumi-tool :is(select,input,textarea):focus-visible {border-color:var(--bm-link,var(--tblr-primary));box-shadow:0 0 0 3px color-mix(in srgb,var(--bm-link,var(--tblr-primary)) 18%,transparent);}
 }
 .bumi-guide-pointer{position:fixed;z-index:11000;pointer-events:none;width:46px;height:44px;display:grid;place-items:center;background:#173a37;border:2px solid #89d9c5;border-radius:50%;box-shadow:0 3px 14px #10282236}
-.bumi-guide-pointer svg{width:36px;height:32px}.bumi-guide-pointer .bumi-face__expression{display:none}.bumi-guide-pointer .bumi-face__expression--smile{display:inline}
+.bumi-guide-pointer svg{width:36px;height:32px}.bumi-guide-pointer .bumi-face__expression{display:none}.bumi-guide-pointer .bumi-face__expression--happy{display:inline}
 .bumi-target{outline:3px solid #42ad97!important;outline-offset:3px}
 .bumi-sources{border-inline-start:3px solid #448d80}.bumi-guide-link{width:fit-content}.ai-actions>strong{flex-basis:100%}
 @media(prefers-reduced-motion:no-preference){.bm-pet[data-guiding]{transition:left .52s ease-out,top .52s ease-out}}
+
+/* Bumi в чатах: честные in-place состояния и подсветка изменённых карточек. */
+.bumi-card.is-changed,
+tr.is-changed {
+    outline: 2px solid var(--tblr-primary, var(--crm-accent, #206bc4));
+    outline-offset: 2px;
+    border-radius: var(--crm-radius-md, 8px);
+}
+
+.ai-msg.is-pending {opacity:.72;}
+.ai-msg.is-failed .ai-msg__bubble {border-color:var(--tblr-danger, var(--crm-danger, #d63939));}
+.ai-msg.is-typing {opacity:.82;}
+.ai-msg__retry {margin-top:.35rem;min-height:var(--crm-tap, 44px);}
+@media(prefers-reduced-motion:no-preference){
+    .bumi-card.is-changed,
+    tr.is-changed {animation:crm-pop .28s ease-out;}
+    .ai-msg.is-typing i {animation:bumi-thought .95s ease-in-out infinite;}
+}
 

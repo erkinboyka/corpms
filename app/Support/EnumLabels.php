@@ -43,6 +43,7 @@ final class EnumLabels
         ],
         'attendance_source' => [
             'biometric' => 'Биометрия', 'qr' => 'QR', 'kiosk' => 'Терминал', 'manual' => 'Вручную',
+            'offsite_request' => 'Заявка на удалённую работу', 'system' => 'Система',
         ],
         'document_status' => [
             'draft' => 'Черновик', 'submitted' => 'Подан', 'review' => 'На согласовании',
@@ -176,6 +177,7 @@ final class EnumLabels
         'crm_lead_source' => [
             'web' => 'Сайт', 'call' => 'Звонок', 'referral' => 'Рекомендация',
             'event' => 'Мероприятие', 'other' => 'Другое',
+            'telegram' => 'Telegram', 'instagram' => 'Instagram', 'whatsapp' => 'WhatsApp',
         ],
         'crm_lead_status' => [
             'new' => 'Новый', 'qualified' => 'Квалифицирован',
@@ -292,6 +294,9 @@ final class EnumLabels
         'bi.dashboard_generate_queued' => 'Генерация BI-панели поставлена в очередь',
         'bi.dashboard_generated' => 'BI-панель сгенерирована',
         'bi.rebuilt' => 'BI-витрина пересобрана',
+        'bi.chat.asked' => 'Запрос Bumi к BI-дашборду',
+        'bi.chat.undone' => 'Откат изменений Bumi',
+        'bi.chat.rated' => 'Оценка ответа Bumi',
         'chat.message.deleted' => 'Сообщение удалено',
         'chat.message.edited' => 'Редактирование сообщения',
         'chat.message.sent' => 'Сообщение отправлено',

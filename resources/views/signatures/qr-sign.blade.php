@@ -29,13 +29,7 @@
                 @endif
             </div>
 
-            @if (filled($documentBody ?? null))
-                <div class="signature-qr-body mt-3">
-                    <div class="text-secondary small mb-1">{{ __('Содержимое документа') }}</div>
-                    @include('partials.rich-text', ['value' => $documentBody, 'class' => 'signature-qr-body-text'])
-                </div>
-            @endif
-
+            {{-- SEC-02: тело документа не отдаётся на публичной странице подписи --}}
             <dl class="signature-qr-meta">
                 <div>
                     <dt>{{ __('Подписант') }}</dt>

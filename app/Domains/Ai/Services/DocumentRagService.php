@@ -16,6 +16,7 @@ use App\Support\SettingsService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -49,6 +50,7 @@ class DocumentRagService
         protected AnalyticsService $analytics,
         protected PermissionService $permissions,
         protected AttachmentTextExtractor $extractor,
+        protected AiProviderService $providers,
     ) {}
 
     /* -------------------- индексация -------------------- */
@@ -78,6 +80,9 @@ class DocumentRagService
             (string) $document->body,
             (string) $version?->sha256,
             (string) $version?->id,
+            // Смена модели/размерности делает старые вектора несовместимыми.
+            $this->embeddingModel(),
+            (string) ($this->embeddingDimensions() ?? ''),
         ]));
 
         $state = DocumentRagIndex::query()->firstOrNew(['document_id' => $document->id]);
@@ -122,13 +127,16 @@ class DocumentRagService
         }
 
         $vectors = $chunks === [] ? null : $this->embed(array_column($chunks, 'content'));
+        $embeddingModel = $vectors === null ? null : $this->embeddingModel();
 
         foreach ($chunks as $index => $chunk) {
             $chunks[$index]['company_id'] = $document->company_id;
             $chunks[$index]['document_id'] = $document->id;
             $chunks[$index]['chunk_index'] = $index;
             $chunks[$index]['index_version'] = $generation;
-            $chunks[$index]['embedding'] = $vectors[$index] ?? null;
+            $vector = $vectors[$index] ?? null;
+            $chunks[$index]['embedding'] = $vector;
+            $chunks[$index]['embedding_model'] = $vector === null ? null : $embeddingModel;
         }
 
         // Общий статус описывает результат индексации; причина отсутствия
@@ -249,14 +257,37 @@ class DocumentRagService
         $scored = [];
 
         if ($queryVector !== null) {
+            $queryDimensions = count($queryVector);
+            $activeModel = $this->embeddingModel();
+            $skipped = 0;
+
             foreach ($candidates as $chunk) {
                 if (! is_array($chunk->embedding) || $chunk->embedding === []) {
                     continue;
                 }
+
+                // Разная длина или модель = другое векторное пространство:
+                // косинус здесь не имеет смысла, чанк пропускается.
+                if (count($chunk->embedding) !== $queryDimensions
+                    || (string) ($chunk->embedding_model ?? '') !== $activeModel) {
+                    $skipped++;
+                    continue;
+                }
+
                 $score = $this->cosine($queryVector, $chunk->embedding);
                 if ($score > 0) {
                     $scored[] = ['score' => $score, 'chunk' => $chunk];
                 }
+            }
+
+            if ($skipped > 0) {
+                Log::warning('RAG: чанки пропущены из-за несовместимости векторов.', [
+                    'model' => $activeModel,
+                    'dimensions' => $queryDimensions,
+                    'skipped' => $skipped,
+                    'total' => $candidates->count(),
+                    'hint' => 'php artisan ai:index-documents --force',
+                ]);
             }
         }
 
@@ -395,26 +426,33 @@ class DocumentRagService
     protected function embed(array $input): ?array
     {
         $settings = app(SettingsService::class);
-        $baseUrl = rtrim((string) $settings->get('corpms.ai.base_url'), '/');
-        $apiKey = (string) $settings->get('corpms.ai.api_key');
-        $model = (string) ($settings->get('corpms.ai.embeddings_model') ?? '');
+        $credentials = $this->providers->credentials();
+        $baseUrl = $credentials['base_url'];
+        $apiKey = $credentials['api_key'];
+        $model = $credentials['embedding_model'] !== '' ? $credentials['embedding_model'] : $this->embeddingModel();
+        $dimensions = $this->embeddingDimensions();
 
         if ($baseUrl === '' || $apiKey === '' || $model === '' || ! AiEndpointGuard::isAllowed($baseUrl.'/embeddings')) {
             return null;
         }
 
-        $configured = (int) ($settings->get('corpms.ai.timeout') ?? 30);
+        $configured = (int) ($credentials['timeout'] ?: $settings->get('corpms.ai.timeout') ?: 30);
         $cap = (int) config('corpms.ai.sync_timeout', self::EMBED_TIMEOUT_CAP);
         $timeout = $cap > 0 ? min($configured, $cap) : $configured;
+
+        $payload = [
+            'model' => $model,
+            'input' => array_values($input),
+        ];
+        if ($dimensions !== null) {
+            $payload['dimensions'] = $dimensions;
+        }
 
         try {
             $response = Http::withToken($apiKey)
                 ->timeout($timeout)
                 ->withoutRedirecting()
-                ->post($baseUrl.'/embeddings', [
-                    'model' => $model,
-                    'input' => array_values($input),
-                ]);
+                ->post($baseUrl.'/embeddings', $payload);
         } catch (Throwable) {
             return null;
         }
@@ -437,10 +475,29 @@ class DocumentRagService
             if (! is_array($embedding) || $embedding === []) {
                 return null;
             }
-            $vectors[] = array_map('floatval', $embedding);
+            $vector = array_map('floatval', $embedding);
+            if ($dimensions !== null && count($vector) !== $dimensions) {
+                return null;
+            }
+            $vectors[] = $vector;
         }
 
         return $vectors;
+    }
+
+    private function embeddingModel(): string
+    {
+        return trim((string) (app(SettingsService::class)->get('corpms.ai.embedding_model')
+            ?: app(SettingsService::class)->get('corpms.ai.embeddings_model')
+            ?: config('corpms.ai.embeddings_model')
+            ?: ''));
+    }
+
+    private function embeddingDimensions(): ?int
+    {
+        $value = app(SettingsService::class)->get('corpms.ai.embedding_dimensions');
+
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
     }
 
     /**
@@ -486,13 +543,14 @@ class DocumentRagService
         return $boost;
     }
 
-    /** Косинусное сходство; размерности разной длины безопасно усекаются. */
+    /** Косинусное сходство; вектора разных размеров несовместимы. */
     protected function cosine(array $a, array $b): float
     {
-        $length = min(count($a), count($b));
-        if ($length === 0) {
+        if (count($a) !== count($b) || $a === []) {
             return 0.0;
         }
+
+        $length = count($a);
 
         $dot = 0.0;
         $normA = 0.0;

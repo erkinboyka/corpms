@@ -2,15 +2,26 @@
 
 namespace App\Providers;
 
+use App\Domains\Ai\Services\BumiPersonaService;
+use App\Domains\Ai\Services\BumiRoleService;
 use App\Domains\Attendance\Events\AttendanceRecorded;
 use App\Domains\Attendance\Listeners\NotifyOnLateArrival;
 use App\Http\Middleware\BoostBrowserLogsGuard;
+use App\Models\BiChatMessage;
+use App\Models\BiDashboard;
+use App\Models\BiWidget;
+use App\Policies\BiChatMessagePolicy;
+use App\Policies\BiDashboardPolicy;
+use App\Policies\BiWidgetPolicy;
 use App\Support\EnumLabels;
 use App\Support\PermissionService;
+use App\Support\Queue\WorkerHeartbeat;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -41,9 +52,30 @@ class AppServiceProvider extends ServiceProvider
             session()->put('auth_version', (int) $event->user->auth_version);
         });
 
+        // Heartbeat пулов воркеров: любое реально обработанное задание
+        // подтверждает, что воркер жив и исполняет текущий код.
+        Queue::before(static function (JobProcessing $event): void {
+            /** @var WorkerHeartbeat $heartbeat */
+            $heartbeat = app(WorkerHeartbeat::class);
+            $heartbeat->beat($heartbeat->poolForQueue((string) $event->job->getQueue()));
+        });
+
         // Подписи enum-ов хранятся в виде русских исходных строк — прогоняем их
         // через перевод, иначе воронка CRM остаётся русской среди таджикского UI.
         View::share('crm_label', static fn (?string $group = null, ?string $value = null) => $group === null ? '' : __(EnumLabels::label($group, $value)));
+
+        // Настроение Bumi вычисляется сервисом, а не случайным JS-таймером:
+        // все точке входа получают одну и ту же осмысленную реплику.
+        View::composer(['layouts.tabler', 'layouts.auth', 'welcome'], static function ($view): void {
+            $view->with('bumi', app(BumiPersonaService::class)->current())
+                ->with('bumiVoice', config('corpms.bumi.conversation'))
+                ->with('bumiRole', app(BumiRoleService::class)->current());
+        });
+
+        // BI-политики связывают право bi.* с принадлежностью объекта тенанту.
+        Gate::policy(BiDashboard::class, BiDashboardPolicy::class);
+        Gate::policy(BiWidget::class, BiWidgetPolicy::class);
+        Gate::policy(BiChatMessage::class, BiChatMessagePolicy::class);
 
         // Blade-гейт @can('checkBoxPermission', 'slug.permission'):
         // UI-кнопки гейтятся той же матрицей прав, что и HTTP-middleware.

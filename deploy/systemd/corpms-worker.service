@@ -1,16 +1,16 @@
 [Unit]
-Description=CorpMS queue worker
+Description=CorpMS queue worker (default pool)
 After=network.target
 
 [Service]
 User=www-data
 Group=www-data
 WorkingDirectory=/srv/corpms/current
-ExecStart=/usr/bin/php artisan queue:work --tries=3 --backoff=5 --sleep=3
+ExecStart=/usr/bin/php artisan queue:work --queue=default --tries=3 --backoff=5 --sleep=3 --timeout=120
 Restart=always
 RestartSec=5
 KillSignal=SIGTERM
-TimeoutStopSec=30
+TimeoutStopSec=150
 
 [Install]
 WantedBy=multi-user.target

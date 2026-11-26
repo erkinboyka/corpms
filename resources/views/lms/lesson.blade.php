@@ -1,5 +1,6 @@
 @extends('layouts.tabler')
 @section('title', $lesson->title)
+
 @section('content')
 <div class="container-xl py-4 lms-page">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
@@ -102,6 +103,7 @@
         </div>
 
         <div class="col-lg-4">
+            {{-- Репетитор — это роль общего Bumi Mini, отдельная карточка не нужна. --}}
             @include('lms.partials.mentor', ['tips' => $tips])
 
             <div class="card lms-side-card mt-3">

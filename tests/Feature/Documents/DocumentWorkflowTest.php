@@ -269,6 +269,47 @@ class DocumentWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function signed_version_is_immutable_and_signature_key_is_domain_separated(): void
+    {
+        $document = $this->approvedDocument();
+        $signatures = app(SignatureService::class);
+        $signatures->requestSignatures($this->director, $document, [$this->author->id]);
+        $request = DocumentSignatureRequest::query()->where('document_id', $document->id)->sole();
+        $signature = $signatures->sign($this->author, $request);
+
+        $version = $document->fresh()->currentVersion;
+        $originalHash = (string) $version->sha256;
+        $this->assertTrue((bool) $version->immutable);
+        $this->assertSame('valid', $signatures->verify($signature->fresh())->status->value);
+
+        // SEC-03: подпись не строится напрямую на app.key
+        $withAppKey = hash('sha256', implode('|', [
+            $originalHash,
+            $this->author->id,
+            $signature->signature_id,
+            config('app.key'),
+        ]));
+        $this->assertNotSame($withAppKey, $signature->signature_hash);
+
+        // SEC-04: подписанная версия не меняется и не удаляется
+        try {
+            $version->update(['sha256' => str_repeat('b', 64)]);
+            $this->fail('Подписанная версия не должна изменяться');
+        } catch (LogicException) {
+            // ожидаемо
+        }
+        $this->assertSame($originalHash, $version->fresh()->sha256);
+
+        try {
+            $this->service->addVersion($document->fresh(), $this->author, null, bodyContent: 'Правка после подписи');
+            $this->fail('Подписанный документ не должен получать новую версию');
+        } catch (LogicException) {
+            // ожидаемо
+        }
+        $this->assertSame(1, DocumentVersion::query()->where('document_id', $document->id)->count());
+    }
+
+    #[Test]
     public function signature_otp_flow(): void
     {
         $document = $this->approvedDocument();

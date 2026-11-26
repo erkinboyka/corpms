@@ -3,6 +3,14 @@
 
 @section('title', __('Настройки системы'))
 
+@push('styles')
+    <link rel="stylesheet" href="/assets/css/ai-providers.css?v1">
+@endpush
+
+@push('scripts')
+    <script src="/assets/js/ai-providers.js?v1" defer></script>
+@endpush
+
 @php
     $grouped = [];
     foreach ($settings as $key => $meta) {
@@ -100,6 +108,44 @@
                 </div>
             @endforeach
 
+            <div class="crm-form__section">
+                <h3>{{ __('Провайдеры и модели AI') }}</h3>
+                <div class="crm-form__desc">
+                    {{ __('Добавьте несколько OpenAI-совместимых провайдеров: у каждого свой ключ и список моделей. Агент Bumi сможет выбрать любую из перечисленных моделей.') }}
+                </div>
+                <div data-ai-providers>
+                    <div class="ai-providers__list" data-ai-provider-list>
+                        @foreach ($aiProviders as $providerIndex => $provider)
+                            @include('settings.partials.ai-provider-row', [
+                                'index' => $providerIndex,
+                                'provider' => $provider,
+                                'activeId' => $aiActiveProviderId,
+                                'canManage' => $canManage,
+                            ])
+                        @endforeach
+                    </div>
+                    @if ($canManage)
+                        <div class="ai-providers__actions">
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-ai-provider-add>
+                                <i class="ti ti-plus me-1"></i>{{ __('Добавить провайдера') }}
+                            </button>
+                            <span class="text-secondary small align-self-center">
+                                {{ __('Пустое поле ключа сохраняет прежнее значение.') }}
+                            </span>
+                        </div>
+                    @endif
+                    <div class="d-none">
+                        @include('settings.partials.ai-provider-row', [
+                            'index' => '__INDEX__',
+                            'provider' => null,
+                            'activeId' => null,
+                            'canManage' => true,
+                            'template' => true,
+                        ])
+                    </div>
+                </div>
+            </div>
+
             <div class="crm-form__footer crm-form__footer--card">
                 <div class="text-secondary small">
                     @if ($canManage)
@@ -129,6 +175,16 @@
                 </div>
             @endforeach
         </div>
+
+        @can('checkBoxPermission', 'bumi.view')
+        <div class="crm-form__section">
+            <h3>Bumi</h3>
+            <div class="crm-form__desc">{{ __('Агенты, внешние каналы и автоответы') }}</div>
+            <a class="btn btn-ghost-secondary w-100 mt-2" href="{{ route('bumi.settings.index') }}">
+                <i class="ti ti-message-circle me-1"></i>{{ __('Bumi в чатах') }}
+            </a>
+        </div>
+        @endcan
 
         <div class="crm-form__section">
             <h3>{{ __('Приоритет источников') }}</h3>

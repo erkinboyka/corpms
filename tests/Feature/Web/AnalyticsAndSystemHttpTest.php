@@ -127,6 +127,37 @@ class AnalyticsAndSystemHttpTest extends TestCase
         $this->get('/analytics')->assertForbidden();
     }
 
+    /** SEC-01: audit-виджеты analytics не должны смешивать компании. */
+    public function test_audit_widgets_are_company_scoped(): void
+    {
+        $other = Company::create(['name' => 'Other Co', 'code' => 'otherco']);
+
+        foreach ([
+            ['company_id' => $other->id, 'action' => 'foreign_only_action'],
+            ['company_id' => $this->company->id, 'action' => 'own_only_action'],
+        ] as $log) {
+            DB::table('audit_logs')->insert($log + [
+                'object_type' => 'company',
+                'object_id' => 1,
+                'created_at' => now(),
+            ]);
+        }
+
+        $analytics = app(\App\Domains\Analytics\Services\AnalyticsService::class);
+        $companyId = (int) $this->company->id;
+
+        self::assertSame(1, $analytics->auditTrend(14, $companyId)['total']);
+        self::assertSame(
+            [['action' => 'own_only_action', 'count' => 1]],
+            $analytics->auditTopActions(14, $companyId),
+        );
+
+        $this->get('/analytics')
+            ->assertOk()
+            ->assertSee('own_only_action')
+            ->assertDontSee('foreign_only_action');
+    }
+
     /* -------------------- отчёты -------------------- */
 
     public function test_attendance_report_aggregates_and_exports(): void

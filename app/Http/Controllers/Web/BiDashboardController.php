@@ -9,9 +9,13 @@ use App\Domains\Bi\Jobs\RebuildBiMart;
 use App\Domains\Bi\Services\BiService;
 use App\Domains\DashboardGen\Jobs\GenerateAiDashboard;
 use App\Domains\DashboardGen\Services\AiClient;
+use App\Domains\DashboardGen\Services\BiAnalystChat;
+use App\Domains\DashboardGen\Services\WidgetCatalog;
+use App\Domains\DashboardGen\Services\WidgetSpecCompiler;
 use App\Domains\DashboardGen\Services\BiInstructionGuard;
 use App\Domains\DashboardGen\Services\WidgetQueryRunner;
 use App\Http\Controllers\Controller;
+use App\Models\BiChatMessage;
 use App\Models\BiDashboard;
 use App\Models\BiWidget;
 use App\Shared\Enums\BiWidgetKind;
@@ -22,6 +26,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -43,6 +48,8 @@ class BiDashboardController extends Controller
         $me = $request->user()->employee;
         \assert($me !== null);
 
+        Gate::authorize('viewAny', BiDashboard::class);
+
         $companyId = (int) $me->company_id;
         $month = (string) $request->query('month', now()->format('Y-m'));
 
@@ -55,7 +62,7 @@ class BiDashboardController extends Controller
         $default = $this->bi->ensureDefaultDashboard($companyId, $me->user_id);
 
         $dashboards = BiDashboard::query()
-            ->where('company_id', $companyId)
+            ->forCompany($companyId)
             ->withCount('widgets')
             ->orderByDesc('is_default')
             ->orderBy('name')
@@ -79,6 +86,7 @@ class BiDashboardController extends Controller
         $me = $request->user()->employee;
         \assert($me !== null);
         TenantGuard::ensure($dashboard, $me);
+        Gate::authorize('view', $dashboard);
 
         $companyId = (int) $me->company_id;
         $month = (string) $request->query('month', now()->format('Y-m'));
@@ -93,12 +101,12 @@ class BiDashboardController extends Controller
             ->orderBy('position')
             ->orderBy('id')
             ->get()
-            ->map(function (BiWidget $widget) use ($companyId, $from, $to): array {
+            ->map(function (BiWidget $widget) use ($dashboard, $companyId, $from, $to): array {
                 // SQL-виджет, сгенерированный ИИ: данные из query_spec, не из витрины
                 if ($widget->isAiWidget()) {
                     return [
                         'widget' => $widget,
-                        'data' => $this->aiWidgetData($widget, $companyId),
+                        'data' => $this->aiWidgetData($widget, $dashboard, $companyId),
                     ];
                 }
 
@@ -128,6 +136,8 @@ class BiDashboardController extends Controller
             'forecasts' => $forecasts,
             'catalog' => $this->bi->catalog(),
             'kinds' => BiWidgetKind::cases(),
+            'widgetFamilies' => app(WidgetCatalog::class)->families(),
+            'spanOptions' => [4, 6, 12],
             'canManage' => $this->permissions->check($request->user(), 'bi.manage'),
         ]);
     }
@@ -141,6 +151,7 @@ class BiDashboardController extends Controller
         $me = $request->user()->employee;
         \assert($me !== null);
         TenantGuard::ensure($dashboard, $me);
+        Gate::authorize('view', $dashboard);
 
         $widgets = $dashboard->widgets()
             ->orderBy('position')
@@ -164,11 +175,62 @@ class BiDashboardController extends Controller
         ]);
     }
 
+    /**
+     * Bumi в режиме /bi: инструментальные изменения текущего дашборда.
+     * Вопрос проверяется на BI-релевантность до вызова модели.
+     */
+    public function chat(Request $request, BiDashboard $dashboard, BiAnalystChat $chat): JsonResponse
+    {
+        $me = $request->user()->employee;
+        \assert($me !== null);
+        TenantGuard::ensure($dashboard, $me);
+        Gate::authorize('update', $dashboard);
+
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'max:2000'],
+        ], [], ['message' => __('запрос')]);
+
+        if (! app(BiInstructionGuard::class)->isRelevant($validated['message'])) {
+            return response()->json([
+                'ok' => false,
+                'error' => __('Запрос не относится к данным BI. Спросите о метриках, виджетах или показателях компании.'),
+            ], 422);
+        }
+
+        return response()->json($chat->reply($request->user(), $dashboard, $validated['message']));
+    }
+
+    /** Откат изменений, сделанных Bumi в одном ответе. */
+    public function undoChat(Request $request, BiDashboard $dashboard, BiChatMessage $message, BiAnalystChat $chat): JsonResponse
+    {
+        $me = $request->user()->employee;
+        \assert($me !== null);
+        TenantGuard::ensure($dashboard, $me);
+        Gate::authorize('update', $dashboard);
+
+        if ((int) $message->dashboard_id !== (int) $dashboard->id) {
+            abort(404, __('Сообщение не относится к дашборду'));
+        }
+
+        return response()->json(['ok' => true] + $chat->undo($request->user(), $dashboard, $message));
+    }
+
+    /** Оценка ответа Bumi (1–5). */
+    public function rateChat(Request $request, BiChatMessage $message, BiAnalystChat $chat): JsonResponse
+    {
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+        ]);
+
+        return response()->json($chat->rate($request->user(), $message, (int) $validated['rating']));
+    }
+
     /** Создание дашборда. */
     public function store(Request $request): RedirectResponse
     {
         $me = $request->user()->employee;
         \assert($me !== null);
+        Gate::authorize('create', BiDashboard::class);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -196,6 +258,7 @@ class BiDashboardController extends Controller
     {
         $me = $request->user()->employee;
         \assert($me !== null);
+        Gate::authorize('create', BiDashboard::class);
 
         $validated = $request->validate([
             'instruction' => ['required', 'string', 'max:2000'],
@@ -222,7 +285,7 @@ class BiDashboardController extends Controller
         try {
             $dashboard = BiDashboard::query()->create([
                 'company_id' => $me->company_id,
-                'name' => Str::limit($validated['instruction'], 255, ''),
+                'name' => __('Генерация дашборда'),
                 'is_default' => false,
                 'created_by' => $me->user_id,
                 'origin' => 'ai',
@@ -253,7 +316,7 @@ class BiDashboardController extends Controller
         }
 
         return redirect()->route('bi.dashboards.show', $dashboard)
-            ->with('status', __('Генерация дашборда запущена — обновите страницу через минуту.'));
+            ->with('status', __('Генерация дашборда запущена — страница обновится сама.'));
     }
 
     /**
@@ -263,7 +326,7 @@ class BiDashboardController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function aiWidgetData(BiWidget $widget, int $companyId): array
+    private function aiWidgetData(BiWidget $widget, BiDashboard $dashboard, int $companyId): array
     {
         $base = [
             'family' => $widget->widget_family,
@@ -282,6 +345,17 @@ class BiDashboardController extends Controller
             return $base + ['content' => null, 'last_error' => $widget->last_error ?? __('Спецификация запроса отсутствует.')];
         }
 
+        // Фильтры Bumi применяются поверх исходной спецификации: готовый SQL
+        // не правится строками, а пересобирается компилятором.
+        $filters = [
+            ...(is_array($dashboard->filters ?? null) ? $dashboard->filters : []),
+            ...(is_array($widget->filters ?? null) ? $widget->filters : []),
+        ];
+
+        if ($filters !== []) {
+            $spec = WidgetSpecCompiler::forCurrentConnection()->apply($spec, $filters);
+        }
+
         $runner = new WidgetQueryRunner(companyId: $companyId);
         $result = $runner->run($spec, (string) $widget->widget_family, $widget->widget_type);
 
@@ -293,7 +367,38 @@ class BiDashboardController extends Controller
             'content' => $result['data'],
             'meta' => $result['meta'] ?? [],
             'last_error' => null,
+            'has_data' => $this->widgetHasData($result['data']),
         ];
+    }
+
+    /**
+     * Признак того, что в ответе виджета есть хоть одна точка/строка.
+     * Агрегат без GROUP BY возвращает одну строку с NULL-меткой и нулём —
+     * это не данные, а пустое состояние виджета.
+     */
+    private function widgetHasData(array $content): bool
+    {
+        foreach (['rows', 'counters', 'categories', 'points', 'x', 'y'] as $key) {
+            if (!empty($content[$key])) {
+                return true;
+            }
+        }
+
+        $labels = $content['labels'] ?? [];
+
+        if (is_array($labels) && $labels !== []) {
+            foreach ($labels as $label) {
+                $label = trim((string) $label);
+
+                if ($label !== '' && $label !== '—' && $label !== '-') {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return !empty($content['series']);
     }
 
     /** Добавление виджета на дашборд. */
@@ -302,6 +407,7 @@ class BiDashboardController extends Controller
         $me = $request->user()->employee;
         \assert($me !== null);
         TenantGuard::ensure($dashboard, $me);
+        Gate::authorize('create', BiWidget::class);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -324,6 +430,72 @@ class BiDashboardController extends Controller
         return back()->with('status', __('Виджет «').$widget->title.__('» добавлен'));
     }
 
+    /**
+     * Точечное редактирование SQL-виджета: заголовок, семейство/тип, ширина
+     * и оформление. SQL и tenant-ограничения в query_spec не трогаются —
+     * меняется только визуальная часть спецификации.
+     */
+    public function updateWidget(Request $request, BiDashboard $dashboard, BiWidget $widget): RedirectResponse
+    {
+        $me = $request->user()->employee;
+        \assert($me !== null);
+        TenantGuard::ensure($dashboard, $me);
+
+        if ((int) $widget->dashboard_id !== (int) $dashboard->id) {
+            abort(404, __('Виджет не относится к дашборду'));
+        }
+
+        Gate::authorize('update', $widget);
+
+        $catalog = app(WidgetCatalog::class);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'widget_family' => ['required', Rule::in($catalog->names())],
+            'widget_type' => ['nullable', 'string', 'max:32'],
+            'span' => ['required', 'integer', Rule::in([4, 6, 12])],
+            'presentation' => ['nullable', 'json'],
+        ], [], [
+            'title' => __('название'),
+            'widget_family' => __('семейство'),
+            'widget_type' => __('тип'),
+            'span' => __('ширина'),
+        ]);
+
+        $family = (string) $validated['widget_family'];
+        $type = $validated['widget_type'] ?? null;
+        $type = is_string($type) && $type !== '' ? $type : null;
+
+        if (!$catalog->hasType($family, $type)) {
+            $type = $catalog->defaultType($family);
+        }
+
+        $payload = [
+            'title' => (string) $validated['title'],
+            'widget_family' => $family,
+            'widget_type' => $type,
+            'span' => (int) $validated['span'],
+        ];
+
+        if (isset($validated['presentation'])) {
+            $decoded = json_decode((string) $validated['presentation'], true);
+
+            if (is_array($widget->query_spec)) {
+                $spec = $widget->query_spec;
+                $spec['presentation'] = is_array($decoded) ? $decoded : [];
+                $payload['query_spec'] = $spec;
+            }
+        }
+
+        $old = $widget->only(array_keys($payload));
+
+        $widget->update($payload);
+
+        $this->audit->log($request->user(), 'bi.widget_updated', 'bi_dashboard', $dashboard->id, $old, $payload);
+
+        return back()->with('status', __('Виджет «').$widget->title.__('» обновлён'));
+    }
+
     /** Удаление виджета. */
     public function destroyWidget(Request $request, BiDashboard $dashboard, BiWidget $widget): RedirectResponse
     {
@@ -334,6 +506,8 @@ class BiDashboardController extends Controller
         if ((int) $widget->dashboard_id !== (int) $dashboard->id) {
             abort(404, __('Виджет не относится к дашборду'));
         }
+
+        Gate::authorize('delete', $widget);
 
         $widget->delete();
 

@@ -53,15 +53,27 @@ class WidgetSpecValidator
             return $this->fail('В спецификации нет ни одного запроса.');
         }
 
+        $bindings = is_array($spec['bindings'] ?? null) ? $spec['bindings'] : [];
         $columns = [];
 
         foreach ($queries as $name => $sql) {
-            $allowlist = $this->allowlistCheck($sql);
+            try {
+                // Проверяем тот же SQL, который в итоге уйдёт в исполнение:
+                // комментарии и строковые литералы не должны маскировать
+                // таблицы и tenant-предикат.
+                $clean = ReadOnlySqlGuard::sanitize($sql, null);
+            } catch (Throwable $e) {
+                return $this->fail(self::cleanDatabaseError($e->getMessage()));
+            }
+
+            $inspectable = preg_replace("/'(?:''|[^'])*'/", "''", $clean) ?? $clean;
+
+            $allowlist = $this->allowlistCheck($inspectable);
             if ($allowlist !== null) {
                 return $this->fail((count($queries) > 1 ? "Запрос «{$name}»: " : '').$allowlist);
             }
 
-            $tenant = $this->tenantCheck($sql);
+            $tenant = $this->tenantCheck($inspectable);
 
             if ($tenant !== null) {
                 return $this->fail(
@@ -70,7 +82,7 @@ class WidgetSpecValidator
             }
 
             try {
-                $probe = $this->runner->probe($sql);
+                $probe = $this->runner->probe($clean, $bindings);
             } catch (Throwable $e) {
                 return $this->fail($e->getMessage());
             }
@@ -171,7 +183,11 @@ class WidgetSpecValidator
                 continue;
             }
 
-            if (preg_match('/:company_id\b/', $sql) !== 1) {
+            // Достаточно только явного предиката равенства. ":company_id" в
+            // комментарии, строке, IN/!=/IS NULL tenant-фильтром не считается.
+            // Идентификатор может быть экранирован под MySQL/SQLite компилятором.
+            $tenantPredicate = '/(?<![A-Za-z0-9_])[`"\[]?company_id[`"\]]?\s*=\s*:company_id\b/i';
+            if (preg_match($tenantPredicate, $sql) !== 1) {
                 return "Таблица «{$table}» содержит company_id, но запрос её не фильтрует. "
                     . 'Добавь условие WHERE company_id = :company_id (значение подставит платформа).';
             }

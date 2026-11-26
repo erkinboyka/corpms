@@ -30,3 +30,9 @@ Schedule::call(function () {
 
 // LMS: retention for high-volume realtime data; business records are preserved.
 Schedule::command('lms:prune')->dailyAt('04:20')->name('lms.prune')->withoutOverlapping();
+
+// Надзор за воркерами: canary в оба пула раз в 5 минут, поиск зависших
+// заданий раз в 10 минут и отдельный health-report по пулам раз в 15 минут.
+Schedule::command('worker:selfcheck')->everyFiveMinutes()->withoutOverlapping()->name('ops.worker-selfcheck');
+Schedule::command('queue:watchdog --release')->everyTenMinutes()->withoutOverlapping()->name('ops.queue-watchdog');
+Schedule::command('queue:health')->everyFifteenMinutes()->withoutOverlapping()->name('ops.queue-health');

@@ -13,36 +13,7 @@
 (function (global) {
     'use strict';
 
-    /* --------------------------- минимальные стили -------------------------- */
-
-    if (typeof document !== 'undefined' && !document.getElementById('bi-widgets-style')) {
-        var style = document.createElement('style');
-        style.id = 'bi-widgets-style';
-        style.textContent = [
-            '.bi-widget{min-width:0}',
-            '.bi-widget .bi-chart-host{min-width:0;overflow:hidden}',
-            '.bi-widget .bi-pager{display:flex;align-items:center;justify-content:center;gap:.75rem;margin-top:.5rem;flex-wrap:wrap}',
-            '.bi-widget .bi-pager-label{font-size:.8125rem;color:var(--crm-muted,#667085)}',
-            '.bi-widget .bi-notice{font-size:.75rem;color:var(--crm-muted,#667085);margin-top:.35rem}',
-            '.bi-widget .bi-empty{padding:1rem 0;color:var(--crm-muted,#667085);font-size:.875rem}',
-            '.bi-widget .bi-error{padding:1rem 0;color:#d63939;font-size:.875rem}',
-            '.bi-widget .bi-counter-grid{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}',
-            '.bi-widget .bi-counter-card{min-width:0}',
-            '.bi-widget .bi-counter-value{font-size:1.75rem;line-height:1.2;font-weight:600;margin:0}',
-            '.bi-widget .bi-table{width:100%;border-collapse:collapse;font-size:.875rem}',
-            '.bi-widget .bi-table th,.bi-widget .bi-table td{padding:.45rem .6rem;border-bottom:1px solid var(--crm-border,#e6e7e9);text-align:left;vertical-align:top}',
-            '.bi-widget .bi-table th{font-weight:600;white-space:nowrap;cursor:pointer;user-select:none}',
-            '.bi-widget .bi-table tbody tr:nth-child(even){background:rgba(0,0,0,.02)}',
-            '.bi-widget .bi-table-compact th,.bi-widget .bi-table-compact td{padding:.25rem .45rem;font-size:.8125rem}',
-            '.bi-widget .bi-table-search{width:100%;max-width:260px;margin-bottom:.6rem}',
-            '.bi-widget .bi-table-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.6rem;font-size:.8125rem;color:var(--crm-muted,#667085);flex-wrap:wrap}',
-            '.bi-widget .bi-table-footer button{border:1px solid var(--crm-border,#e6e7e9);background:transparent;border-radius:4px;padding:.15rem .5rem;cursor:pointer}',
-            '.bi-widget .bi-table-footer button:disabled{opacity:.4;cursor:default}',
-            '.bi-widget .bi-funnel-steps{margin-top:.75rem;font-size:.8125rem}',
-            '.bi-widget .bi-funnel-steps div{display:flex;justify-content:space-between;border-top:1px solid var(--crm-border,#e6e7e9);padding:.25rem 0}'
-        ].join('\n');
-        document.head.appendChild(style);
-    }
+    /* Стили JS-виджетов живут в assets/css/bi-art.css — без runtime <style>. */
 
     /* ------------------------------ реестр --------------------------------- */
 
@@ -421,7 +392,7 @@
 
     function mountChart(container, config, state) {
         if (!global.ApexCharts) {
-            textNode(container, 'Не загружена библиотека ApexCharts.', 'bi-error');
+            state.fail('График недоступен — показаны данные без визуализации.');
             return null;
         }
 
@@ -435,7 +406,7 @@
             state.chart = chart;
             return chart;
         } catch (error) {
-            textNode(container, 'Ошибка виджета: ' + (error && error.message ? error.message : String(error)), 'bi-error');
+            state.fail('Не удалось отрисовать график — показаны данные без визуализации.');
             return null;
         }
     }
@@ -450,6 +421,7 @@
         prev.type = 'button';
         prev.className = 'btn btn-sm btn-ghost-secondary';
         prev.textContent = '◀';
+        prev.setAttribute('aria-label', 'Предыдущая страница графика');
         prev.disabled = axis.start === 0;
         prev.addEventListener('click', function () {
             state.offset = Math.max(0, axis.start - axis.size);
@@ -465,6 +437,7 @@
         next.type = 'button';
         next.className = 'btn btn-sm btn-ghost-secondary';
         next.textContent = '▶';
+        next.setAttribute('aria-label', 'Следующая страница графика');
         next.disabled = axis.end >= axis.total;
         next.addEventListener('click', function () {
             state.offset = Math.min(axis.total - axis.size, axis.start + axis.size);
@@ -1048,7 +1021,10 @@
 
     function formatCell(value) {
         if (value === null || value === undefined) return '';
-        if (typeof value === 'number') return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+        // Обычный пробел — как в серверном fallback (number_format).
+        if (typeof value === 'number') {
+            return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 }).replace(/\u00a0/g, ' ');
+        }
         return String(value);
     }
 
@@ -1071,6 +1047,7 @@
         tableEl.className = 'bi-table table table-vcenter card-table'
             + (options.striped ? ' table-striped' : '')
             + (options.compact ? ' bi-table-compact table-sm' : '');
+        tableEl.setAttribute('aria-label', 'Таблица данных виджета');
         wrap.appendChild(tableEl);
         container.appendChild(wrap);
 
@@ -1079,7 +1056,8 @@
         container.appendChild(footer);
 
         var stateTable = state.table || (state.table = { page: 1, query: '', sortColumn: null, sortOrder: 'asc' });
-        var perPage = options.compact ? 12 : 5;
+        // Одинаковая плотность с серверным fallback (12 строк).
+        var perPage = 12;
 
         function draw() {
             var visible = rows.filter(function (row) {
@@ -1124,6 +1102,11 @@
                         ? (stateTable.sortOrder === 'asc' ? ' asc' : ' desc')
                         : '');
                 button.textContent = String(header);
+                button.setAttribute('aria-label', 'Сортировать по колонке ' + String(header));
+
+                if (stateTable.sortColumn === index) {
+                    th.setAttribute('aria-sort', stateTable.sortOrder === 'asc' ? 'ascending' : 'descending');
+                }
                 button.addEventListener('click', function () {
                     if (stateTable.sortColumn === index) {
                         stateTable.sortOrder = stateTable.sortOrder === 'asc' ? 'desc' : 'asc';
@@ -1177,12 +1160,14 @@
             var prev = document.createElement('button');
             prev.type = 'button';
             prev.textContent = '◀';
+            prev.setAttribute('aria-label', 'Предыдущая страница таблицы');
             prev.disabled = stateTable.page <= 1;
             prev.addEventListener('click', function () { stateTable.page--; draw(); });
 
             var next = document.createElement('button');
             next.type = 'button';
             next.textContent = '▶';
+            next.setAttribute('aria-label', 'Следующая страница таблицы');
             next.disabled = stateTable.page >= totalPages;
             next.addEventListener('click', function () { stateTable.page++; draw(); });
 
@@ -1306,12 +1291,29 @@
             state.chart = null;
         }
 
+        // SSR-разметка сохраняется между перерисовками и возвращается при
+        // любом отказе рендера — не только при полностью пустом контейнере.
+        var fallback = state.ssr || container.innerHTML;
+        state.ssr = fallback;
+
+        function fail(message) {
+            container.textContent = '';
+
+            if (fallback) {
+                container.innerHTML = fallback;
+                return;
+            }
+
+            textNode(container, message, 'bi-error');
+        }
+        state.fail = fail;
+
         container.textContent = '';
 
         var family = spec.family;
 
         if (!FAMILIES[family]) {
-            textNode(container, 'Семейство не поддерживается', 'bi-error');
+            fail('Нет данных для отображения.');
             return { destroy: function () {} };
         }
 
@@ -1326,15 +1328,21 @@
         });
 
         if (!hasData(family, spec.content)) {
-            textNode(container, 'Нет данных', 'bi-empty');
+            fail('Нет данных');
             return { destroy: function () {} };
         }
 
-        var prepared = prepare(family, spec.content, options, view);
+        var prepared;
+        try {
+            prepared = prepare(family, spec.content, options, view);
+        } catch (error) {
+            fail('Не удалось подготовить данные виджета.');
+            return { destroy: function () {} };
+        }
         var renderer = RENDERERS[family];
 
         if (!renderer) {
-            textNode(container, 'Семейство не поддерживается', 'bi-error');
+            fail('Нет данных для отображения.');
             return { destroy: function () {} };
         }
 
@@ -1343,8 +1351,12 @@
             attachNotice(container, prepared.notice);
             attachPager(container, spec, prepared.axis, state);
         } catch (error) {
-            container.textContent = '';
-            textNode(container, 'Ошибка виджета: ' + (error && error.message ? error.message : String(error)), 'bi-error');
+            fail('Не удалось отрисовать виджет — показаны исходные данные.');
+        }
+
+        // Некоторые рендеры возвращаются раньше, чем добавят узел в DOM.
+        if (!container.childNodes.length && fallback) {
+            container.innerHTML = fallback;
         }
 
         return {

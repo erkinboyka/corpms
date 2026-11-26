@@ -463,6 +463,7 @@ header.navbar .avatar { box-shadow: 0 0 0 2px var(--crm-surface-solid), 0 0 0 3.
     flex-wrap: wrap;
     gap: 6px;
     padding: 10px 0 0;
+    margin-bottom: var(--crm-space-2);
     font-size: 12.5px;
     line-height: 1.4;
 }
@@ -851,12 +852,114 @@ a.bm-crumbs__item:hover { color: var(--crm-accent); }
 }
 .crm-auth .form-control, .crm-auth .btn { min-height: var(--crm-tap); }
 
+/* ----------------------------------------------------------------------------
+    Bumi: база знаний — широкие формы и понятные шаги без узких сайдбаров.
+    ---------------------------------------------------------------------------- */
+.bumi-kb { max-width: 100%; min-width: 0; }
+.crm-form__row--1 { grid-template-columns: minmax(0, 1fr); }
+.bumi-kb__stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 100%;
+    padding: 12px 14px;
+    background: var(--crm-surface-solid);
+    border: 1px solid var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+}
+.bumi-kb__stat-icon {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--crm-radius-md);
+    background: color-mix(in srgb, var(--crm-accent) 10%, var(--crm-surface-solid));
+    color: var(--crm-accent);
+}
+.bumi-kb__section { padding: var(--crm-space-5); }
+.bumi-kb__head { display: flex; align-items: flex-start; gap: 14px; }
+.bumi-kb__step {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--crm-accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+}
+.bumi-kb__head h3 { margin: 1px 0 5px; font-size: var(--crm-text-section); }
+.bumi-kb__head > .btn { flex: none; white-space: nowrap; }
+.bumi-kb__add,
+.bumi-kb__upload {
+    padding: 16px;
+    border: 1px dashed var(--crm-border);
+    border-radius: var(--crm-radius-lg);
+    background: color-mix(in srgb, var(--crm-accent) 3%, var(--crm-surface-solid));
+}
+.bumi-kb__add-title { font-weight: 650; color: var(--crm-accent); }
+
+/* TinyMCE внутри Bumi:editor занимает всю доступную ширину секции. */
+.bumi-rich { width: 100%; min-width: 0; max-width: 100%; }
+.bumi-rich textarea.form-control { width: 100%; }
+.bumi-rich .tox-tinymce { width: 100% !important; max-width: 100%; }
+.bumi-rich .tox-editor-container { min-width: 0; }
+
+/* Bumi: карточка агента и публичный чат в стиле рабочего чата Bumi. */
+.bumi-agent-shell__layout { align-items: flex-start; }
+.bumi-agent-shell__layout aside {
+    position: sticky;
+    top: 16px;
+    align-self: flex-start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.bumi-agent-shell__identity .card-body { padding-top: 1.25rem; }
+.bumi-agent-shell__face {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto;
+    border: 1px solid var(--crm-border);
+    border-radius: 38%;
+    background: rgba(var(--crm-accent-rgb), .10);
+}
+.bumi-agent-shell__face svg { width: 86%; height: 86%; }
+.bumi-agent-shell__facts .list-group-item { padding-block: .5rem; }
+.bumi-agent-shell__nav .list-group-item {
+    border-inline-start: 0;
+    border-inline-end: 0;
+    padding: .7rem .9rem;
+    color: var(--crm-text);
+}
+.bumi-agent-shell__nav .list-group-item.active {
+    background: rgba(var(--crm-accent-rgb), .10);
+    border-color: transparent;
+    color: var(--crm-accent);
+    font-weight: 650;
+}
+.bumi-agent-shell__nav .list-group-item.active .text-secondary { color: var(--crm-accent); }
+.bumi-agent-shell__nav-hint { line-height: 1.25; }
+
+.bm-public-chat .bm-assistant__workspace { max-width: 72rem; }
+.bm-public-chat .bm-assistant__thread-header .crm-chip { flex: none; }
+
 @media (max-width: 991.98px) {
     .bm-overview__summary,
     .bm-finance-accounts .crm-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .bm-assistant__workspace { grid-template-columns: minmax(0, 1fr); }
+    .bumi-agent-shell__layout aside { position: static; max-height: none; overflow: visible; }
 }
 @media (max-width: 575.98px) {
+    .bumi-kb__head { flex-wrap: wrap; }
+    .bumi-kb__head > .btn { margin-left: 48px; }
     .bm-project-progress { grid-template-columns: minmax(0, 1fr) auto; }
     .bm-project-progress > div { grid-column: 1 / -1; }
     .bm-overview__hero .row > * { flex: 0 0 100%; }

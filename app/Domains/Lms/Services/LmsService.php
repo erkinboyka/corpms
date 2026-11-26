@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Lms\Services;
 
 use App\Domains\Audit\Services\AuditService;
+use App\Domains\Notifications\Services\NotificationService;
 use App\Models\Employee;
 use App\Models\LmsActivity;
 use App\Models\LmsAssignment;
@@ -99,7 +100,7 @@ class LmsService
         ];
     }
 
-    /** @param array{title:string,summary?:string,description?:string,cover_color?:string,publish?:bool} $data */
+    /** @param array{title:string,summary?:string,description?:string,bumi_scenario?:string,cover_color?:string,publish?:bool} $data */
     public function createCourse(array $data, User $user, Employee $me): LmsCourse
     {
         $publish = ! empty($data['publish']);
@@ -110,6 +111,9 @@ class LmsService
                 'title' => trim((string) $data['title']),
                 'summary' => $data['summary'] ?? null,
                 'description' => $data['description'] ?? null,
+                'bumi_scenario' => filled($data['bumi_scenario'] ?? null)
+                    ? trim((string) $data['bumi_scenario'])
+                    : null,
                 'cover_color' => ! empty($data['cover_color']) ? $data['cover_color'] : '#206bc4',
                 'status' => $publish ? LmsCourseStatus::Published : LmsCourseStatus::Draft,
                 'published_at' => $publish ? now() : null,
@@ -129,6 +133,54 @@ class LmsService
         });
 
         $this->audit->log($user, 'lms.course.created', 'LmsCourse', $course->id);
+
+        return $course;
+    }
+
+    /**
+     * Сценарий репетитора задаёт владелец/преподаватель курса. Bumi дальше
+     * работает строго по нему: и в LLM-промпте, и в локальном фолбэке.
+     */
+    public function updateBumiScenario(LmsCourse $course, ?string $scenario, User $user, Employee $me): LmsCourse
+    {
+        $this->assertCompany($me, $course->company_id);
+        $scenario = filled($scenario) ? mb_substr(trim((string) $scenario), 0, 20000) : null;
+        $old = $course->bumi_scenario;
+
+        DB::transaction(function () use ($course, $scenario, $me): void {
+            $course->forceFill(['bumi_scenario' => $scenario])->save();
+            $this->recordActivity(
+                (int) $course->company_id,
+                (int) $course->id,
+                (int) $me->id,
+                'bumi_scenario',
+                $scenario === null
+                    ? __('Сценарий Bumi очищен').' «'.$course->title.'»'
+                    : __('Обновлён сценарий Bumi').' «'.$course->title.'»',
+            );
+        });
+
+        $this->audit->log(
+            $user,
+            'lms.course.bumi_scenario.updated',
+            'LmsCourse',
+            (int) $course->id,
+            $old,
+            $scenario,
+            null,
+            (int) $course->company_id,
+        );
+
+        $recipient = $course->creator;
+        if ($recipient instanceof Employee && (int) $recipient->id !== (int) $me->id) {
+            app(NotificationService::class)->notify(
+                $recipient,
+                'lms_bumi_scenario',
+                __('Обновлён сценарий Bumi'),
+                __('Курс «:course»: Bumi будет помогать студентам по новому сценарию.', ['course' => $course->title]),
+                $course,
+            );
+        }
 
         return $course;
     }

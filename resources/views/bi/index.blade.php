@@ -109,6 +109,6 @@
 
 @push('scripts')
 <script>document.body.classList.add('bi-page');</script>
-<script src="/assets/js/bumi-bi-panel.js?v=5"></script>
+<script src="/assets/js/bumi-bi-panel.js?v=7"></script>
 @endpush
 @endsection

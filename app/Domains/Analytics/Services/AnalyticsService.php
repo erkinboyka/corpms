@@ -401,10 +401,12 @@ class AnalyticsService
      *
      * @return array{days: array<int, array{date: CarbonImmutable, count: int}>, total: int}
      */
-    public function auditTrend(int $days = 14): array
+    public function auditTrend(int $days, int $companyId): array
     {
         $from = CarbonImmutable::today()->subDays($days - 1);
         $rows = DB::table('audit_logs')
+            // SEC-01: без tenant-предиката сводка утекает в другую компанию
+            ->where('company_id', $companyId)
             ->where('created_at', '>=', $from->toDateTimeString())
             ->selectRaw('DATE(created_at) as d, count(*) as c')
             ->groupBy('d')
@@ -423,11 +425,13 @@ class AnalyticsService
     }
 
     /** Самые частые действия журнала за период (для владельцев audit.view). */
-    public function auditTopActions(int $days = 14, int $limit = 6): array
+    public function auditTopActions(int $days, int $companyId, int $limit = 6): array
     {
         $from = CarbonImmutable::today()->subDays($days - 1);
 
         return DB::table('audit_logs')
+            // SEC-01: журнал аудита всегда ограничен компанией вызывающего
+            ->where('company_id', $companyId)
             ->where('created_at', '>=', $from->toDateTimeString())
             ->selectRaw('action, count(*) as c')
             ->groupBy('action')

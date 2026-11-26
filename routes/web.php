@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ServiceWorkerController;
 use App\Http\Controllers\Web\AccountingChartController;
 use App\Http\Controllers\Web\AccountingDocumentController;
 use App\Http\Controllers\Web\AccountingEntryController;
@@ -12,7 +13,13 @@ use App\Http\Controllers\Web\AiController;
 use App\Http\Controllers\Web\AnalyticsController;
 use App\Http\Controllers\Web\AttendanceController;
 use App\Http\Controllers\Web\AttendanceCorrectionController;
+use App\Http\Controllers\Web\AttendanceOffsiteController;
 use App\Http\Controllers\Web\AuditController;
+use App\Http\Controllers\Web\BumiChatController;
+use App\Http\Controllers\Web\BumiSettingsController;
+use App\Http\Controllers\Web\BumiTutorController;
+use App\Http\Controllers\Web\BumiVoiceController;
+use App\Http\Controllers\Web\BumiVoiceRelayController;
 use App\Http\Controllers\Web\BackupController;
 use App\Http\Controllers\Web\BiDashboardController;
 use App\Http\Controllers\Web\BiMetricsController;
@@ -80,6 +87,7 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
+Route::get('/sw.js', [ServiceWorkerController::class, 'show'])->name('service-worker');
 Route::view('/', 'welcome')->name('welcome');
 Route::redirect('/welcome', '/');
 Route::redirect('/landing', '/')->name('landing');
@@ -100,11 +108,18 @@ Route::get('/sitemap.xml', function () {
     return response($xml, 200)->header('Content-Type', 'application/xml');
 })->name('sitemap');
 
+/* Публичный микрофон-relay: без входа, но только для whitelist родительских origin. */
+Route::get('/bumi/voice/relay', [BumiVoiceRelayController::class, 'show'])->name('bumi.voice.relay');
+
 /* Публичная подпись по QR: достаточно одноразового токена из ссылки (без входа). */
 Route::get('/sign/{token}', [DocumentController::class, 'showQrSign'])
     ->middleware('throttle:30,1')->name('signature.qr.show');
 Route::post('/sign/{token}', [DocumentController::class, 'signByQr'])
     ->middleware('throttle:10,1')->name('signature.qr.sign');
+
+// Публичная демо-страница канала «Чат на сайте»: клиент пишет Bumi без входа.
+Route::get('/bumi/chat/{channel:public_token}', [BumiSettingsController::class, 'widget'])
+    ->middleware('throttle:60,1')->name('bumi.chat.show');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -175,6 +190,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/attendance/corrections', [AttendanceCorrectionController::class, 'store'])->middleware('permission:attendance.correct')->name('attendance.corrections.store');
     Route::post('/attendance/corrections/{correction}/approve', [AttendanceCorrectionController::class, 'approve'])->middleware('permission:attendance.corrections.approve')->name('attendance.corrections.approve');
     Route::post('/attendance/corrections/{correction}/reject', [AttendanceCorrectionController::class, 'reject'])->middleware('permission:attendance.corrections.approve')->name('attendance.corrections.reject');
+
+    // Удалённая работа: PENDING не даёт присутствия, APPROVED — PRESENT без face.
+    Route::get('/attendance/offsite', [AttendanceOffsiteController::class, 'index'])->middleware('permission:attendance.offsite.view')->name('attendance.offsite');
+    Route::post('/attendance/offsite', [AttendanceOffsiteController::class, 'store'])->middleware('permission:attendance.offsite.request')->name('attendance.offsite.store');
+    Route::post('/attendance/offsite/{offsite}/approve', [AttendanceOffsiteController::class, 'approve'])->name('attendance.offsite.approve');
+    Route::post('/attendance/offsite/{offsite}/reject', [AttendanceOffsiteController::class, 'reject'])->name('attendance.offsite.reject');
+    Route::post('/attendance/offsite/{offsite}/cancel', [AttendanceOffsiteController::class, 'cancel'])->name('attendance.offsite.cancel');
 
     /* ---------- зарплата ---------- */
     Route::get('/payroll', [PayrollController::class, 'index'])->middleware('permission:payroll.view')->name('payroll.index');
@@ -303,7 +325,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/bi/dashboards/{dashboard}/generation-status', [BiDashboardController::class, 'generationStatus'])->middleware(['permission:bi.view', 'throttle:30,1'])->name('bi.dashboards.generation-status');
     Route::get('/bi/dashboards/{dashboard}', [BiDashboardController::class, 'show'])->middleware('permission:bi.view')->name('bi.dashboards.show');
     Route::post('/bi/dashboards/{dashboard}/widgets', [BiDashboardController::class, 'storeWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.store');
+    Route::put('/bi/dashboards/{dashboard}/widgets/{widget}', [BiDashboardController::class, 'updateWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.update');
     Route::delete('/bi/dashboards/{dashboard}/widgets/{widget}', [BiDashboardController::class, 'destroyWidget'])->middleware('permission:bi.manage@company')->name('bi.widgets.destroy');
+    Route::post('/bi/dashboards/{dashboard}/chat', [BiDashboardController::class, 'chat'])->middleware(['permission:bi.manage@company', 'throttle:15,1,bi.chat'])->name('bi.dashboards.chat');
+    Route::post('/bi/dashboards/{dashboard}/chat/{message}/undo', [BiDashboardController::class, 'undoChat'])->middleware(['permission:bi.manage@company', 'throttle:15,1,bi.chat.undo'])->name('bi.chat.undo');
+    Route::post('/bi/chat/messages/{message}/rating', [BiDashboardController::class, 'rateChat'])->middleware(['permission:bi.view', 'throttle:30,1,bi.chat.rate'])->name('bi.chat.rating');
 
     /* ---------- документы и подписи ---------- */
     Route::get('/documents', [DocumentController::class, 'index'])->middleware('permission:documents.view')->name('documents.index');
@@ -369,6 +395,28 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('permission:settings.view@company')->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->middleware('permission:settings.manage@company')->name('settings.update');
 
+    /* ---------- Bumi: агенты, каналы, автоответы (по образцу Velora Agents) ---------- */
+    Route::get('/settings/bumi', [BumiSettingsController::class, 'index'])->middleware('permission:bumi.view@company')->name('bumi.settings.index');
+    Route::get('/settings/bumi/agents/{agent}', [BumiSettingsController::class, 'showAgent'])->middleware('permission:bumi.view@company')->name('bumi.settings.agent');
+    Route::post('/settings/bumi/agents/{agent}', [BumiSettingsController::class, 'updateAgent'])->middleware('permission:bumi.manage@company')->name('bumi.settings.agent.update');
+    Route::post('/settings/bumi/agents/{agent}/toggle', [BumiSettingsController::class, 'toggleAgent'])->middleware('permission:bumi.manage@company')->name('bumi.settings.agent.toggle');
+    Route::post('/settings/bumi/agents/{agent}/knowledge', [BumiSettingsController::class, 'updateKnowledge'])->middleware('permission:bumi.manage@company')->name('bumi.settings.agent.knowledge');
+    Route::post('/settings/bumi/agents/{agent}/knowledge/items', [BumiSettingsController::class, 'storeKnowledgeItem'])->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.items.store');
+    Route::post('/settings/bumi/agents/{agent}/knowledge/upload', [BumiSettingsController::class, 'uploadKnowledgeFile'])->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.upload');
+    Route::post('/settings/bumi/agents/{agent}/knowledge/pack', [BumiSettingsController::class, 'seedKnowledgePack'])->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.pack');
+    Route::post('/settings/bumi/knowledge-items/{item}/update', [BumiSettingsController::class, 'updateKnowledgeItem'])->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.item.update');
+    Route::post('/settings/bumi/knowledge-items/{item}/toggle', [BumiSettingsController::class, 'toggleKnowledgeItem'])->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.item.toggle');
+    Route::post('/settings/bumi/knowledge-items/{item}/delete', [BumiSettingsController::class, 'deleteKnowledgeItem'])->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.item.delete');
+    Route::post('/settings/bumi/knowledge-items/restore/{token}', [BumiSettingsController::class, 'restoreKnowledgeItem'])->where('token', '[a-z0-9]+')->middleware('permission:bumi.manage@company')->name('bumi.settings.knowledge.item.restore');
+    Route::post('/settings/bumi/agents/{agent}/playground', [BumiSettingsController::class, 'playground'])->middleware('permission:bumi.manage@company')->name('bumi.settings.agent.playground');
+    Route::post('/settings/bumi/agents/{agent}/playground/generate', [BumiSettingsController::class, 'generatePlaygroundQuestions'])->middleware('permission:bumi.manage@company')->name('bumi.settings.playground.generate');
+
+    Route::get('/settings/bumi/channels/{channel}', [BumiSettingsController::class, 'showChannel'])->middleware('permission:bumi.view@company')->name('bumi.settings.channel');
+    Route::post('/settings/bumi/channels/{channel}', [BumiSettingsController::class, 'updateChannel'])->middleware('permission:bumi.manage@company')->name('bumi.settings.channel.update');
+    Route::post('/settings/bumi/channels/{channel}/toggle', [BumiSettingsController::class, 'toggleChannel'])->middleware('permission:bumi.manage@company')->name('bumi.settings.channel.toggle');
+    Route::post('/settings/bumi/channels/{channel}/token', [BumiSettingsController::class, 'regenerateToken'])->middleware('permission:bumi.manage@company')->name('bumi.settings.channel.token');
+    Route::post('/settings/bumi/messages/{message}/retry', [BumiSettingsController::class, 'retryMessage'])->middleware('permission:bumi.manage@company')->name('bumi.settings.message.retry');
+
     Route::get('/backups', [BackupController::class, 'index'])->middleware(['platform', 'throttle:30,1'])->name('backups.index');
 
     Route::get('/certificates', [CertificateController::class, 'index'])->middleware('permission:settings.view@company')->name('certificates.index');
@@ -390,6 +438,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai', [AiController::class, 'ask'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.ask');
     Route::post('/ai/message', [AiController::class, 'message'])->middleware(['permission:analytics.ai.use', 'throttle:15,1'])->name('ai.message');
     Route::get('/ai/files/{file}', [AiController::class, 'download'])->where('file', '[0-9A-Za-z]{26}\.(?:png|svg|csv|html|txt|pptx)')->middleware('permission:analytics.ai.use')->name('ai.files.download');
+
+    /* ---------- Bumi: роли, голос и репетитор LMS ---------- */
+    Route::post('/bumi/ask', [BumiChatController::class, 'ask'])
+        ->middleware(['permission:analytics.ai.use|lms.view', 'throttle:15,1'])
+        ->name('bumi.ask');
+    Route::post('/bumi/voice/transcribe', [BumiVoiceController::class, 'transcribe'])
+        ->middleware(['permission:analytics.ai.use|lms.view', 'throttle:30,1'])
+        ->name('bumi.voice.transcribe');
+    Route::post('/bumi/voice/synthesize', [BumiVoiceController::class, 'synthesize'])
+        ->middleware(['permission:analytics.ai.use|lms.view', 'throttle:30,1'])
+        ->name('bumi.voice.synthesize');
+    Route::post('/lms/lessons/{lesson}/bumi/ask', [BumiTutorController::class, 'ask'])
+        ->middleware(['permission:lms.view', 'throttle:30,1'])
+        ->name('lms.lessons.bumi.ask');
 
     /* ---------- BM Chat ---------- */
     Route::get('/chat', [ChatController::class, 'index'])->middleware(['permission:chat.view', 'throttle:120,1'])->name('chat.index');
@@ -450,6 +512,7 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware(['permission:lms.manage|lms.teach', 'throttle:60,1'])->group(function (): void {
             Route::post('/courses', [LmsController::class, 'storeCourse'])->name('lms.courses.store');
+            Route::post('/courses/{course}/bumi-scenario', [LmsController::class, 'updateBumiScenario'])->name('lms.courses.bumi-scenario');
             Route::post('/courses/{course}/lessons', [LmsController::class, 'storeLesson'])->name('lms.lessons.store');
             Route::post('/assignments', [LmsController::class, 'storeAssignment'])->name('lms.assignments.store');
             Route::post('/assignments/{submission}/review', [LmsController::class, 'reviewAssignment'])->name('lms.assignments.review');

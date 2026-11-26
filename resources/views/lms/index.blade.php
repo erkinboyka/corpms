@@ -148,6 +148,12 @@
                             <label class="form-label" for="lms-course-desc">{{ __('Программа') }}</label>
                             <textarea data-crm-rich id="lms-course-desc" name="description" class="form-control" rows="4"></textarea>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="lms-course-bumi-scenario"><i class="ti ti-brain me-1"></i>{{ __('Сценарий Bumi') }}</label>
+                            <textarea id="lms-course-bumi-scenario" name="bumi_scenario" class="form-control" rows="4" maxlength="20000"
+                                      placeholder="{{ __('Например: сначала спроси, что уже ясно; потом дай подсказку; объясняй только по материалам курса') }}">{{ old('bumi_scenario') }}</textarea>
+                            <div class="form-hint">{{ __('По этому сценарию Bumi будет помогать студентам на уроках курса.') }}</div>
+                        </div>
                         @include('partials.entity-photo-field', ['id' => 'lms-course-photo', 'photoPath' => null])
                         <div class="row g-3 align-items-end">
                             <div class="col-auto">

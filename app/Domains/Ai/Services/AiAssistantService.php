@@ -35,6 +35,7 @@ class AiAssistantService
         protected DocumentRagService $rag,
         protected AiToolRegistry $tools,
         protected AiMemoryService $memory,
+        protected AiProviderService $providers,
     ) {}
 
     public function ask(Employee $asker, string $question): AiConversation
@@ -230,14 +231,12 @@ class AiAssistantService
 
     protected function llmEnabled(): bool
     {
-        $settings = app(SettingsService::class);
+        $credentials = $this->providers->credentials();
 
-        $baseUrl = (string) $settings->get('corpms.ai.base_url');
-
-        return $baseUrl !== ''
-            && $settings->get('corpms.ai.api_key') !== ''
+        return $credentials['base_url'] !== ''
+            && $credentials['api_key'] !== ''
             // даже унаследованная из БД настройка не должна стать SSRF-точкой
-            && AiEndpointGuard::isAllowed($baseUrl.'/chat/completions');
+            && AiEndpointGuard::isAllowed($credentials['base_url'].'/chat/completions');
     }
 
     /**
@@ -254,11 +253,11 @@ class AiAssistantService
      */
     protected function llmAnswer(array $facts, string $question, array $history = [], ?string &$answerText = null, bool $background = false, array $rag = [], ?Employee $asker = null, ?array &$sourceItems = null): bool
     {
-        $settings = app(SettingsService::class);
-        $baseUrl = rtrim((string) $settings->get('corpms.ai.base_url'), '/');
-        $apiKey = (string) $settings->get('corpms.ai.api_key');
-        $model = (string) ($settings->get('corpms.ai.model') ?? 'gpt-4o-mini');
-        $timeout = (int) ($settings->get('corpms.ai.timeout') ?? 30);
+        $credentials = $this->providers->credentials();
+        $baseUrl = $credentials['base_url'];
+        $apiKey = $credentials['api_key'];
+        $model = $credentials['model'];
+        $timeout = $credentials['timeout'];
         if (! $background) {
             $timeout = $this->syncTimeout($timeout); // D3: синхронный вызов не ждёт дольше потолка
         }

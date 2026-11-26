@@ -21,6 +21,9 @@
 .tour-narrator[data-mood=curious] {--nod:-9deg;}
 .tour-narrator[data-mood=wink] {--nod:7deg;}
 .tour-narrator[data-mood=surprised] {--nod:-4deg;}
+.tour-narrator[data-mood=thinking] {--nod:-5deg;}
+.tour-narrator[data-mood=proud] {--nod:5deg;}
+.tour-narrator[data-mood=angry] {--nod:-12deg;}
 .tour-narrator[data-speaking=true] .mascot-head {animation:guide-nod 1.15s ease-in-out alternate infinite;}
 .tour-narrator[data-speaking=true] :is(.mascot-mouth,.mascot-head>g:last-child .mascot-expression) {transform-box:fill-box;transform-origin:center;animation:guide-talk .33s ease-in-out alternate infinite;}
 @keyframes guide-nod {from{transform:rotate(var(--nod,0deg));}to{transform:translateY(-4px) rotate(calc(var(--nod,0deg) + 4deg));}}

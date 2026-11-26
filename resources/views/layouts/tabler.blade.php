@@ -1,3 +1,11 @@
+@php
+    $isBiPage = request()->is('bi', 'bi/*');
+    // Публичный чат Bumi, настройки Bumi и BI не используют LMS, legal и realtime.
+    // Оставляем тяжёлые ассеты только там, где они реально нужны.
+    $isQuietPage = $isBiPage
+        || request()->is('bumi/chat/*')
+        || request()->is('settings/bumi', 'settings/bumi/*');
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -55,31 +63,51 @@
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
     <link rel="stylesheet" href="/assets/css/effects.css?v62">
     <link rel="stylesheet" href="/assets/css/corpms.css?v9">
-    <link rel="stylesheet" href="/assets/css/bm-ui.css?v22">
-    <link rel="stylesheet" href="/assets/css/ai-panel.css?v16">
+    <link rel="stylesheet" href="/assets/css/bm-ui.css?v28">
+    <link rel="stylesheet" href="/assets/css/ai-panel.css?v18">
     <link rel="stylesheet" href="/assets/css/motion.css?v8">
-    <link rel="stylesheet" href="/assets/css/ui-fixes.css?v3">
+    <link rel="stylesheet" href="/assets/css/ui-fixes.css?v6">
     <script src="/assets/vendor/tabler.min.js" defer></script>
-    <script src="/assets/js/corpms.js?v54" defer></script>
+    <script src="/assets/js/corpms.js?v58" defer></script>
     <script src="/assets/js/bm-ui.js?v4" defer></script>
     <script src="/assets/js/crm-select.js?v2" defer></script>
-    <script src="/assets/js/lms.js?v6" defer></script>
-    <script src="/assets/js/lms-whiteboard.js?v1" defer></script>
-    <script src="/assets/js/lms-meeting.js?v1" defer></script>
-    <script src="/assets/js/lms-pulse.js?v1" defer></script>
-    <script src="/assets/js/ai-panel.js?v18" defer></script>
-    <script src="/assets/vendor/echo/pusher.min.js" defer></script>
-    <script src="/assets/vendor/echo/echo.iife.js" defer></script>
-    <script src="/assets/js/bm-realtime.js?v1" defer></script>
+    @unless ($isQuietPage)
+        <script src="/assets/js/lms.js?v6" defer></script>
+        <script src="/assets/js/lms-whiteboard.js?v1" defer></script>
+        <script src="/assets/js/lms-meeting.js?v1" defer></script>
+        <script src="/assets/js/lms-pulse.js?v1" defer></script>
+        <script src="/assets/vendor/echo/pusher.min.js" defer></script>
+        <script src="/assets/vendor/echo/echo.iife.js" defer></script>
+        <script src="/assets/js/bm-realtime.js?v1" defer></script>
+    @endunless
+    @include('partials.bumi-i18n')
+    <script src="/assets/js/bumi-persona.js?v4" defer></script>
+    <script src="/assets/js/bumi-voice.js?v2" defer></script>
+    <script src="/assets/js/ai-panel.js?v23" defer></script>
+    @if (request()->is('settings/bumi', 'settings/bumi/*'))
+        <script src="/assets/js/bumi-settings-ux.js?v4" defer></script>
+    @endif
     <link rel="icon" type="image/svg+xml" href="/assets/bm-mark.svg">
     <link rel="stylesheet" href="/assets/css/workspace.css?v31">
-    <link rel="stylesheet" href="/assets/css/bumi-tools.css?v2">
-    <link rel="stylesheet" href="/assets/css/legal.css?v3">
+    <link rel="stylesheet" href="/assets/css/bumi-tools.css?v5">
+    <link rel="stylesheet" href="/assets/css/bumi-persona.css?v4">
+    @unless ($isQuietPage)
+        <link rel="stylesheet" href="/assets/css/legal.css?v3">
+        <link rel="stylesheet" href="/assets/css/lms.css?v11">
+    @endunless
     <link rel="stylesheet" href="/assets/css/crm-select.css?v3">
-    <link rel="stylesheet" href="/assets/css/lms.css?v11">
     @stack('styles')
 </head>
-<body class="crm-app @yield('body_class')">
+<body class="crm-app @yield('body_class')"
+      @if(isset($bumi)) data-bumi-mood="{{ $bumi->mood->value }}" data-bumi-line="{{ $bumi->line }}" data-bumi-reason="{{ $bumi->reason }}" @endif
+      @if(isset($bumiVoice)) data-bumi-conversation="{{ (bool) ($bumiVoice['enabled'] ?? false) ? '1' : '0' }}"
+          data-bumi-auto-speak="{{ (bool) ($bumiVoice['auto_speak'] ?? true) ? '1' : '0' }}"
+          data-bumi-tts="{{ $bumiVoice['tts'] ?? 'browser' }}" data-bumi-stt="{{ $bumiVoice['stt'] ?? 'server' }}"
+          data-bumi-voice-lang="{{ $bumiVoice['lang'] ?? 'ru-RU' }}"
+          data-bumi-voice-rate="{{ $bumiVoice['rate'] ?? 1 }}" data-bumi-voice-pitch="{{ $bumiVoice['pitch'] ?? 1 }}"
+          data-bumi-voice-name="{{ $bumiVoice['voice_name'] ?? '' }}"
+          data-bumi-voice-relay="{{ $bumiVoice['relay_url'] ?? '' }}" @endif
+          @if(isset($bumiRole)) data-bumi-role="{{ $bumiRole->role->value }}" data-bumi-role-scope="{{ $bumiRole->scope }}" @endif>
 <a class="bm-skip-link visually-hidden-focusable" href="#main-content" data-crm-palette-background>{{ __('Перейти к содержанию') }}</a>
 <div class="page" data-crm-palette-background>
 
@@ -185,6 +213,17 @@
                                     </ul>
                                 @endif
                             </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></button>
+                    </div>
+                @endif
+
+                {{-- единый видимый ответ на успешные POST-действия (Bumi, BI, настройки) --}}
+                @if (session('status'))
+                    <div class="alert alert-success alert-dismissible mb-3" role="status" data-test="flash-status">
+                        <div class="d-flex">
+                            <div><i class="ti ti-circle-check icon alert-icon"></i></div>
+                            <div>{{ session('status') }}</div>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __("Закрыть") }}"></button>
                     </div>
@@ -349,9 +388,16 @@
         </div>
     </div>
 
-    @if (! request()->routeIs('ai.index', 'chat.index', 'chat.show') && app(\App\Support\PermissionService::class)->check(auth()->user(), 'analytics.ai.use'))
-        @include('partials.ai-panel')
-    @endif
+    @auth
+        @php
+            $bumiPermissions = app(\App\Support\PermissionService::class);
+            $bumiChatAllowed = $bumiPermissions->check(auth()->user(), 'analytics.ai.use')
+                || $bumiPermissions->check(auth()->user(), 'lms.view');
+        @endphp
+        @if (! request()->routeIs('ai.index', 'chat.index', 'chat.show') && $bumiChatAllowed)
+            @include('partials.ai-panel')
+        @endif
+    @endauth
 
     {{-- C3: палитра команд Ctrl+K — навигация по разделам + быстрый поиск --}}
     <div class="crm-palette" id="crm-palette" hidden
@@ -433,11 +479,13 @@
             </script>
         @endif
 
+@unless ($isQuietPage)
 <script>
     window.LMS_I18N = Object.assign(window.LMS_I18N || {}, {
         pulseOpen: @json(__('Открыть курс'))
     });
 </script>
+@endunless
 @stack('scripts')
 </body>
 </html>

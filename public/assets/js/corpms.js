@@ -1329,11 +1329,55 @@
        submit-подписчики (и toast’ы) накапливаются. */
     var richHandlers = new WeakMap();
 
+    /* Fullscreen-плагин делает редактор position:fixed, но внутри .modal-blur
+       он привязывается к модальному окну и выглядит криво. На время
+       fullscreen переносим контейнер редактора в <body> и возвращаем на место
+       после выхода — геометрия становится точной без переопределения скина. */
+    var richFullscreenHosts = new WeakMap();
+
+    /* Библиотеку грузим заранее: если пользователь открыл модалку и сразу
+       начал печатать, редактор должен уже быть (или появиться без задержки). */
+    var richJsPromise = null;
+
+    function loadRichEditorJs() {
+        if (!richJsPromise) { richJsPromise = loadJs('/assets/vendor/tinymce/tinymce.min.js'); }
+        return richJsPromise;
+    }
+
+    function moveRichEditorToBody(editor) {
+        var container = editor && editor.getContainer && editor.getContainer();
+        if (!container || container.parentElement === document.body) { return; }
+        richFullscreenHosts.set(editor, {
+            parent: container.parentElement,
+            next: container.nextSibling
+        });
+        document.body.appendChild(container);
+    }
+
+    function restoreRichEditorHost(editor) {
+        var stored = editor && richFullscreenHosts.get(editor);
+        if (!stored) { return; }
+        var container = editor.getContainer && editor.getContainer();
+        if (container && stored.parent && stored.parent.isConnected) {
+            if (stored.next && stored.next.parentNode === stored.parent) {
+                stored.parent.insertBefore(container, stored.next);
+            } else {
+                stored.parent.appendChild(container);
+            }
+        }
+        richFullscreenHosts.delete(editor);
+    }
+
     function detachRichEditor(textarea) {
         var stored = richHandlers.get(textarea);
         if (!stored) { return; }
         if (stored.form && stored.submit) { stored.form.removeEventListener('submit', stored.submit, true); }
         if (stored.modal && stored.shown) { stored.modal.removeEventListener('shown.bs.modal', stored.shown); }
+        if (stored.modal && stored.hide) { stored.modal.removeEventListener('hide.bs.modal', stored.hide); }
+        var editor = window.tinymce && typeof window.tinymce.get === 'function'
+            ? window.tinymce.get(textarea.id)
+            : null;
+        if (editor) { restoreRichEditorHost(editor); }
         richHandlers.delete(textarea);
     }
 
@@ -1388,6 +1432,11 @@
                     }));
                 }
                 editor.on('init input change undo redo', notify);
+                editor.on('FullscreenStateChanged', function (event) {
+                    if (event.state) { moveRichEditorToBody(editor); }
+                    else { restoreRichEditorHost(editor); }
+                });
+                editor.on('remove', function () { restoreRichEditorHost(editor); });
             }
         };
     }
@@ -1433,6 +1482,8 @@
 
     function initRichEditors() {
         ensureEditorThemeStyles();
+        /*预热 только сам скрипт: инициализация всё равно идёт после показа модалки*/
+        loadRichEditorJs().catch(function () { /* обычный textarea — fallback */ });
         var nodes = document.querySelectorAll('[data-crm-rich]');
         for (var i = 0; i < nodes.length; i++) {
             attachRichEditor(nodes[i]);
@@ -1450,16 +1501,30 @@
 
         var modal = textarea.closest('.modal');
         var started = false;
-        var stored = { form: null, submit: null, modal: modal, shown: null };
+        var stored = { form: null, submit: null, modal: modal, shown: null, hide: null };
         richHandlers.set(textarea, stored);
 
         function start() {
             if (started) { return; }
+            /* если модалку закрыли, пока грузился скрипт, инициализацию
+               откладываем до следующего показа — иначе TinyMCE получает
+               скрытый узел с нулевыми размерами и ломает ввод */
+            if (modal && !modal.classList.contains('show')) { return; }
             started = true;
-            loadJs('/assets/vendor/tinymce/tinymce.min.js')
+            loadRichEditorJs()
                 .then(function () {
-                    if (!window.tinymce) { return; }
+                    if (!window.tinymce) { textarea.dataset.crmEditor = 'failed'; return; }
+                    if (modal && !modal.classList.contains('show')) { started = false; return; }
                     window.tinymce.init(richEditorOptions(textarea));
+                    var editor = window.tinymce.get(textarea.id);
+                    if (editor && modal) {
+                        /* после показа модалки фокус часто остаётся на кнопке —
+                           возвращаем его в поле ввода, чтобы печатать сразу */
+                        var active = document.activeElement;
+                        if (!active || !modal.contains(active) || active === document.body) {
+                            editor.focus();
+                        }
+                    }
                 })
                 .catch(function () {
                     /* библиотека недоступна — остаётся обычный textarea */
@@ -1471,6 +1536,14 @@
         if (modal) {
             stored.shown = start;
             modal.addEventListener('shown.bs.modal', start);
+            stored.hide = function () {
+                var editor = window.tinymce && typeof window.tinymce.get === 'function'
+                    ? window.tinymce.get(textarea.id)
+                    : null;
+                if (editor) { restoreRichEditorHost(editor); }
+                else { started = false; }
+            };
+            modal.addEventListener('hide.bs.modal', stored.hide);
             if (modal.classList.contains('show')) { start(); }
         } else {
             start();

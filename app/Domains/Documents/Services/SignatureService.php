@@ -28,7 +28,7 @@ use Throwable;
 /**
  * Электронная подпись (п.61–63 ТЗ).
  *
- *  - internal: хэш-подпись формата sha256(version_hash|signer|sig_id|nonce|key)
+ *  - internal: хэш-подпись формата sha256(version_hash|signer|sig_id|signing_secret)
  *  - otp: код подтверждения (META запроса), позже уйдёт в уведомления (Telegram)
  *  - qr_approval: одноразовый QR-токен из qr_tokens (purpose=sign)
  *
@@ -638,8 +638,22 @@ class SignatureService
             $documentHash,
             $signerId,
             $signatureId,
-            config('app.key'),
+            $this->signingSecret(),
         ]));
+    }
+
+    /**
+     * SEC-03: секрет подписи доменно отделён от ключа шифрования приложения.
+     * Явно заданный CORPMS_SIGNATURE_SECRET имеет приоритет; без него ключ
+     * детерминированно выводится из app.key через domain separation.
+     */
+    protected function signingSecret(): string
+    {
+        $secret = (string) config('corpms.signature.signing_secret');
+
+        return $secret !== ''
+            ? $secret
+            : hash_hmac('sha256', 'corpms.document.signature', (string) config('app.key'));
     }
 
     /** Документ становится signed, когда все requests по нему подписаны. */

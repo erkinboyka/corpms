@@ -10,4 +10,6 @@ enum AttendanceSource: string
     case Qr = 'qr';
     case Kiosk = 'kiosk';
     case Manual = 'manual';
+    case OffsiteRequest = 'offsite_request';
+    case System = 'system';
 }

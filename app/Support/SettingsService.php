@@ -100,6 +100,11 @@ class SettingsService
                 'type' => 'string',
                 'group' => __('AI-ассистент'),
             ],
+            'corpms.ai.embedding_model' => [
+                'name' => __('Модель /embeddings'),
+                'type' => 'string',
+                'group' => __('AI-ассистент'),
+            ],
             'corpms.ai.timeout' => [
                 'name' => __('Ожидание ответа, сек.'),
                 'type' => 'int',

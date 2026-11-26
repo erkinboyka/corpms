@@ -16,7 +16,6 @@ class SecurityHeadersHttpTest extends TestCase
         'X-Content-Type-Options' => 'nosniff',
         'X-Frame-Options' => 'SAMEORIGIN',
         'Referrer-Policy' => 'strict-origin-when-cross-origin',
-        'Permissions-Policy' => 'camera=(self), microphone=(self), display-capture=(self), geolocation=()',
     ];
 
     public function test_security_headers_present_on_responses(): void
@@ -28,6 +27,15 @@ class SecurityHeadersHttpTest extends TestCase
         foreach (self::SECURITY_HEADERS as $name => $value) {
             $response->assertHeader($name, $value);
         }
+
+        // Микрофон разрешён на своём origin и на явно настроенном localhost-relay.
+        $relayUrl = rtrim((string) config('corpms.bumi.conversation.relay_url', ''), '/');
+        $parts = $relayUrl !== '' ? parse_url($relayUrl) : false;
+        $relayOrigin = is_array($parts) && isset($parts['scheme'], $parts['host'])
+            ? $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '')
+            : '';
+        $microphone = $relayOrigin !== '' ? 'microphone=(self '.$relayOrigin.')' : 'microphone=(self)';
+        $response->assertHeader('Permissions-Policy', 'camera=(self), '.$microphone.', display-capture=(self), geolocation=()');
     }
 
     public function test_hsts_set_only_over_https(): void

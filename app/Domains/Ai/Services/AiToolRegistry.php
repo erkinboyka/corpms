@@ -9,9 +9,20 @@ use App\Domains\Analytics\Services\AnalyticsService;
 use App\Domains\Audit\Services\AuditService;
 use App\Domains\Bi\Services\BiService;
 use App\Domains\Crm\Services\CrmService;
+use App\Domains\DashboardGen\QuerySpec\BiQueryCompiler;
+use App\Domains\DashboardGen\QuerySpec\BiQuerySpec;
+use App\Domains\DashboardGen\Services\BiToolContext;
+use App\Domains\DashboardGen\Services\SchemaInspector;
+use App\Domains\DashboardGen\Services\WidgetCatalog;
+use App\Domains\DashboardGen\Services\WidgetShapeMapper;
+use App\Domains\DashboardGen\Services\WidgetSpecCompiler;
+use App\Domains\DashboardGen\Services\WidgetSpecValidator;
+use App\Domains\DashboardGen\Services\WidgetQueryRunner;
 use App\Domains\Finance\Services\FinanceService;
 use App\Domains\Inventory\Services\InventoryService;
 use App\Domains\Projects\Services\ProjectService;
+use App\Models\BiDashboard;
+use App\Models\BiWidget;
 use App\Models\CrmClient;
 use App\Models\CrmDeal;
 use App\Models\Document;
@@ -20,8 +31,13 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Shared\Enums\CrmDealStage;
 use App\Support\PermissionService;
+use App\Support\TenantGuard;
 use Carbon\CarbonImmutable;
 use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use RuntimeException;
 
 /**
  * D5 (tool calling): белый список backend-инструментов для LLM (п.68 ТЗ).
@@ -54,7 +70,7 @@ class AiToolRegistry
      *
      * @return array<int, array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>}}>
      */
-    public function toolsFor(Employee $asker): array
+    public function toolsFor(Employee $asker, ?string $group = null): array
     {
         if (! $this->enabled()) {
             return [];
@@ -62,6 +78,15 @@ class AiToolRegistry
 
         $tools = [];
         foreach ($this->definitions() as $name => $definition) {
+            // BI-инструменты меняют дашборд и доступны только в контексте /bi.
+            $toolGroup = $definition['group'] ?? null;
+            if ($group === 'bi' && $toolGroup !== 'bi') {
+                continue;
+            }
+            if ($group !== 'bi' && $toolGroup === 'bi') {
+                continue;
+            }
+
             if ($asker->user === null || ! $this->permissions->check($asker->user, $definition['permission'])) {
                 continue;
             }
@@ -88,7 +113,7 @@ class AiToolRegistry
      *
      * @return array{ok: bool, result: mixed, error: ?string}
      */
-    public function execute(Employee $asker, string $name, mixed $arguments): array
+    public function execute(Employee $asker, string $name, mixed $arguments, ?BiToolContext $context = null): array
     {
         $definition = $this->definitions()[$name] ?? null;
 
@@ -107,7 +132,15 @@ class AiToolRegistry
         }
 
         try {
-            $result = ($definition['handler'])($asker, $args);
+            $result = ($definition['handler'])($asker, $args, $context);
+        } catch (AuthorizationException) {
+            return $this->deny($asker, 'ai.tool.denied', $name, $args, 'forbidden');
+        } catch (RuntimeException $e) {
+            // BI-инструменты объясняют отказ (неизвестное семейство, плохой
+            // фильтр и т.п.) — передаём текст модели и в аудит, и в ответ.
+            $detail = trim($e->getMessage());
+
+            return $this->deny($asker, 'ai.tool.invalid', $name, $args, $detail !== '' ? mb_substr($detail, 0, 300) : 'failed');
         } catch (\Throwable) {
             return $this->deny($asker, 'ai.tool.invalid', $name, $args, 'failed');
         }
@@ -130,6 +163,7 @@ class AiToolRegistry
      *     description: string,
      *     permission: string,
      *     critical: bool,
+     *     group?: string,
      *     schema: array{type: string, properties: array<string, array<string, mixed>>, required: array<int, string>},
      *     handler: Closure
      * }>
@@ -303,6 +337,63 @@ class AiToolRegistry
                 ],
                 'handler' => fn (Employee $asker, array $args): array => $this->biMetricsSummary($asker, isset($args['month']) ? (string) $args['month'] : null),
             ],
+
+            // ---- Инструменты Bumi в режиме /bi (только с контекстом дашборда) ----
+
+            'add_widget' => [
+                'description' => __('Добавить виджет на текущий BI-дашборд. spec — структурированная спецификация запроса (queries/shape/presentation), не SQL.'),
+                'permission' => 'bi.manage@company',
+                'critical' => true,
+                'group' => 'bi',
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'title' => ['type' => 'string', 'description' => __('Название виджета')],
+                        'family' => ['type' => 'string', 'description' => __('Семейство виджета из каталога')],
+                        'type' => ['type' => 'string', 'description' => __('Вариант отрисовки')],
+                        'spec' => ['type' => 'object', 'description' => __('Структурированная спецификация запроса')],
+                        'span' => ['type' => 'integer', 'description' => __('Ширина виджета: 4, 6 или 12')],
+                    ],
+                    'required' => ['title', 'family', 'spec'],
+                ],
+                'handler' => fn (Employee $asker, array $args, ?BiToolContext $context): array => $this->biAddWidget($asker, $args, $context),
+            ],
+
+            'update_widget' => [
+                'description' => __('Изменить название, семейство, вариант отрисовки, спецификацию запроса или фильтры существующего виджета текущего BI-дашборда.'),
+                'permission' => 'bi.manage@company',
+                'critical' => true,
+                'group' => 'bi',
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'widget_id' => ['type' => 'integer', 'description' => __('ID виджета текущего дашборда')],
+                        'title' => ['type' => 'string'],
+                        'family' => ['type' => 'string'],
+                        'type' => ['type' => 'string'],
+                        'spec' => ['type' => 'object'],
+                        'filters' => ['type' => 'array'],
+                    ],
+                    'required' => ['widget_id'],
+                ],
+                'handler' => fn (Employee $asker, array $args, ?BiToolContext $context): array => $this->biUpdateWidget($asker, $args, $context),
+            ],
+
+            'set_filter' => [
+                'description' => __('Установить фильтры дашборда или отдельного виджета. Массив объектов {column, op, value}. Передавайте widget_id только чтобы отфильтровать один виджет.'),
+                'permission' => 'bi.manage@company',
+                'critical' => true,
+                'group' => 'bi',
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'filters' => ['type' => 'array', 'description' => __('Список фильтров')],
+                        'widget_id' => ['type' => 'integer', 'description' => __('ID виджета; без него фильтр применяется к дашборду')],
+                    ],
+                    'required' => ['filters'],
+                ],
+                'handler' => fn (Employee $asker, array $args, ?BiToolContext $context): array => $this->biSetFilter($asker, $args, $context),
+            ],
         ];
     }
 
@@ -332,6 +423,7 @@ class AiToolRegistry
                 'string' => is_string($value),
                 'integer' => is_int($value),
                 'boolean' => is_bool($value),
+                'object', 'array' => is_array($value),
                 default => is_scalar($value),
             };
 
@@ -342,9 +434,36 @@ class AiToolRegistry
             if (is_string($value) && mb_strlen($value) > 500) {
                 return 'length:'.$key;
             }
+
+            if (is_array($value) && ! $this->withinArrayLimits($value)) {
+                return 'length:'.$key;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Ограничиваем структурированные аргументы (spec/filters) по размеру
+     * и глубине: модель не должна иметь возможность прислать multi-MB JSON.
+     *
+     * @param  array<mixed>  $value
+     */
+    private function withinArrayLimits(array $value, int $depth = 0): bool
+    {
+        if ($depth > 10 || count($value) > 50) {
+            return false;
+        }
+
+        foreach ($value as $entry) {
+            if (is_array($entry) && ! $this->withinArrayLimits($entry, $depth + 1)) {
+                return false;
+            }
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE);
+
+        return $encoded !== false && strlen($encoded) <= 20000;
     }
 
     /**
@@ -615,6 +734,274 @@ class AiToolRegistry
             'income_forecast' => $forecast[0] ?? null,
             'url' => route('bi.index', ['month' => $month]),
         ];
+    }
+
+    /* -------------------- инструменты Bumi /bi -------------------- */
+
+    /** Дашборд берётся из контекста маршрута, а не из аргументов модели. */
+    protected function requireBiDashboard(Employee $asker, ?BiToolContext $context): BiDashboard
+    {
+        if ($context === null) {
+            throw new RuntimeException('context_required');
+        }
+
+        $dashboard = $context->dashboard;
+        TenantGuard::ensure($dashboard, $asker);
+        Gate::authorize('update', $dashboard);
+
+        return $dashboard;
+    }
+
+    /**
+     * Скомпилировать структурированную спецификацию и проверить её пробым
+     * запросом. Модель никогда не передаёт готовый SQL.
+     *
+     * @param  array<string, mixed>  $raw
+     * @return array<string, mixed>
+     */
+    protected function compileWidgetSpec(Employee $asker, array $raw, string $family, ?string $type): array
+    {
+        $catalog = app(WidgetCatalog::class);
+
+        if (! $catalog->hasFamily($family)) {
+            throw new RuntimeException('unknown_family');
+        }
+        if (! $catalog->hasType($family, $type)) {
+            throw new RuntimeException('unknown_type');
+        }
+
+        $shape = $raw['shape'] ?? WidgetShapeMapper::shapeFor($family);
+        if (! is_string($shape) || ! in_array($shape, WidgetShapeMapper::SHAPES, true)) {
+            throw new RuntimeException('unknown_shape');
+        }
+
+        $queries = $raw['queries'] ?? $raw['query'] ?? null;
+        if (! is_array($queries) || $queries === []) {
+            throw new RuntimeException('missing_queries');
+        }
+
+        $structured = [
+            'queries' => $queries,
+            'shape' => $shape,
+            'presentation' => is_array($raw['presentation'] ?? null) ? $raw['presentation'] : [],
+        ];
+
+        $compiler = $this->widgetSpecCompiler();
+        $spec = $compiler->compile($structured);
+        $schema = $compiler->schema();
+
+        $validator = new WidgetSpecValidator(
+            new WidgetQueryRunner(companyId: (int) $asker->company_id),
+            $schema,
+            (array) config('dashboard_gen.tables', []),
+        );
+        $check = $validator->validate($spec, $family, $type);
+
+        if (! ($check['ok'] ?? false)) {
+            throw new RuntimeException(implode(' ', $check['errors']));
+        }
+
+        return $spec;
+    }
+
+    protected function widgetSpecCompiler(): WidgetSpecCompiler
+    {
+        return WidgetSpecCompiler::forCurrentConnection();
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    protected function biAddWidget(Employee $asker, array $args, ?BiToolContext $context): array
+    {
+        $dashboard = $this->requireBiDashboard($asker, $context);
+        $family = (string) ($args['family'] ?? '');
+        $type = isset($args['type']) && $args['type'] !== '' ? (string) $args['type'] : null;
+        $spec = $this->compileWidgetSpec($asker, (array) ($args['spec'] ?? []), $family, $type);
+
+        if ($dashboard->widgets()->count() >= (int) config('dashboard_gen.max_widgets', 12)) {
+            throw new RuntimeException('too_many_widgets');
+        }
+
+        $span = (int) ($args['span'] ?? 4);
+        $span = in_array($span, [4, 6, 12], true) ? $span : 4;
+
+        $widget = $dashboard->widgets()->create([
+            'title' => mb_substr((string) $args['title'], 0, 120),
+            'widget_family' => $family,
+            'widget_type' => $type,
+            'content_mode' => 'sql',
+            'query_spec' => $spec,
+            'span' => $span,
+            'status' => 'ready',
+            'position' => (int) $dashboard->widgets()->max('position') + 1,
+        ]);
+
+        $dashboard->increment('version');
+        $context->capture([
+            'kind' => 'delete_widget',
+            'widget_id' => (int) $widget->id,
+        ]);
+
+        return [
+            'kind' => 'widget',
+            'widget_id' => (int) $widget->id,
+            'title' => (string) $widget->title,
+            'family' => $family,
+            'text' => 'Виджет «'.$widget->title.'» добавлен на дашборд.',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    protected function biUpdateWidget(Employee $asker, array $args, ?BiToolContext $context): array
+    {
+        $dashboard = $this->requireBiDashboard($asker, $context);
+        $widget = $dashboard->widgets()->findOrFail((int) $args['widget_id']);
+
+        $before = $widget->only([
+            'title', 'widget_family', 'widget_type', 'query_spec', 'filters', 'span',
+        ]);
+
+        $family = isset($args['family']) ? (string) $args['family'] : (string) $widget->widget_family;
+        $type = array_key_exists('type', $args)
+            ? ($args['type'] !== '' ? (string) $args['type'] : null)
+            : $widget->widget_type;
+
+        $attributes = [];
+
+        if (array_key_exists('title', $args)) {
+            $attributes['title'] = mb_substr((string) $args['title'], 0, 120);
+        }
+
+        if (array_key_exists('spec', $args)) {
+            $attributes['query_spec'] = $this->compileWidgetSpec($asker, (array) $args['spec'], $family, $type);
+            $attributes['content_mode'] = 'sql';
+        }
+
+        if (array_key_exists('family', $args)) {
+            $attributes['widget_family'] = $family;
+        }
+        if (array_key_exists('type', $args)) {
+            $attributes['widget_type'] = $type;
+        }
+        if (array_key_exists('filters', $args)) {
+            $attributes['filters'] = $this->normalizeFilters($args['filters']);
+        }
+
+        if ($attributes === []) {
+            throw new RuntimeException('nothing_to_update');
+        }
+
+        $widget->forceFill($attributes)->save();
+        $dashboard->increment('version');
+        $context->capture([
+            'kind' => 'restore_widget',
+            'widget_id' => (int) $widget->id,
+            'attributes' => $before,
+        ]);
+
+        return [
+            'kind' => 'widget',
+            'widget_id' => (int) $widget->id,
+            'title' => (string) $widget->title,
+            'text' => 'Виджет «'.$widget->title.'» обновлён.',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    protected function biSetFilter(Employee $asker, array $args, ?BiToolContext $context): array
+    {
+        $dashboard = $this->requireBiDashboard($asker, $context);
+        $filters = $this->normalizeFilters($args['filters'] ?? []);
+
+        if (isset($args['widget_id'])) {
+            $widget = $dashboard->widgets()->findOrFail((int) $args['widget_id']);
+            $before = $widget->filters ?? [];
+            $widget->forceFill(['filters' => $filters])->save();
+
+            $context->capture([
+                'kind' => 'restore_filters',
+                'target' => 'widget',
+                'widget_id' => (int) $widget->id,
+                'filters' => $before,
+            ]);
+
+            return [
+                'kind' => 'filter',
+                'widget_id' => (int) $widget->id,
+                'text' => 'Фильтр виджета «'.$widget->title.'» обновлён.',
+            ];
+        }
+
+        $before = $dashboard->filters ?? [];
+        $dashboard->forceFill(['filters' => $filters])->save();
+        $dashboard->increment('version');
+        $context->capture([
+            'kind' => 'restore_filters',
+            'target' => 'dashboard',
+            'filters' => $before,
+        ]);
+
+        return [
+            'kind' => 'filter',
+            'text' => count($filters) === 0 ? 'Фильтры дашборда сброшены.' : 'Фильтры дашборда применены.',
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function normalizeFilters(mixed $filters): array
+    {
+        if (! is_array($filters)) {
+            throw new RuntimeException('invalid_filters');
+        }
+
+        $result = [];
+
+        foreach (array_slice($filters, 0, 12) as $filter) {
+            if (! is_array($filter)) {
+                throw new RuntimeException('invalid_filters');
+            }
+
+            $column = (string) ($filter['column'] ?? '');
+            if (preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', $column) !== 1) {
+                throw new RuntimeException('invalid_filter_column');
+            }
+
+            $op = strtolower(trim((string) ($filter['op'] ?? $filter['operator'] ?? '=')));
+            if (! in_array($op, BiQuerySpec::OPERATORS, true)) {
+                throw new RuntimeException('invalid_filter_operator');
+            }
+
+            $item = ['column' => $column, 'op' => $op];
+
+            if (! in_array($op, ['is null', 'is not null'], true)) {
+                $value = $filter['value'] ?? null;
+
+                if (is_array($value)) {
+                    $item['value'] = array_values(array_map(
+                        static fn (mixed $entry): mixed => is_scalar($entry) ? $entry : null,
+                        array_slice($value, 0, 30),
+                    ));
+                } elseif (is_scalar($value)) {
+                    $item['value'] = $value;
+                } else {
+                    throw new RuntimeException('invalid_filter_value');
+                }
+            }
+
+            $result[] = $item;
+        }
+
+        return $result;
     }
 
     /**

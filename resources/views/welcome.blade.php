@@ -16,10 +16,14 @@
     <link rel="stylesheet" href="/assets/css/tokens.css?v34">
     <link rel="stylesheet" href="/assets/css/motion.css?v5">
     <link rel="stylesheet" href="/assets/css/landing.css?v=5">
-    <link rel="stylesheet" href="/assets/css/landing-tour.css?v=5">
+    <link rel="stylesheet" href="/assets/css/landing-tour.css?v=6">
+    <link rel="stylesheet" href="/assets/css/bumi-persona.css?v4">
+    @include('partials.bumi-i18n')
+    <script src="/assets/js/bumi-persona.js?v4" defer></script>
     <script type="module" src="/assets/js/landing.js?v=6"></script>
 </head>
-<body class="bm-landing" id="top">
+<body class="bm-landing" id="top"
+      @if(isset($bumi)) data-bumi-mood="{{ $bumi->mood->value }}" data-bumi-line="{{ $bumi->line }}" data-bumi-reason="{{ $bumi->reason }}" @endif>
 @php
     $entry = auth()->check() ? route('dashboard') : route('login');
     $enterLabel = auth()->check() ? __('Рабочий стол') : __('Войти');
@@ -38,14 +42,14 @@
             ['hello', 'wink', __('Я Бими. Покажу, как связаны люди, задачи и документы.')],
             ['overview', 'curious', __('Я вижу связи между модулями. Выберите кольцо, чтобы открыть его в демо.')],
             ['arrival', 'happy', __('Начнём со смены. Я покажу, кто в офисе и кто работает удалённо.')],
-            ['tasks', 'curious', __('Возьмите задачу. Я замечу смену статуса и учту её в сводке.')],
-            ['documents', 'wink', __('У сметы есть маршрут. Согласуйте её, и я покажу следующий этап.')],
-            ['report', 'happy', __('Здесь я собираю ваши действия за день в один отчёт.')],
+            ['tasks', 'thinking', __('Возьмите задачу. Я замечу смену статуса и учту её в сводке.')],
+            ['documents', 'curious', __('У сметы есть маршрут. Согласуйте её, и я покажу следующий этап.')],
+            ['report', 'proud', __('Здесь я собираю ваши действия за день в один отчёт.')],
             ['assistant', 'curious', __('Теперь моя очередь. Спросите, что сделано, и я сверюсь с этим демо.')],
             ['people', 'wink', __('В оргструктуре видно, кто за что отвечает. Раскройте отдел.')],
             ['analytics', 'surprised', __('Смотрите, как менялась нагрузка. Выберите неделю и день.')],
-            ['security', 'curious', __('Здесь видно, как права разделяют просмотр и согласование.')],
-            ['finish', 'happy', __('Мы прошли рабочий день. Войдите, чтобы открыть своё пространство.')],
+            ['security', 'angry', __('Меня не пускают без прав — и это правильно. Здесь видно, кто что может.')],
+            ['finish', 'proud', __('Мы прошли рабочий день. Войдите, чтобы открыть своё пространство.')],
         ],
         'answers' => [
             'bothOnShift' => __('На смене оба сотрудника. Анна в офисе с 09:04, Фарид работает удалённо.'),
@@ -274,5 +278,14 @@
     </section>
 </main>
 <footer class="wrap footer"><a class="brand" href="{{ route('welcome') }}">@include('partials.workspace-mark')<b>BM Systems</b></a><a href="#top">{{ __('Наверх') }} <i class="ti ti-arrow-up"></i></a></footer>
+@if (config('corpms.service_worker.enabled'))
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+        });
+    }
+</script>
+@endif
 </body>
 </html>

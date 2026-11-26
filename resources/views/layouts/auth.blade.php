@@ -35,14 +35,18 @@
     <link rel="icon" type="image/svg+xml" href="/assets/bm-mark.svg">
     <link rel="stylesheet" href="/assets/css/motion.css?v5">
     <link rel="stylesheet" href="/assets/css/workspace.css?v26">
+    <link rel="stylesheet" href="/assets/css/bumi-persona.css?v4">
     <link rel="stylesheet" href="/assets/css/legal.css?v1">
     <script src="/assets/js/password-visibility.js" defer></script>
-    <script src="/assets/js/auth-mascot.js?v5" defer></script>
+    @include('partials.bumi-i18n')
+    <script src="/assets/js/bumi-persona.js?v4" defer></script>
+    <script src="/assets/js/auth-mascot.js?v7" defer></script>
     @stack('styles')
 </head>
-<body class="crm-app crm-auth d-flex flex-column @yield('body_class')">
+<body class="crm-app crm-auth d-flex flex-column @yield('body_class')"
+      @if(isset($bumi)) data-bumi-mood="{{ $bumi->mood->value }}" data-bumi-line="{{ $bumi->line }}" data-bumi-reason="{{ $bumi->reason }}" @endif>
     <main class="crm-auth__wrap bm-auth-layout">
-        <div class="bm-auth-art" data-mascot-greeting>
+        <div class="bm-auth-art" data-mascot-greeting @if(isset($bumi)) data-mood="{{ $bumi->mood->value }}" @endif>
             <div class="bm-auth-speech" data-mascot-speech aria-hidden="true" hidden>
                 <svg class="bm-auth-speech__tail" viewBox="0 0 80 30" preserveAspectRatio="none" aria-hidden="true" focusable="false">
                     <path d="M80 3C57 15 30 15 3 9c18 15 49 21 77 17"/>

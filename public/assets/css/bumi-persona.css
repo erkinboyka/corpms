@@ -1,0 +1,231 @@
+/* ============================================================================
+   BUMI PERSONA — единая мимика и характер во всех точках проекта
+   ----------------------------------------------------------------------------
+   Настроение приходит из data-bumi-mood / data-mood. Значения всегда объяснены
+   причиной (data-bumi-reason): ошибка валидации, успех, поздний час, действие
+   пользователя. Здесь только визуальное состояние — никаких случайных таймеров.
+   Анимируются transform/opacity и width не трогаются: курсор не должен тормозить.
+   ============================================================================ */
+
+/* ---------- portraits: аватар в чате, настройках и публичном виджете ---------- */
+.bumi-face {
+    position: relative;
+}
+.bumi-face__expression {
+    display: none;
+}
+.bumi-face[data-bumi-mood="happy"] .bumi-face__expression--happy,
+.bumi-face[data-bumi-mood="wink"] .bumi-face__expression--wink,
+.bumi-face[data-bumi-mood="thinking"] .bumi-face__expression--thinking,
+.bumi-face[data-bumi-mood="surprised"] .bumi-face__expression--surprised,
+.bumi-face[data-bumi-mood="sleepy"] .bumi-face__expression--sleepy,
+.bumi-face[data-bumi-mood="sluggish"] .bumi-face__expression--sluggish,
+.bumi-face[data-bumi-mood="sad"] .bumi-face__expression--sad,
+.bumi-face[data-bumi-mood="angry"] .bumi-face__expression--angry,
+.bumi-face[data-bumi-mood="curious"] .bumi-face__expression--curious,
+.bumi-face[data-bumi-mood="proud"] .bumi-face__expression--proud {
+    display: inline;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .bumi-face[data-bumi-mood="sleepy"] svg {
+        transform: rotate(-5deg) translateY(2px);
+    }
+    .bumi-face[data-bumi-mood="sad"] svg {
+        transform: rotate(4deg) translateY(2px);
+    }
+    .bumi-face[data-bumi-mood="angry"] svg {
+        transform: rotate(-3deg) scale(1.04);
+    }
+    .bumi-face[data-bumi-mood="proud"] svg {
+        transform: rotate(4deg);
+    }
+}
+
+/* ---------- реплика по клику: текст живёт рядом, а не на лице ---------- */
+.bumi-speech {
+    position: fixed;
+    z-index: 12000;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(290px, calc(100vw - 24px));
+    padding: .5rem .68rem;
+    border: 1px solid color-mix(in srgb, var(--bm-link, var(--crm-accent, #328776)) 45%, transparent);
+    border-radius: 12px 12px 12px 3px;
+    background: var(--bm-glass-overlay, var(--crm-surface-solid, var(--tblr-bg-surface, #fff)));
+    color: var(--bm-ink, var(--crm-text, inherit));
+    box-shadow: 0 8px 24px #0b24242b;
+    font-size: .8rem;
+    line-height: 1.4;
+    pointer-events: none;
+}
+.bumi-speech[data-bumi-reason="error"],
+.bumi-speech[data-bumi-reason="denied"],
+.bumi-speech[data-bumi-reason="ai_error"],
+.bumi-speech[data-bumi-reason="bi_error"] {
+    border-color: color-mix(in srgb, var(--crm-danger, #d63939) 55%, transparent);
+}
+.bumi-speech[data-bumi-reason="success"],
+.bumi-speech[data-bumi-reason="ready"],
+.bumi-speech[data-bumi-reason="ai_ready"],
+.bumi-speech[data-bumi-reason="bi_ready"] {
+    border-color: color-mix(in srgb, var(--bm-link, var(--crm-accent, #328776)) 60%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .bumi-speech.is-entering { animation: bumi-speech-in .22s ease-out; }
+}
+@keyframes bumi-speech-in {
+    from { opacity: 0; transform: translateY(6px) scale(.96); }
+    to { opacity: 1; transform: none; }
+}
+
+/* ---------- говорящий рот: включается только на время озвучки ---------- */
+.bumi-face__talk,
+.mini-talk {
+    display: none;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+.bumi-face[data-bumi-speaking="1"] .bumi-face__talk,
+.bm-pet[data-bumi-speaking="1"] .mini-talk {
+    display: inline;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .bumi-face[data-bumi-speaking="1"] .bumi-face__talk,
+    .bm-pet[data-bumi-speaking="1"] .mini-talk {
+        animation: bumi-talk .26s ease-in-out infinite alternate;
+    }
+}
+@keyframes bumi-talk {
+    from { transform: scaleY(.35); }
+    to { transform: scaleY(1.12); }
+}
+
+/* ---------- мини-ассистент: выражения внутри шлема ---------- */
+.mini-expression {
+    display: none;
+}
+.bm-pet[data-mood="happy"] .mini-expression--happy,
+.bm-pet[data-mood="wink"] .mini-expression--wink,
+.bm-pet[data-mood="thinking"] .mini-expression--thinking,
+.bm-pet[data-mood="surprised"] .mini-expression--surprised,
+.bm-pet[data-mood="sleepy"] .mini-expression--sleepy,
+.bm-pet[data-mood="sluggish"] .mini-expression--sluggish,
+.bm-pet[data-mood="sad"] .mini-expression--sad,
+.bm-pet[data-mood="angry"] .mini-expression--angry,
+.bm-pet[data-mood="curious"] .mini-expression--curious,
+.bm-pet[data-mood="proud"] .mini-expression--proud {
+    display: inline;
+}
+@media (prefers-reduced-motion: no-preference) {
+    /* Наклон добавляется к gaze, а не перезаписывает его — взгляд остаётся живым. */
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="happy"] { --bumi-mood-tilt: -2deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="curious"] { --bumi-mood-tilt: 7deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="thinking"] { --bumi-mood-tilt: 4deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="sleepy"] { --bumi-mood-tilt: -7deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="sluggish"] { --bumi-mood-tilt: 3deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="sad"] { --bumi-mood-tilt: 6deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="angry"] { --bumi-mood-tilt: -5deg; }
+    .bm-pet:not([data-bm-running]):not([data-dragging])[data-mood="proud"] { --bumi-mood-tilt: -4deg; }
+    .bm-pet[data-mood="sleepy"] .mini-idle,
+    .bm-pet[data-mood="sluggish"] .mini-idle { animation-duration: 11s; }
+    .bm-pet[data-mood="sleepy"] .mini-gaze,
+    .bm-pet[data-mood="sluggish"] .mini-gaze { opacity: .62; }
+    .bm-pet[data-mood="angry"] .mini-arm { animation-duration: 1.15s; }
+    .bm-pet[data-mood="sad"] .mini-arm,
+    .bm-pet[data-mood="sleepy"] .mini-arm { animation-duration: 5.2s; }
+    .bm-pet[data-mood="proud"] .mini-jump { animation: mini-jump .5s ease-out; }
+}
+.bm-pet__reaction[data-bumi-reason="error"],
+.bm-pet__reaction[data-bumi-reason="denied"],
+.bm-pet__reaction[data-bumi-reason="ai_error"] {
+    border-color: color-mix(in srgb, var(--crm-danger, #d63939) 52%, transparent);
+}
+.bm-pet__reaction[data-bumi-reason="success"],
+.bm-pet__reaction[data-bumi-reason="ready"],
+.bm-pet__reaction[data-bumi-reason="bi_ready"] {
+    border-color: color-mix(in srgb, var(--bm-link, var(--crm-accent, #328776)) 55%, transparent);
+}
+
+/* ---------- большой маскот: страница входа и экскурсия по витрине ---------- */
+[data-mood="sleepy"] .mascot-expression--sleepy,
+[data-mood="sluggish"] .mascot-expression--sluggish,
+[data-mood="sad"] .mascot-expression--sad,
+[data-mood="angry"] .mascot-expression--angry,
+[data-mood="proud"] .mascot-expression--proud,
+[data-mood="happy"] .mascot-expression--happy,
+[data-mood="wink"] .mascot-expression--wink,
+[data-mood="curious"] .mascot-expression--curious,
+[data-mood="surprised"] .mascot-expression--surprised {
+    display: inline;
+}
+[data-mood="sleepy"] .mascot-eyelid,
+[data-mood="sluggish"] .mascot-eyelid,
+[data-mood="sad"] .mascot-eyelid,
+[data-mood="angry"] .mascot-eyelid,
+[data-mood="proud"] .mascot-eyelid,
+[data-mood="happy"] .mascot-eyelid {
+    display: none;
+}
+.tour-narrator[data-mood="sleepy"] .mascot-expression--sleepy,
+.tour-narrator[data-mood="sluggish"] .mascot-expression--sluggish,
+.tour-narrator[data-mood="sad"] .mascot-expression--sad,
+.tour-narrator[data-mood="angry"] .mascot-expression--angry,
+.tour-narrator[data-mood="proud"] .mascot-expression--proud {
+    display: inline;
+}
+.tour-narrator[data-mood="sleepy"] .mascot-eyelid,
+.tour-narrator[data-mood="sluggish"] .mascot-eyelid,
+.tour-narrator[data-mood="sad"] .mascot-eyelid,
+.tour-narrator[data-mood="angry"] .mascot-eyelid,
+.tour-narrator[data-mood="proud"] .mascot-eyelid {
+    display: none;
+}
+/* landing.css показывает «счастливое» лицо при раскрытии подсказки —
+   если причина уже сменилась, старое выражение убираем. */
+.core-guide[data-mood]:not([data-mood="happy"])[aria-expanded="true"] .mascot-expression--happy {
+    display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+    [data-mood="sleepy"] { --mascot-mood-tilt: -9deg; }
+    [data-mood="sluggish"] { --mascot-mood-tilt: 3deg; }
+    [data-mood="sad"] { --mascot-mood-tilt: 12deg; }
+    [data-mood="angry"] { --mascot-mood-tilt: -8deg; }
+    [data-mood="proud"] { --mascot-mood-tilt: -4deg; }
+    [data-mood="sleepy"] .mascot-body,
+    [data-mood="sluggish"] .mascot-body { animation-duration: 9s; }
+}
+
+/* Ролевые инструменты Bumi Mini: компактная строка под заголовком чата. */
+.bm-mini-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--tblr-border-color, #e6e7e9);
+    background: var(--tblr-bg-surface, #fff);
+}
+.bm-mini-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 9px;
+    border: 1px solid var(--tblr-border-color, #d8dce0);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tblr-body-color, #495057);
+    font-size: 12px;
+    line-height: 1.2;
+    cursor: pointer;
+}
+.bm-mini-tool:hover,
+.bm-mini-tool:focus-visible {
+    border-color: var(--tblr-primary, #206bc4);
+    color: var(--tblr-primary, #206bc4);
+}
+.bm-mini-tool:disabled { opacity: .55; cursor: default; }
+.bm-mini-voice { border-radius: 50%; padding: 6px 8px; }
+.bm-mini-compose .bm-mini-tool { margin-right: 4px; }
+.bm-mini-compose textarea { flex: 1 1 140px; }
+@media (prefers-reduced-motion: no-preference) {
+    .bm-mini-tool { transition: color .15s ease, border-color .15s ease; }
+}

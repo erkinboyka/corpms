@@ -88,7 +88,14 @@ class SignatureQrHttpTest extends TestCase
         $response->assertSessionHas('signature_qr');
         $qr = $response->getSession()->get('signature_qr');
         $this->assertStringContainsString('<svg', $qr['svg']);
-        $this->lastCode = (string) $qr['code'];
+        // SEC-02: код подтверждения не должен попадать во flash-сессию
+        $this->assertArrayNotHasKey('code', $qr);
+
+        $notification = AppNotification::query()->where('type', 'signature.otp')->latest()->first();
+        $this->assertNotNull($notification);
+        preg_match('/\b\d{6}\b/', (string) $notification->body, $match);
+        $this->assertNotEmpty($match, 'Код подтверждения должен прийти в уведомлении');
+        $this->lastCode = $match[0];
         $this->assertMatchesRegularExpression('/^\d{6}$/', $this->lastCode);
 
         return (string) basename((string) parse_url($qr['url'], PHP_URL_PATH));
@@ -129,7 +136,7 @@ class SignatureQrHttpTest extends TestCase
             ->assertSee($signature->signature_id);
     }
 
-    public function test_qr_page_shows_both_deadlines_and_sanitized_content(): void
+    public function test_qr_page_shows_deadlines_but_not_document_body(): void
     {
         $document = $this->makeDocument('QR с содержимым');
         $document->update(['body' => '<p>Тело для проверки перед подписью</p><script>alert(1)</script>']);
@@ -141,7 +148,8 @@ class SignatureQrHttpTest extends TestCase
             ->assertOk()
             ->assertSee('QR-ссылка действительна до')
             ->assertSee('Код подтверждения действует до')
-            ->assertSee('Тело для проверки перед подписью')
+            // SEC-02: содержимое документа не утекает на публичную страницу подписи
+            ->assertDontSee('Тело для проверки перед подписью')
             ->assertDontSee('<script>alert(1)</script>', false);
 
         QrToken::query()

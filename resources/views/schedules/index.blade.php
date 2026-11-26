@@ -6,6 +6,7 @@
 @php
     $typeChips = ['standard' => 'crm-chip--cyan', 'shift' => 'crm-chip--orange', 'flexible' => 'crm-chip'];
     $typeIcons = ['standard' => 'clock', 'shift' => 'arrows-exchange', 'flexible' => 'relax'];
+    $dayNames = [1 => __('Пн'), 2 => __('Вт'), 3 => __('Ср'), 4 => __('Чт'), 5 => __('Пт'), 6 => __('Сб'), 7 => __('Вс')];
 @endphp
 
 @section('content')
@@ -50,6 +51,10 @@
                         @else
                             <i class="ti ti-coffee me-1"></i>{{ __('без обеденного перерыва') }}
                         @endif
+                    </div>
+                    <div class="crm-entity__meta">
+                        <i class="ti ti-calendar-week me-1"></i>{{ __('Рабочие дни') }}:
+                        {{ implode(', ', array_map(fn ($day) => $dayNames[$day] ?? (string) $day, $schedule->workingDays())) }}
                     </div>
                     <div class="crm-entity__footer">
                         <span class="text-secondary small"><i class="ti ti-bed me-1"></i>{{ __('отдых ≥') }} {{ $schedule->min_rest_hours ?? 8 }} {{ __('ч') }}</span>
@@ -96,6 +101,19 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+                <div class="crm-form__section">
+                    <h3>{{ __('Рабочие дни недели') }}</h3>
+                    <div class="crm-form__desc">{{ __('По умолчанию Пн–Пт. Отметьте все дни, когда сотрудник работает по этому графику') }}</div>
+                    <div class="d-flex flex-wrap gap-3">
+                        @foreach ($dayNames as $day => $label)
+                            <label class="form-check">
+                                <input class="form-check-input" type="checkbox" name="work_days[]" value="{{ $day }}" @checked(in_array($day, [1, 2, 3, 4, 5], true))>
+                                <span class="form-check-label">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('work_days')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                 </div>
                 <div class="crm-form__section mb-0">
                     <h3>{{ __('Рабочее время') }}</h3>
@@ -163,6 +181,19 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+                <div class="crm-form__section">
+                    <h3>{{ __('Рабочие дни недели') }}</h3>
+                    <div class="crm-form__desc">{{ __('Отметьте все дни, когда сотрудник работает по этому графику') }}</div>
+                    <div class="d-flex flex-wrap gap-3">
+                        @foreach ($dayNames as $day => $label)
+                            <label class="form-check">
+                                <input class="form-check-input" type="checkbox" name="work_days[]" value="{{ $day }}" @checked(in_array($day, $schedule->workingDays(), true))>
+                                <span class="form-check-label">{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('work_days')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                 </div>
                 <div class="crm-form__section mb-0">
                     <h3>{{ __('Рабочее время') }}</h3>

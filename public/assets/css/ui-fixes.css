@@ -84,3 +84,28 @@
     font-size: .78rem;
     line-height: 1.35;
 }
+
+/* Пока открыт модальный слой, снимаем эффекты, которые заставляют браузер
+   перерисовывать размытие и анимированный фон при каждом движении курсора. */
+body.crm-app.modal-open :is(.modal-content, .crm-offcanvas, .ai-panel) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: var(--crm-surface-solid, var(--tblr-bg-surface, #fff)) !important;
+}
+
+body.modal-open :is(.bm-pet, .crm-aura, .crm-glow, .crm-orb),
+body.modal-open :is(.bm-pet, .crm-aura, .crm-glow, .crm-orb) * {
+    animation-play-state: paused !important;
+}
+
+body.modal-open .bm-pet { pointer-events: none; }
+
+body.modal-open .bm-pet__reaction {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: var(--bm-glass-overlay, var(--crm-surface-solid, #fff)) !important;
+}
+
+body.modal-open :is(.card, .crm-metric, .crm-entity, .crm-kanban__card) {
+    will-change: auto;
+}

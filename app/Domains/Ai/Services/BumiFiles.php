@@ -6,7 +6,6 @@ namespace App\Domains\Ai\Services;
 
 use App\Models\Employee;
 use App\Support\AiEndpointGuard;
-use App\Support\SettingsService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -32,10 +31,10 @@ class BumiFiles
 
     public function illustration(Employee $employee, string $prompt): array
     {
-        $settings = app(SettingsService::class);
-        $base = rtrim((string) $settings->get('corpms.ai.base_url'), '/');
-        $key = (string) $settings->get('corpms.ai.api_key');
-        $model = (string) $settings->get('corpms.ai.image_model');
+        $credentials = app(AiProviderService::class)->credentials();
+        $base = $credentials['base_url'];
+        $key = $credentials['api_key'];
+        $model = $credentials['image_model'];
         if ($model === '' || $base === '' || $key === '') {
             return ['reply' => 'Для иллюстраций администратору нужно подключить модель изображений в настройках AI. Диаграмму по данным я могу построить уже сейчас.', 'blocks' => []];
         }

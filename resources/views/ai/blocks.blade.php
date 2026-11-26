@@ -2,15 +2,18 @@
     @switch($block['type'] ?? '')
         @case('templates')
             <div class="bumi-tool" data-bumi-library>
-                <label>{{ __('Шаблон') }}<select data-template-command>
+                <strong>{{ __('Каталог шаблонов Bumi') }}</strong>
+                <p class="bumi-tool__hint">{{ __('Выберите вид материала и номер шаблона, уточните тему — незавершённый вопрос в поле ввода сохранится.') }}</p>
+                <label>{{ __('Шаблон') }}<select data-template-command aria-label="{{ __('Шаблон') }}">
                     @foreach(['report'=>[__('Отчёты'),__('Подготовь отчёт')], 'deck'=>[__('Презентации'),__('Создай презентацию')], 'chart'=>[__('Диаграммы'),__('Построй диаграмму')]] as $kind=>[$group,$verb])
                         <optgroup label="{{ $group }}">@foreach(\App\Domains\Ai\Services\BumiTemplates::names($kind) as $index=>$name)
                             <option value="{{ $verb }}, {{ __('шаблон') }} №{{ $index+1 }}">{{ $index+1 }}. {{ $name }}</option>
                         @endforeach</optgroup>
                     @endforeach
                 </select></label>
-                <label>{{ __('Данные') }}<input data-template-topic maxlength="380" value="{{ __("по задачам") }}" placeholder="{{ __("По посещаемости за неделю") }}"></label>
-                <button class="btn btn-primary" type="button" data-template-use>{{ __('Создать по шаблону') }}</button>
+                <label>{{ __('Тема / данные') }}<input data-template-topic maxlength="380" value="{{ __("по задачам") }}" placeholder="{{ __("По посещаемости за неделю") }}"></label>
+                <button class="btn btn-primary" type="button" data-template-use><i class="ti ti-layout-grid" aria-hidden="true"></i> {{ __('Создать по шаблону') }}</button>
+                <span class="bumi-tool__status" data-template-status role="status" aria-live="polite"></span>
             </div>
             @break
         @case('sources')

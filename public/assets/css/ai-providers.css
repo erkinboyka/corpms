@@ -1,0 +1,18 @@
+/* Несколько провайдеров и ключей в настройках AI. */
+.ai-providers__list { display: grid; gap: .75rem; }
+.ai-provider-row {
+    border: 1px solid var(--tblr-border-color, #dce0e6);
+    border-radius: 10px;
+    padding: .8rem;
+    background: var(--tblr-bg-surface, #fff);
+}
+.ai-provider-row__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .6rem;
+}
+.ai-provider-row .form-label { font-size: .78rem; color: var(--tblr-secondary, #687385); }
+.ai-provider-row .form-control { font-size: .84rem; }
+.ai-providers__actions { display: flex; gap: .5rem; margin-top: .75rem; }

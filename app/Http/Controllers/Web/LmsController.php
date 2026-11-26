@@ -220,6 +220,7 @@ class LmsController extends Controller
             'title' => ['required', 'string', 'max:180'],
             'summary' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'string'],
+            'bumi_scenario' => ['nullable', 'string', 'max:20000'],
             'cover_color' => ['nullable', 'string', 'max:16'],
             'publish' => ['sometimes', 'boolean'],
             'photo' => app(EntityPhotoService::class)->rules(),
@@ -230,6 +231,23 @@ class LmsController extends Controller
         app(EntityPhotoService::class)->sync($course, $request, 'lms-courses');
 
         return redirect()->route('lms.courses.show', $course)->with('status', __('Курс создан'));
+    }
+
+    public function updateBumiScenario(Request $request, LmsCourse $course): RedirectResponse
+    {
+        $me = $this->me($request);
+        $validated = $request->validate([
+            'bumi_scenario' => ['nullable', 'string', 'max:20000'],
+        ]);
+
+        $this->lms->updateBumiScenario(
+            $course,
+            $validated['bumi_scenario'] ?? null,
+            $request->user(),
+            $me,
+        );
+
+        return redirect()->route('lms.courses.show', $course)->with('status', __('Сценарий Bumi сохранён'));
     }
 
     public function storeLesson(Request $request, LmsCourse $course): RedirectResponse

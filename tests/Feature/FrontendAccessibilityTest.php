@@ -119,7 +119,8 @@ final class FrontendAccessibilityTest extends TestCase
     {
         $layout = $this->source('resources/views/layouts/tabler.blade.php');
         self::assertStringNotContainsString('<a class="btn-close"', $layout);
-        self::assertSame(2, substr_count($layout, '<button type="button" class="btn-close" data-bs-dismiss="alert"'));
+        // Одна кнопка на общий session('status') flash плюс две на error/legacy-уведомления.
+        self::assertSame(3, substr_count($layout, '<button type="button" class="btn-close" data-bs-dismiss="alert"'));
 
         $actions = $this->source('resources/views/partials/nav-actions.blade.php');
         self::assertStringContainsString('data-bs-target="#crm-bell" aria-controls="crm-bell" aria-label=', $actions);

@@ -203,7 +203,7 @@ class DashboardGenerator
                     'widget_family' => $family,
                     'widget_type' => $type,
                     'content_mode' => 'sql',
-                    'span' => 4,
+                    'span' => $this->spanFor($entry, $family),
                     'instruction' => $instruction,
                     'status' => 'pending',
                 ]),
@@ -212,6 +212,38 @@ class DashboardGenerator
         }
 
         return $created;
+    }
+
+    /**
+     * Ширина виджета: явное значение из плана, иначе разумный дефолт по
+     * семейству. Никакого «всё по 4» — у таблиц и карт должна быть строка.
+     *
+     * @param  array<string, mixed>  $entry
+     */
+    private function spanFor(array $entry, string $family): int
+    {
+        $span = $entry['span'] ?? null;
+
+        if (is_numeric($span) && in_array((int) $span, [4, 6, 12], true)) {
+            return (int) $span;
+        }
+
+        $defaults = [
+            'mini-counters' => 6,
+            'table' => 12,
+            'heatmap' => 12,
+            'treemap' => 12,
+            'bar' => 6,
+            'line' => 6,
+            'combo' => 6,
+            'scatter' => 6,
+            'radar' => 6,
+            'funnel' => 6,
+            'pie' => 4,
+            'radial' => 4,
+        ];
+
+        return $defaults[$family] ?? 4;
     }
 
     /**

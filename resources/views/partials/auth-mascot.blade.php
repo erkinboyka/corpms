@@ -125,12 +125,25 @@
         <path class="mascot-expression mascot-expression--happy" d="M219 159q11-16 23 0m49-6q11-16 23 0" fill="none" stroke="url(#mint)" stroke-width="5" stroke-linecap="round"/>
         <path class="mascot-expression mascot-expression--wink" d="M220 156l19-7-15 14" fill="none" stroke="url(#mint)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
         <path class="mascot-expression mascot-expression--curious" d="M220 138q12-8 22-2m52-10q13-8 23 2" fill="none" stroke="#a4edd3" stroke-width="3" stroke-linecap="round"/>
+        <path class="mascot-expression mascot-expression--sleepy" d="M217 157q14 11 28 0m46-6q14 11 28 0" fill="none" stroke="#a4edd3" stroke-width="5" stroke-linecap="round"/>
+        <path class="mascot-expression mascot-expression--sluggish" d="M220 150h23m49-5h24m-93 16q9 5 18 0m48-5q10 5 20 0" fill="none" stroke="#a4edd3" stroke-width="4" stroke-linecap="round"/>
+        <path class="mascot-expression mascot-expression--sad" d="M219 148q13-7 26 2m48-8q13-5 26 2" fill="none" stroke="#a4edd3" stroke-width="5" stroke-linecap="round"/>
+        <path class="mascot-expression mascot-expression--angry" d="M215 141l30 12m46-17 29 11m-69 16 23 6m49-12 23-5" fill="none" stroke="#ff9b8a" stroke-width="5" stroke-linecap="round"/>
+        <path class="mascot-expression mascot-expression--proud" d="M215 153q15-17 30 0m44-5q15-17 30 0" fill="none" stroke="#a4edd3" stroke-width="5" stroke-linecap="round"/>
       </g>
       <g fill="none" stroke="#a4edd3" stroke-width="3" stroke-linecap="round">
         <path class="mascot-mouth" d="M253 186c8 10 25 10 34-3"/>
         <path class="mascot-expression mascot-expression--happy" d="M248 182q20 32 42-4l-42 4Z" fill="#a4edd3" fill-opacity=".34"/>
         <ellipse class="mascot-expression mascot-expression--surprised" cx="272" cy="190" rx="8" ry="10"/>
         <path class="mascot-expression mascot-expression--curious" d="M261 190q9-4 19-2"/>
+        <path class="mascot-expression mascot-expression--sleepy" d="M259 189q13 4 26 0" stroke-width="4"/>
+        <path class="mascot-expression mascot-expression--sluggish" d="M257 189h30" stroke-width="4"/>
+        <path class="mascot-expression mascot-expression--sad" d="M253 196q18-15 36 0" stroke-width="4"/>
+        <path class="mascot-expression mascot-expression--angry" d="M257 197q17-19 34 0" stroke-width="4"/>
+        <path class="mascot-expression mascot-expression--proud" d="M247 183q21 33 44-5l-44 5Z" fill="#a4edd3" fill-opacity=".4" stroke="none"/>
+        <path class="mascot-expression mascot-expression--sad" d="M232 166q1 11 6 16" stroke="#7fc9ff" stroke-width="4"/>
+        <path class="mascot-expression mascot-expression--sad" d="M238 188q5 8 0 11-5-3 0-11Z" fill="#7fc9ff" stroke="none"/>
+        <path class="mascot-expression mascot-expression--proud" d="m323 130 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="#ffd477" stroke="none"/>
       </g>
     </g>
   </g>

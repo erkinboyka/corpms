@@ -2,6 +2,7 @@
     const mascot = document.querySelector('[data-mascot-greeting]');
     if (!mascot) return;
 
+    const persona = window.CorpMsBumi;
     const trigger = mascot.querySelector('[data-mascot-react]');
     const bubble = mascot.querySelector('[data-mascot-speech]');
     const line = bubble.querySelector('[data-mascot-line]');
@@ -9,26 +10,8 @@
     const status = mascot.querySelector('[data-mascot-status]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const letterDelay = 55;
-    const afterPhraseDelay = 700;
-    const greetings = [
-        { mood: 'wink', text: 'Да пребудет с тобой Wi-Fi.' },
-        { mood: 'curious', text: 'Шрек бы одобрил: болото без уведомлений.' },
-        { mood: 'happy', text: 'Я как ВАЛЛ·И, только сортирую задачи.' },
-        { mood: 'surprised', text: 'Синий экран? Нет, это просто моя морда.' },
-        { mood: 'wink', text: 'Миссия выполнима. Начнём с почты?' },
-    ];
-    const reactions = [
-        { mood: 'surprised', text: 'Ой! Чуть не ушёл в перезагрузку.' },
-        { mood: 'happy', text: 'Бип! Это роботский смех.' },
-        { mood: 'curious', text: 'Нео, красная кнопка тоже была просто кнопкой.' },
-        { mood: 'wink', text: 'Ты нашёл пасхалку. Награда — подмигивание.' },
-        { mood: 'happy', text: 'Бесконечность не обещаю. План на день — легко.' },
-        { mood: 'curious', text: 'Если кликнуть ещё, квест сам себя сделает?' },
-    ];
-    let nextGreeting = 0;
-    let nextReaction = 0;
+    const afterPhraseDelay = 5200;
     let phraseTimer;
-    let greetingTimer;
     let finishTyping;
     let bubbleExit;
     let frame = 0;
@@ -54,6 +37,8 @@
 
     window.addEventListener('pointermove', event => {
         if (reducedMotion.matches || event.pointerType !== 'mouse') return;
+        // Модалка размывает фон: лишняя перерисовка взгляда тормозит курсор.
+        if (document.body.classList.contains('modal-open')) return;
         pointer = { x: event.clientX, y: event.clientY };
         if (!frame) frame = requestAnimationFrame(updateGaze);
     }, { passive: true });
@@ -64,7 +49,6 @@
         bubble.hidden = true;
         bubbleExit?.cancel();
         bubbleExit = null;
-        delete mascot.dataset.mood;
     }
 
     function hidePhrase() {
@@ -88,9 +72,9 @@
         clearTimeout(phraseTimer);
         bubbleExit?.cancel();
         bubbleExit = null;
-        const letters = Array.from(text);
+        const letters = Array.from(text || '');
         let visible = 0;
-        mascot.dataset.mood = mood;
+        if (mood) mascot.dataset.mood = mood;
         bubble.hidden = false;
         if (announce) status.textContent = text;
 
@@ -112,11 +96,11 @@
             phraseTimer = setTimeout(typeLetter, letterDelay);
         }
 
-        if (reducedMotion.matches) {
+        if (reducedMotion.matches || letters.length < 2) {
             line.textContent = text;
             remainder.textContent = '';
             finishTyping = null;
-            phraseTimer = setTimeout(finish, (letters.length - 1) * letterDelay);
+            phraseTimer = setTimeout(finish, Math.max(0, (letters.length - 1) * letterDelay));
         } else {
             finishTyping = () => {
                 clearTimeout(phraseTimer);
@@ -126,15 +110,35 @@
         }
     }
 
-    function scheduleGreeting() {
-        clearTimeout(greetingTimer);
-        if (document.hidden) return;
-        greetingTimer = setTimeout(() => {
-            showPhrase(greetings[nextGreeting]);
-            nextGreeting = (nextGreeting + 1) % greetings.length;
-            scheduleGreeting();
-        }, 10000 + Math.floor(Math.random() * 5001));
-    }
+    // Стартовая реплика приходит от сервера и уже имеет причину (время суток,
+    // ошибку входа, успешный сброс пароля). Больше нет «случайных приветствий».
+    const initialMood = mascot.dataset.mood || document.body.dataset.bumiMood || 'happy';
+    const initialLine = line.textContent.trim() || document.body.dataset.bumiLine || 'Привет! Я Bumi';
+    if (!document.hidden) showPhrase({ mood: initialMood, text: initialLine });
+
+    trigger.addEventListener('click', () => {
+        // react() возвращает {mood, line, reason}, а типописец ждёт {mood, text}.
+        // source:'auth' не даёт общему слою показать реплику дважды: здесь её
+        // показывает этот сценарий, с озвучиванием в status.
+        const reaction = persona?.react('poke', { source: 'auth' });
+        showPhrase(
+            reaction
+                ? { mood: reaction.mood, text: reaction.line }
+                : { mood: 'curious', text: 'Ты меня позвал? Я на связи.' },
+            true,
+        );
+    });
+
+    // Форма входа, ошибки и сеть озвучиваются тем же persona-слоем, что и чат.
+    document.addEventListener('bumi:mood', (event) => {
+        const detail = event.detail || {};
+        if (!detail.line || detail.source === 'auth') return;
+        showPhrase({ mood: detail.mood, text: detail.line });
+    });
+
+    document.querySelector('form')?.addEventListener('submit', () => {
+        persona?.react('auth');
+    });
 
     reducedMotion.addEventListener('change', () => {
         resetGaze();
@@ -149,15 +153,5 @@
             finishTyping = null;
             hideBubble();
         }
-        scheduleGreeting();
     });
-
-    trigger.addEventListener('click', () => {
-        showPhrase(reactions[nextReaction], true);
-        nextReaction = (nextReaction + 1) % reactions.length;
-        scheduleGreeting();
-    });
-
-    if (!document.hidden) showPhrase({ mood: 'happy', text: line.textContent });
-    scheduleGreeting();
 })();

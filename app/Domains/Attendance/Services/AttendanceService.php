@@ -8,8 +8,6 @@ use App\Models\AttendanceAnomaly;
 use App\Models\AttendanceRecord;
 use App\Models\BiometricEvent;
 use App\Models\Employee;
-use App\Models\Holiday;
-use App\Models\ScheduleAssignment;
 use App\Models\WorkSchedule;
 use App\Shared\Enums\AnomalyType;
 use App\Shared\Enums\AttendanceStatus;
@@ -26,6 +24,14 @@ use Illuminate\Support\Facades\DB;
  */
 class AttendanceService
 {
+    public function __construct(protected ?AttendanceCalculationService $calculation = null) {}
+
+    /** Единый приоритетный слой расчёта (создаётся лениво для прямых new AttendanceService). */
+    protected function calculation(): AttendanceCalculationService
+    {
+        return $this->calculation ??= new AttendanceCalculationService();
+    }
+
     /**
      * Применяет биометрическое событие к табелю.
      * Идемпотентность по event_uuid обеспечена на уровне BP (unique).
@@ -64,6 +70,7 @@ class AttendanceService
             ]);
 
         $schedule ??= $this->scheduleFor($employee, $day->toDateString());
+        $override = $this->calculation()->resolve($employee, $day);
 
         if ($event->direction === 'in') {
             if ($record->exists && $record->clock_in_at !== null) {
@@ -83,7 +90,11 @@ class AttendanceService
             }
 
             $record->clock_in_at = $event->occurred_at;
-            $record->source = 'biometric';
+            // Происхождение отметки не перезаписывается, если день уже
+            // определён приоритетным источником (например, APPROVED offsite).
+            if ($override === null) {
+                $record->source = 'biometric';
+            }
             $record->status = $this->statusOnArrival($record->clock_in_at, $schedule, $day, (int) $employee->company_id);
             $record->late_minutes = $this->lateMinutes($record->clock_in_at, $schedule, $day);
             $record->scheduled_minutes = $schedule !== null
@@ -112,6 +123,10 @@ class AttendanceService
             'grace_minutes' => $schedule?->grace_minutes ?? 10,
         ];
 
+        // Приоритет источников (отпуск, больничный, командировка, APPROVED
+        // offsite, выходной) перекрывает «опоздание» и прочие face-страты.
+        $this->calculation()->applyTo($record, $day);
+
         $record->save();
 
         return $record;
@@ -120,7 +135,7 @@ class AttendanceService
     /** Статус прихода: выходной / отсутствует график / вовремя / опоздал. */
     public function statusOnArrival(Carbon $clockIn, ?WorkSchedule $schedule, Carbon $day, ?int $companyId = null): AttendanceStatus
     {
-        if ($this->isDayOff($day, $companyId ?? $schedule?->company_id)) {
+        if ($this->isDayOff($day, $companyId ?? $schedule?->company_id, $schedule)) {
             return AttendanceStatus::Weekend;
         }
 
@@ -147,6 +162,12 @@ class AttendanceService
     }
 
     public function recalculateForDate(AttendanceRecord $record, ?WorkSchedule $schedule, Carbon $day): void
+    {
+        $this->recalculateRaw($record, $schedule, $day);
+        $this->calculation()->applyTo($record, $day);
+    }
+
+    protected function recalculateRaw(AttendanceRecord $record, ?WorkSchedule $schedule, Carbon $day): void
     {
         $zero = static function (AttendanceRecord $r) {
             $r->late_minutes = 0;
@@ -233,27 +254,12 @@ class AttendanceService
     /** рабочий график на день: назначение по сотруднику > текущий график сотрудника */
     public function scheduleFor(Employee $employee, string $dateString): ?WorkSchedule
     {
-        $assigned = ScheduleAssignment::query()
-            ->where('employee_id', $employee->id)
-            ->where('effective_from', '<=', $dateString)
-            ->where(function ($q) use ($dateString) {
-                $q->whereNull('effective_to')->orWhere('effective_to', '>=', $dateString);
-            })
-            ->orderByDesc('effective_from')
-            ->value('work_schedule_id');
-
-        return WorkSchedule::find($assigned ?? $employee->work_schedule_id);
+        return $this->calculation()->scheduleFor($employee, Carbon::parse($dateString)->startOfDay());
     }
 
-    public function isDayOff(Carbon $day, ?int $companyId = null): bool
+    public function isDayOff(Carbon $day, ?int $companyId = null, ?WorkSchedule $schedule = null): bool
     {
-        if (in_array($day->dayOfWeekIso, [6, 7], true)) {
-            return true;
-        }
-
-        return Holiday::query()->whereDate('date', $day->toDateString())->where('is_day_off', true)
-            ->where(fn ($query) => $query->whereNull('company_id')->when($companyId !== null, fn ($scope) => $scope->orWhere('company_id', $companyId)))
-            ->exists();
+        return $this->calculation()->isDayOffFor($day, $companyId, $schedule);
     }
 
     public function detectMissingCheckout(Carbon $day): int

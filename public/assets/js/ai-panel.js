@@ -1,6 +1,15 @@
 (() => {
     'use strict';
 
+    const bumiUi = (() => {
+        try {
+            const node = document.getElementById('bumi-i18n');
+            return node ? (JSON.parse(node.textContent).ui || {}) : {};
+        } catch (error) {
+            return {};
+        }
+    })();
+    const bt = (key, fallback) => (typeof bumiUi[key] === 'string' ? bumiUi[key] : fallback);
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let cancelActiveVoice = null;
 
@@ -18,7 +27,7 @@
 
         function resetIndicator() {
             mic.setAttribute('aria-pressed', 'false');
-            mic.title = 'Диктовать сообщение';
+            mic.title = bt('dictateMessage', 'Диктовать сообщение');
             onListening(false);
         }
 
@@ -32,8 +41,28 @@
             if (!active) return;
             const recognition = active;
             finish();
-            recognition.abort();
+            recognition.abort?.();
             announce('');
+        }
+
+        function insertTranscript(transcript) {
+            if (!transcript || input.readOnly) return;
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? start;
+            const before = input.value.slice(0, start);
+            const after = input.value.slice(end);
+            const prefix = before && !/\s$/.test(before) ? ' ' : '';
+            const suffix = after && !/^\s/.test(after) ? ' ' : '';
+            const room = input.maxLength - before.length - after.length;
+            if (room > prefix.length) {
+                input.setRangeText((prefix + transcript + suffix).slice(0, room), start, end, 'end');
+                onTranscript();
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.focus();
+                announce(bt('textAdded', 'Текст добавлен. Проверьте его перед отправкой.'));
+            } else {
+                announce(bt('lengthReached', 'В сообщении уже достигнут предел длины.'));
+            }
         }
 
         mic.addEventListener('click', () => {
@@ -42,10 +71,35 @@
                 return;
             }
             if (!SpeechRecognition) {
-                announce('Этот браузер не поддерживает диктовку.');
+                announce(bt('dictationUnsupported', 'Этот браузер не поддерживает диктовку.'));
                 return;
             }
             if (input.readOnly) return;
+
+            // На http://corpms.local браузер не даёт микрофон, поэтому серверная
+            // диктовка — единственный рабочий путь; при недоступности она сама
+            // покажет понятную причину вместо «not-allowed».
+            const voice = window.CorpMsBumiVoice;
+            if (voice?.enabled && voice.sttMode === 'server') {
+                cancelActiveVoice?.();
+                const handle = voice.dictate({
+                    onTranscript: insertTranscript,
+                    onStatus: announce,
+                    onListening: active => {
+                        mic.setAttribute('aria-pressed', String(!!active));
+                        mic.title = active ? bt('dictationStop', 'Завершить диктовку') : bt('dictateMessage', 'Диктовать сообщение');
+                        onListening(active);
+                    },
+                });
+                if (!handle) return;
+                active = { stop: () => handle.stop?.(), abort: () => handle.stop?.() };
+                cancelActiveVoice = () => handle.stop?.();
+                mic.setAttribute('aria-pressed', 'true');
+                mic.title = bt('dictationStop', 'Завершить диктовку');
+                onListening(true);
+                announce(bt('micStarting', 'Включаю микрофон…'));
+                return;
+            }
 
             cancelActiveVoice?.();
             const recognition = new SpeechRecognition();
@@ -55,52 +109,35 @@
 
             recognition.onstart = () => {
                 if (active !== recognition) return;
-                announce('Слушаю…');
+                announce(bt('listeningUi', 'Слушаю…'));
             };
             recognition.onresult = event => {
                 if (active !== recognition || input.readOnly) return;
                 const transcript = Array.from(event.results).slice(event.resultIndex)
                     .filter(result => result.isFinal).map(result => result[0].transcript.trim()).join(' ').trim();
-                if (!transcript) return;
-
-                const start = input.selectionStart ?? input.value.length;
-                const end = input.selectionEnd ?? start;
-                const before = input.value.slice(0, start);
-                const after = input.value.slice(end);
-                const prefix = before && !/\s$/.test(before) ? ' ' : '';
-                const suffix = after && !/^\s/.test(after) ? ' ' : '';
-                const room = input.maxLength - before.length - after.length;
-                if (room > prefix.length) {
-                    input.setRangeText((prefix + transcript + suffix).slice(0, room), start, end, 'end');
-                    onTranscript();
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.focus();
-                    announce('Текст добавлен. Проверьте его перед отправкой.');
-                } else {
-                    announce('В сообщении уже достигнут предел длины.');
-                }
+                insertTranscript(transcript);
             };
             recognition.onerror = event => {
                 if (active !== recognition) return;
                 const errors = {
                     'not-allowed': window.isSecureContext
-                        ? 'Разрешите браузеру доступ к микрофону для этого сайта.'
-                        : 'Для доступа к микрофону откройте сайт по доверенному HTTPS.',
+                        ? bt('micPermission', 'Разрешите браузеру доступ к микрофону для этого сайта.')
+                        : bt('micNeedsHttps', 'Для доступа к микрофону откройте сайт по доверенному HTTPS.'),
                     'service-not-allowed': window.isSecureContext
-                        ? 'Распознавание речи недоступно для этого сайта.'
-                        : 'Для доступа к микрофону откройте сайт по доверенному HTTPS.',
-                    'audio-capture': 'Браузер не нашёл доступный микрофон.',
-                    'no-speech': 'Речь не распознана. Попробуйте снова.',
-                    network: 'Служба распознавания речи недоступна. Можно ввести текст.',
+                        ? bt('speechUnavailable', 'Распознавание речи недоступно для этого сайта.')
+                        : bt('micNeedsHttps', 'Для доступа к микрофону откройте сайт по доверенному HTTPS.'),
+                    'audio-capture': bt('micMissing', 'Браузер не нашёл доступный микрофон.'),
+                    'no-speech': bt('speechNotRecognized', 'Речь не распознана. Попробуйте снова.'),
+                    network: bt('speechServiceUnavailable', 'Служба распознавания речи недоступна. Можно ввести текст.'),
                 };
                 finish();
-                announce(errors[event.error] || 'Диктовку не удалось завершить.');
+                announce(errors[event.error] || bt('dictationFinishFailed', 'Диктовку не удалось завершить.'));
             };
             recognition.onend = () => {
                 if (active !== recognition) return;
                 finish();
-                if (status.textContent === 'Слушаю…' || status.textContent === 'Включаю микрофон…') {
-                    announce('Речь не распознана. Попробуйте снова.');
+                if (status.textContent === bt('listeningUi', 'Слушаю…') || status.textContent === bt('micStarting', 'Включаю микрофон…')) {
+                    announce(bt('speechNotRecognized', 'Речь не распознана. Попробуйте снова.'));
                 }
             };
 
@@ -108,13 +145,13 @@
                 active = recognition;
                 cancelActiveVoice = cancel;
                 mic.setAttribute('aria-pressed', 'true');
-                mic.title = 'Завершить диктовку';
+                mic.title = bt('dictationStop', 'Завершить диктовку');
                 onListening(true);
-                announce('Включаю микрофон…');
+                announce(bt('micStarting', 'Включаю микрофон…'));
                 recognition.start();
             } catch {
                 finish();
-                announce('Браузер не смог начать диктовку.');
+                announce(bt('dictationStartFailed', 'Браузер не смог начать диктовку.'));
             }
         });
 
@@ -125,21 +162,13 @@
         return cancel;
     }
 
-    const emotions = { smile: 'Улыбается', wink: 'Подмигивает', thinking: 'Задумался', surprise: 'Удивлён' };
-    const emotionNames = Object.keys(emotions);
-    document.addEventListener('click', event => {
-        const face = event.target.closest('[data-bumi-face]');
-        if (!face) return;
-        const next = emotionNames[(emotionNames.indexOf(face.dataset.bumiEmotion) + 1) % emotionNames.length];
-        face.dataset.bumiEmotion = next;
-        face.setAttribute('aria-description', emotions[next]);
-    });
-
+    // Реакции на лицо и moods теперь ведёт bumi-persona.js: у каждого
+    // выражения есть причина, а не просто цикл «улыбка → подмигивание».
     function thinkingBubble(container) {
         const pending = document.createElement('div');
         pending.className = 'bumi-thinking';
         pending.setAttribute('role', 'status');
-        pending.innerHTML = '<span class="visually-hidden">Бими обрабатывает запрос</span><i></i><i></i><i></i>';
+        pending.innerHTML = '<span class="visually-hidden">' + bt('processing', 'Бими обрабатывает запрос') + '</span><i></i><i></i><i></i>';
         const face = document.querySelector('[data-bumi-face] svg, [data-ai-toggle] svg');
         if (face) {
             const portrait = document.createElement('span');
@@ -150,7 +179,36 @@
             pending.prepend(portrait);
         }
         container.append(pending);
+        animateIn(pending);
         return pending;
+    }
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    /** Анимация только для новых сообщений; SSR-историю не трогаем. */
+    function animateIn(node) {
+        if (!node || reduceMotion.matches) return node;
+        node.classList.add('is-entering');
+        node.addEventListener('animationend', function clear(event) {
+            if (event.target !== node) return;
+            node.classList.remove('is-entering');
+            node.removeEventListener('animationend', clear);
+        });
+        return node;
+    }
+
+    /** Поставить ответ на место «думающего» сообщения и мягко убрать последнее. */
+    function placeMessage(container, node, reference) {
+        if (reference && reference.parentNode === container) container.insertBefore(node, reference);
+        else container.append(node);
+        return animateIn(node);
+    }
+
+    function retire(node) {
+        if (!node) return;
+        if (reduceMotion.matches) { node.remove(); return; }
+        node.classList.add('is-leaving');
+        window.setTimeout(() => node.remove(), 180);
     }
 
     document.addEventListener('submit', async event => {
@@ -161,15 +219,15 @@
         if (button.disabled) return;
         button.disabled = true;
         const status = form.querySelector('[role=status]');
-        status.textContent = 'Подписываю…';
+        status.textContent = bt('signing', 'Подписываю…');
         try {
             const response = await fetch(form.action, {method:'POST', headers:{Accept:'application/json'}, body:new FormData(form)});
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Подпись не выполнена.');
+            if (!response.ok) throw new Error(data.message || bt('signFailed', 'Подпись не выполнена.'));
             form.replaceChildren(status);
             status.textContent = data.message;
         } catch (error) {
-            status.textContent = error instanceof SyntaxError || error instanceof TypeError ? 'Проверьте состояние документа и соединение.' : error.message;
+            status.textContent = error instanceof SyntaxError || error instanceof TypeError ? bt('checkDocumentAndConnection', 'Проверьте состояние документа и соединение.') : error.message;
             button.disabled = false;
         }
     });
@@ -223,26 +281,40 @@
     document.addEventListener('click', event => {
         const control = event.target.closest('[data-bumi-templates], [data-template-use]');
         if (!control) return;
-        const composer = control.closest('[data-ai-companion]')?.querySelector('#ai-form') || document.querySelector('.bm-assistant__composer');
+        const scope = control.closest('[data-ai-companion], [data-ai-workspace]');
+        const composer = scope?.querySelector('.bm-assistant__composer, #ai-form')
+            || document.querySelector('[data-ai-workspace] .bm-assistant__composer')
+            || document.querySelector('#ai-form');
         if (!composer) return;
         const entry = composer.elements.question;
-        if (entry.readOnly || composer.querySelector('[type=submit]').getAttribute('aria-label') === 'Отправка вопроса') return;
-        let command = 'Покажи шаблоны';
-        if (control.hasAttribute('data-template-use')) {
-            const library = control.closest('[data-bumi-library]');
-            command = library.querySelector('[data-template-command]').value+' '+library.querySelector('[data-template-topic]').value.trim();
-        }
-        if (control.closest('#mini-actions')) {
-            control.closest('#mini-actions').hidden = true;
-            composer.querySelector('[data-mini-actions]').setAttribute('aria-expanded','false');
-        }
-        // A catalog action sends its own message. Preserve any unfinished question.
+        const submit = composer.querySelector('[type=submit]');
+        if (!entry || entry.readOnly || submit?.getAttribute('aria-label') === bt('sendingQuestion', 'Отправка вопроса')) return;
+
+        const library = control.closest('[data-bumi-library]');
+        const command = control.hasAttribute('data-template-use') && library
+            ? [library.querySelector('[data-template-command]')?.value.trim(),
+               library.querySelector('[data-template-topic]')?.value.trim()].filter(Boolean).join(' ')
+            : bt('showTemplates', 'Покажи шаблоны');
+        if (command.length < 3) return;
+
         const draft = entry.value;
-        entry.value = command;
-        entry.dispatchEvent(new Event('input'));
-        composer.requestSubmit();
-        entry.value = draft;
-        entry.dispatchEvent(new Event('input'));
+        const status = library?.querySelector('[data-template-status]');
+        control.classList.add('is-launching');
+        window.setTimeout(() => control.classList.remove('is-launching'), 420);
+        if (status) status.textContent = bt('sending', 'Отправляю запрос…');
+
+        // Каталог/шаблон отправляет отдельную реплику, но черновик пользователя сохраняем.
+        try {
+            entry.value = command;
+            entry.dispatchEvent(new Event('input', { bubbles: true }));
+            composer.requestSubmit();
+        } finally {
+            entry.value = draft;
+            entry.dispatchEvent(new Event('input', { bubbles: true }));
+            window.setTimeout(() => { if (status) status.textContent = ''; }, 2400);
+        }
+
+        if (submit && !submit.disabled) entry.focus({ preventScroll: true });
     });
 
     const workspace = document.querySelector('[data-ai-workspace]');
@@ -293,17 +365,18 @@
                         selection.removeAllRanges();
                         selection.addRange(range);
                         if (!document.execCommand('copy')) {
-                            copyStatus.textContent = 'Ответ выделен. Нажмите Ctrl+C.';
+                            copyStatus.textContent = bt('copyManual', 'Ответ выделен. Нажмите Ctrl+C.');
                             return;
                         }
                         selection.removeAllRanges();
                     }
-                    copyStatus.textContent = 'Ответ скопирован';
+                    copyStatus.textContent = bt('answerCopied', 'Ответ скопирован');
+                    window.CorpMsBumi?.react('copy');
                     const icon = button.querySelector('i');
                     icon.classList.replace('ti-copy', 'ti-check');
                     setTimeout(() => icon.classList.replace('ti-check', 'ti-copy'), 1200);
                 } catch {
-                    copyStatus.textContent = 'Не удалось скопировать ответ.';
+                    copyStatus.textContent = bt('copyFailed', 'Не удалось скопировать ответ.');
                 }
         });
         form.addEventListener('submit', async event => {
@@ -313,17 +386,18 @@
             }
             const question = input.value.trim();
             submitting = true;
+            window.CorpMsBumi?.react('thinking');
             input.value = '';
             history.querySelector('.bm-assistant__empty')?.remove();
             const row = document.createElement('div');
             row.className = 'ai-msg ai-msg--me';
             row.innerHTML = '<div class="ai-msg__bubble"></div>';
             row.firstChild.textContent = question;
-            history.append(row);
+            placeMessage(history, row);
             const pending = thinkingBubble(history);
             scrollToLatest();
             mic.disabled = true;
-            send.setAttribute('aria-label', 'Отправка вопроса');
+            send.setAttribute('aria-label', bt('sendingQuestion', 'Отправка вопроса'));
             send.querySelector('i').className = 'ti ti-loader-2';
             updateComposer();
             const answer = document.createElement('div');
@@ -338,16 +412,19 @@
                 const data = await response.json();
                 if(!response.ok || !data.ok) throw new Error(data.reply || responseError(response,data));
                 bubble.innerHTML = '<div class="bm-assistant__answer ai-markdown">'+data.reply_html+'</div>'+(data.blocks_html || '')+
-                    '<button type="button" class="bm-assistant__copy" data-ai-copy aria-label="Скопировать ответ"><i class="ti ti-copy"></i></button>';
+                    '<button type="button" class="bm-assistant__copy" data-ai-copy aria-label="' + bt('copyAnswer', 'Скопировать ответ') + '"><i class="ti ti-copy"></i></button>';
+                window.CorpMsBumi?.react('ai_ready');
             } catch(error) {
                 answer.classList.add('ai-msg--error');
-                bubble.textContent = error instanceof SyntaxError || error instanceof TypeError ? 'Связь с сервером прервалась. Повторите запрос.' : error.message;
+                bubble.textContent = error instanceof SyntaxError || error instanceof TypeError ? bt('serverInterrupted', 'Связь с сервером прервалась. Повторите запрос.') : error.message;
                 if(!input.value) input.value=question;
+                window.CorpMsBumi?.react('ai_error');
             } finally {
-                pending.replaceWith(answer);
+                placeMessage(history, answer, pending);
+                retire(pending);
                 submitting = false;
                 mic.disabled = false;
-                send.setAttribute('aria-label', 'Отправить вопрос');
+                send.setAttribute('aria-label', bt('sendQuestion', 'Отправить вопрос'));
                 send.querySelector('i').className = 'ti ti-arrow-up';
                 updateComposer();
                 scrollToLatest();
@@ -372,10 +449,18 @@
     const writeBtn = dock.querySelector('[data-ai-write]');
     const recordBtn = dock.querySelector('[data-mini-record]');
     const mic = form.querySelector('[data-ai-voice]');
-    const actions = form.querySelector('#mini-actions');
-    const moreBtn = form.querySelector('[data-mini-actions]');
+    const role = companion.dataset.bumiRole || 'assistant';
+    const roleTools = companion.querySelectorAll('[data-bumi-role-tool]');
+    const lessonField = form.querySelector('[name="lesson_id"]');
+    const modeField = form.querySelector('[name="bumi_mode"]');
+    const greeting = companion.dataset.bumiGreeting || '';
+    let greeted = false;
     const thread = panel.querySelector('[data-mini-thread]');
     const motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+    // При открытой модалке фон размыт, и слежение за курсором заставляет
+    // браузер заново композировать слой — курсор начинает заметно тормозить.
+    const overlayIsOpen = () => document.body.classList.contains('modal-open')
+        || !!document.querySelector('.modal.show, .offcanvas.show');
     let headCenter = { x: 0, y: 0 };
     let landingTimer;
     const positionKey = 'bm-ai-pet-position';
@@ -387,17 +472,17 @@
     let ignoreClick = false;
     let reactionTimer;
     const stateLines = {
-        idle: 'На связи',
-        thinking: 'Думаю…',
-        ready: 'Ответ готов',
-        error: 'Попробуем ещё?',
+        idle: bt('online', 'На связи'),
+        thinking: bt('thinking', 'Думаю…'),
+        ready: bt('answerReady', 'Ответ готов'),
+        error: bt('tryAgain', 'Попробуем ещё?'),
     };
     const cancelVoice = bindDictation(form, active => {
         companion.toggleAttribute('data-listening', active);
         recordBtn.setAttribute('aria-pressed', String(active));
-        mic.querySelector('[data-mini-voice-label]').textContent = active ? 'Завершить диктовку' : 'Диктовать';
-        recordBtn.setAttribute('aria-label', active ? 'Завершить диктовку' : 'Диктовать сообщение');
-        status.textContent = active ? 'Диктовка' : stateLines[companion.dataset.state];
+        mic.querySelector('[data-mini-voice-label]').textContent = active ? bt('dictationStop', 'Завершить диктовку') : bt('dictate', 'Диктовать');
+        recordBtn.setAttribute('aria-label', active ? bt('dictationStop', 'Завершить диктовку') : bt('dictateMessage', 'Диктовать сообщение'));
+        status.textContent = active ? bt('dictation', 'Диктовка') : stateLines[companion.dataset.state];
         placeBubble();
     }, () => setOpen(true), text => {
         if (panel.hidden) showReaction(text, text ? 4200 : 0);
@@ -476,7 +561,7 @@
                 companion.setAttribute('data-guiding','');
                 movePet(rect.left > 100 ? rect.left-companion.offsetWidth-8 : rect.right+8, rect.top);
                 target.classList.add('bumi-target');
-                showReaction('Вот здесь', 3500);
+                showReaction(bt('rightHere', 'Вот здесь'), 3500);
                 setTimeout(() => {
                     companion.removeAttribute('data-guiding');
                     target.classList.remove('bumi-target');
@@ -516,12 +601,8 @@
     function showAssistantState(state) {
         companion.dataset.state = state;
         status.textContent = stateLines[state];
-        showReaction(state === 'thinking' ? '' : stateLines[state], 3300);
-    }
-
-    function setActions(open) {
-        actions.hidden = !open;
-        moreBtn.setAttribute('aria-expanded', String(open));
+        const reason = { idle: 'ready', thinking: 'thinking', ready: 'ai_ready', error: 'ai_error' }[state];
+        if (reason) window.CorpMsBumi?.react(reason);
     }
 
     function setOpen(open, restoreFocus = false) {
@@ -529,7 +610,6 @@
             cancelVoice();
             form.querySelector('[data-ai-voice-status]').hidden = true;
         }
-        setActions(false);
         panel.hidden = !open;
         dock.hidden = open;
         companion.toggleAttribute('data-open', open);
@@ -537,6 +617,10 @@
         writeBtn.setAttribute('aria-expanded', String(open));
         placePet();
         if (open) {
+            if (!greeted && greeting) {
+                greeted = true;
+                addMessage('ai', '<div class="ai-markdown">' + formatText(greeting) + '</div>');
+            }
             scrollDown();
             input.focus({ preventScroll: true });
         } else if (restoreFocus) {
@@ -558,7 +642,7 @@
     let gazeFrame = 0;
     let pointer;
     document.addEventListener('pointermove', event => {
-        if (drag || event.pointerType !== 'mouse' || !motion.matches) return;
+        if (drag || event.pointerType !== 'mouse' || !motion.matches || overlayIsOpen()) return;
         pointer = { x: event.clientX, y: event.clientY };
         if (gazeFrame) return;
         gazeFrame = requestAnimationFrame(() => {
@@ -569,16 +653,23 @@
 
     writeBtn.addEventListener('click', () => setOpen(true));
     recordBtn.addEventListener('click', () => mic.click());
-    moreBtn.addEventListener('click', () => {
-        setActions(actions.hidden);
-        form.querySelector('[data-ai-voice-status]').hidden = true;
-        if (!actions.hidden) actions.querySelector('button:not(:disabled)').focus();
-    });
-    mic.addEventListener('click', () => {
-        setActions(false);
+    mic?.addEventListener('click', () => {
         if (!panel.hidden) input.focus();
     });
-    actions.querySelector('[data-mini-fold]').addEventListener('click', () => setOpen(false, true));
+
+    // Инструменты роли подставляют осмысленный запрос и отправляют его.
+    roleTools.forEach(button => button.addEventListener('click', () => {
+        if (input.readOnly) return;
+        const prompt = button.dataset.bumiToolPrompt || '';
+        if (prompt.length < 3) return;
+        const draft = input.value;
+        input.value = prompt;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        if (modeField && button.dataset.bumiToolMode) modeField.value = button.dataset.bumiToolMode;
+        if (!panel.hidden) form.requestSubmit();
+        input.value = draft;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }));
 
     toggleBtn.addEventListener('pointerdown', event => {
         if (!event.isPrimary || event.button !== 0) return;
@@ -638,27 +729,23 @@
         const [dx, dy] = shifts[event.key];
         movePet(companion.offsetLeft + dx * 20, companion.offsetTop + dy * 20);
         savePosition();
-        showReaction('Я здесь!');
+        showReaction(bt('here', 'Я здесь!'));
     });
 
     companion.querySelector('[data-ai-close]').addEventListener('click', () => setOpen(false, true));
     document.addEventListener('pointerdown', event => {
         if (!panel.hidden && !companion.contains(event.target)) setOpen(false);
-        else if (!actions.contains(event.target) && !moreBtn.contains(event.target)) setActions(false);
     });
     companion.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
         event.stopPropagation();
-        if (!actions.hidden) {
-            setActions(false);
-            moreBtn.focus();
-        } else if (!panel.hidden) setOpen(false, true);
+        if (!panel.hidden) setOpen(false, true);
         else if (companion.hasAttribute('data-listening')) cancelVoice();
         else if (event.target === toggleBtn) {
             position = { x: 1, y: 1 };
             placePet();
             savePosition();
-            showReaction('Вернулся!');
+            showReaction(bt('welcomeBack', 'Вернулся!'));
         }
     });
     /* ---------- утилиты ---------- */
@@ -700,7 +787,7 @@
             if (Number(data[i].value) > max) { max = Number(data[i].value); }
         }
 
-        var svg = ['<svg class="ai-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + escapeHtml(block.title || 'Диаграмма') + '">'];
+        var svg = ['<svg class="ai-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + escapeHtml(block.title || bt('diagram', 'Диаграмма')) + '">'];
         for (i = 0; i < data.length; i++) {
             var label = String(data[i].label);
             var value = Number(data[i].value) || 0;
@@ -774,7 +861,7 @@
     }
 
 
-    function addMessage(side, html, isError = false) {
+    function addMessage(side, html, isError = false, reference = null) {
         const wrap = document.createElement('div');
         wrap.className = 'ai-msg ai-msg--' + side + (isError ? ' ai-msg--error' : '');
         if (side === 'ai') {
@@ -786,7 +873,7 @@
         bubble.className = 'ai-msg__bubble';
         bubble.innerHTML = html;
         wrap.append(bubble);
-        messages.append(wrap);
+        placeMessage(messages, wrap, reference);
         if (side === 'ai' && !isError) guideReply(bubble);
         placeBubble();
         scrollDown();
@@ -797,10 +884,10 @@
     function setBusy(busy) {
         inFlight = busy;
         input.readOnly = busy;
-        form.querySelector('[data-ai-example]').disabled = busy || !!input.value.trim();
+        roleTools.forEach(button => { button.disabled = busy; });
         sendBtn.disabled = busy || input.value.trim().length < 3;
         recordBtn.disabled = busy;
-        form.querySelector('[data-ai-voice]').disabled = busy;
+        if (mic) mic.disabled = busy;
         form.classList.toggle('is-busy', busy);
         messages.setAttribute('aria-busy', String(busy));
     }
@@ -808,12 +895,12 @@
     function responseError(response, data) {
         if (response.status === 422) {
             const validation = Object.values(data.errors || {})[0];
-            return validation?.[0] || 'Проверьте длину вопроса.';
+            return validation?.[0] || bt('checkQuestionLength', 'Проверьте длину вопроса.');
         }
-        if (response.status === 401 || response.status === 419) return 'Сессия истекла. Обновите страницу и войдите снова.';
-        if (response.status === 403) return 'У вас нет доступа к этому действию.';
-        if (response.status === 429) return 'Слишком много запросов. Попробуйте чуть позже.';
-        return 'Ассистент пока недоступен. Попробуйте ещё раз.';
+        if (response.status === 401 || response.status === 419) return bt('sessionExpired', 'Сессия истекла. Обновите страницу и войдите снова.');
+        if (response.status === 403) return bt('accessDenied', 'У вас нет доступа к этому действию.');
+        if (response.status === 429) return bt('tooManyRequests', 'Слишком много запросов. Попробуйте чуть позже.');
+        return bt('assistantUnavailable', 'Ассистент пока недоступен. Попробуйте ещё раз.');
     }
 
     async function send(question, fromInput = false) {
@@ -823,7 +910,7 @@
         const token = form.querySelector('input[name="_token"]').value;
         cancelVoice();
         thread.hidden = false;
-        input.placeholder = 'Сообщение для Bumi';
+        input.placeholder = bt('messagePlaceholder', 'Сообщение для Bumi');
         addMessage('me', formatText(question));
         if (fromInput) input.value = '';
         setBusy(true);
@@ -842,11 +929,15 @@
                     'X-CSRF-TOKEN': token,
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ question }),
+                body: JSON.stringify({
+                    question,
+                    ...(lessonField && lessonField.value ? { lesson_id: Number(lessonField.value) } : {}),
+                    ...(modeField && modeField.value ? { mode: modeField.value } : {}),
+                }),
             });
             const data = (await response.json().catch(() => ({}))) || {};
             if (!response.ok) {
-                addMessage('ai', formatText(responseError(response, data)), true);
+                addMessage('ai', formatText(responseError(response, data)), true, pending);
                 return;
             }
 
@@ -855,12 +946,19 @@
             const blocks = Array.isArray(data.blocks) ? data.blocks : [];
             const replyHtml = reply && typeof data.reply_html === 'string'
                 ? data.reply_html
-                : formatText(reply || 'Bumi пока не смог ответить. Попробуйте ещё раз.');
-            addMessage('ai', '<div class="ai-markdown">' + replyHtml + '</div>' + (data.blocks_html ?? renderBlocks(blocks)), !success);
+                : formatText(reply || bt('noReply', 'Bumi пока не смог ответить. Попробуйте ещё раз.'));
+            addMessage('ai', '<div class="ai-markdown">' + replyHtml + '</div>' + (data.blocks_html ?? renderBlocks(blocks)), !success, pending);
+            if (success) {
+                if (data.reason) window.CorpMsBumi?.react(data.reason);
+                const canSpeak = document.body.dataset.bumiConversation === '1'
+                    && document.body.dataset.bumiAutoSpeak !== '0'
+                    && typeof window.CorpMsBumiVoice?.speak === 'function';
+                if (canSpeak) void window.CorpMsBumiVoice.speak(data.speech || reply);
+            }
         } catch (error) {
-            addMessage('ai', formatText('Связь с сервером оборвалась. Попробуйте ещё раз.'), true);
+            addMessage('ai', formatText(bt('connectionLost', 'Связь с сервером оборвалась. Попробуйте ещё раз.')), true, pending);
         } finally {
-            pending.remove();
+            retire(pending);
             if (!success && fromInput && !input.value) input.value = question;
             setBusy(false);
             showAssistantState(success ? 'ready' : 'error');
@@ -870,14 +968,6 @@
 
     input.addEventListener('input', () => {
         sendBtn.disabled = inFlight || input.value.trim().length < 3;
-        form.querySelector('[data-ai-example]').disabled = inFlight || !!input.value.trim();
-    });
-    companion.querySelector('[data-ai-example]').addEventListener('click', () => {
-        if (inFlight || input.value.trim()) return;
-        setActions(false);
-        input.value = 'Какие задачи у меня на сегодня?';
-        input.dispatchEvent(new Event('input'));
-        input.focus();
     });
 
     input.addEventListener('keydown', event => {

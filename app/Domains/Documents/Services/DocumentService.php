@@ -143,7 +143,16 @@ class DocumentService
     public function addVersion(Document $document, Employee $actor, ?UploadedFile $file, ?string $bodyContent = null, ?string $changeNote = null): DocumentVersion
     {
         return DB::transaction(function () use ($document, $actor, $file, $bodyContent, $changeNote) {
-            $nextVersion = (int) $document->versions()->max('version') + 1;
+            $locked = Document::query()->lockForUpdate()->findOrFail($document->id);
+
+            // SEC-04: подписанная версия неизменяема; поверх неё нельзя ни править body,
+            // ни создать следующую версию до перевода документа в новую жизнь.
+            if ($locked->currentVersion?->immutable === true
+                || in_array($locked->status->value, ['signed', 'registered', 'archived'], true)) {
+                throw new LogicException(__('Подписанная версия документа неизменяема'));
+            }
+
+            $nextVersion = (int) $locked->versions()->max('version') + 1;
 
             if ($file !== null) {
                 $path = $file->store('documents/'.$document->id, 'local');
@@ -174,7 +183,10 @@ class DocumentService
                 ]);
             }
 
-            $document->update(['current_version_id' => $version->id]);
+            $locked->update(['current_version_id' => $version->id]);
+            // Держим переданную модель в синхроне: create() сразу возвращает документ
+            // с актуальной текущей версией.
+            $document->forceFill(['current_version_id' => $version->id]);
 
             $this->audit->log($actor->user, 'document.version_added', 'document_version', $version->id, null, [
                 'document_id' => $document->id,

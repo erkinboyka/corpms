@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Shared\Enums\BiWidgetKind;
+use App\Support\Concerns\ScopesActiveCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BiWidget extends Model
 {
+    use ScopesActiveCompany;
+
     protected $table = 'bi_widgets';
 
     protected $guarded = [];
@@ -28,6 +31,7 @@ class BiWidget extends Model
             'position' => 'integer',
             'span' => 'integer',
             'query_spec' => 'array',
+            'filters' => 'array',
             'last_run_at' => 'datetime',
         ];
     }
@@ -41,5 +45,11 @@ class BiWidget extends Model
     public function dashboard(): BelongsTo
     {
         return $this->belongsTo(BiDashboard::class, 'dashboard_id');
+    }
+
+    /** У виджета нет company_id — скоуп идёт через дашборд. */
+    protected function companyScopeRelation(): string
+    {
+        return 'dashboard';
     }
 }

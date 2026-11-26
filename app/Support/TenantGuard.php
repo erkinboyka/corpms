@@ -47,6 +47,36 @@ final class TenantGuard
     }
 
     /**
+     * Булева проверка владения для политик Gate (без abort).
+     * Модели без company_id проверяются через связь, указанную вызывающей
+     * стороной (например, BiWidget → dashboard).
+     */
+    public static function owns(?Employee $me, Model $model, array $relations = []): bool
+    {
+        if ($me === null || $me->company_id === null) {
+            return false;
+        }
+
+        $current = $model;
+
+        foreach ($relations as $relation) {
+            if (! method_exists($current, $relation)) {
+                return false;
+            }
+
+            $current = $current->loadMissing($relation)->{$relation};
+
+            if (! $current instanceof Model) {
+                return false;
+            }
+        }
+
+        $companyId = $current->getAttribute('company_id');
+
+        return $companyId !== null && (int) $companyId === (int) $me->company_id;
+    }
+
+    /**
      * Проверка модели с company_id (PayrollPeriod, Document, WorkSchedule, Holiday…).
      */
     public static function ensure(Model $model, ?Employee $me, string $message = 'Объект принадлежит другой компании'): void

@@ -32,6 +32,7 @@ class AnalyticsController extends Controller
 
         // журнал действий показываем только владельцам audit.view (как на дашборде)
         $canAudit = $this->permissions->check($user, 'audit.view');
+        $companyId = (int) $user->employee->company_id;
 
         return view('analytics.index', [
             'scope' => $access['scope_value'],
@@ -50,8 +51,8 @@ class AnalyticsController extends Controller
             'tenure' => $this->analytics->tenureStats($employees),
             'timeTracking' => $this->analytics->timeTrackingStats($employees),
             'canAudit' => $canAudit,
-            'auditTrend' => $canAudit ? $this->analytics->auditTrend(14) : null,
-            'auditActions' => $canAudit ? $this->analytics->auditTopActions(14) : [],
+            'auditTrend' => $canAudit ? $this->analytics->auditTrend(14, $companyId) : null,
+            'auditActions' => $canAudit ? $this->analytics->auditTopActions(14, $companyId) : [],
         ]);
     }
 }

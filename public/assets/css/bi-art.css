@@ -19,10 +19,11 @@
     overflow: hidden;
     min-height: 164px;
     border: 1px solid var(--crm-border, rgba(0, 0, 0, .09));
-    border-radius: 14px;
+    border-radius: var(--crm-radius-lg);
     background: var(--crm-surface-solid, #fff);
     box-shadow: 0 3px 12px rgba(15, 23, 42, .045);
-    transition: box-shadow .25s ease, border-color .25s ease;
+    transition: box-shadow var(--crm-motion-control) var(--crm-ease),
+                border-color var(--crm-motion-control) var(--crm-ease);
 }
 
 .card.bi-art-card:hover {
@@ -75,7 +76,7 @@
     width: 27px;
     height: 27px;
     padding: 0;
-    border-radius: 9px;
+    border-radius: var(--crm-radius-sm);
     opacity: .55;
 }
 
@@ -86,6 +87,31 @@
 .bi-art-card__body {
     position: relative;
     padding: 10px 16px 16px;
+}
+
+.bi-edit-colors__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+.bi-edit-colors .form-control-color {
+    width: 2.75rem;
+    height: 2.25rem;
+    padding: .15rem;
+}
+
+.bi-edit-series {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 9rem;
+    gap: .5rem;
+}
+
+@media (max-width: 575.98px) {
+    .bi-edit-series {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* KPI как крупный экспонат */
@@ -115,7 +141,7 @@
     flex-wrap: wrap;
     margin-top: 9px;
     font-size: .75rem;
-    color: var(--crm-muted, #667085);
+    color: var(--crm-text-muted, #667085);
 }
 
 .bi-kpi__unit {
@@ -141,7 +167,7 @@
     width: 7px;
     border-radius: 4px 4px 0 0;
     background: linear-gradient(var(--art-accent), color-mix(in srgb, var(--art-accent) 22%, transparent));
-    animation: bi-bar-rise 2.6s ease-in-out infinite alternate;
+    animation: bi-bar-rise var(--crm-motion-skeleton) var(--crm-ease) infinite alternate;
 }
 
 .bi-kpi__bars i:nth-child(1) { height: 34%; animation-delay: -.4s; }
@@ -170,7 +196,7 @@
     stroke-linecap: round;
     stroke-dasharray: 700;
     stroke-dashoffset: 700;
-    animation: bi-line-draw 1.8s ease-out forwards;
+    animation: bi-line-draw var(--crm-motion-content) var(--crm-ease-out) forwards;
 }
 
 .bi-trend__footer {
@@ -180,7 +206,7 @@
     flex-wrap: wrap;
     margin-top: 8px;
     font-size: .75rem;
-    color: var(--crm-muted, #667085);
+    color: var(--crm-text-muted, #667085);
 }
 
 .bi-trend__footer strong {
@@ -196,7 +222,7 @@
     gap: 10px;
     min-height: 96px;
     font-size: .82rem;
-    color: var(--crm-muted, #667085);
+    color: var(--crm-text-muted, #667085);
 }
 
 .bi-skeleton {
@@ -209,7 +235,7 @@
     height: 84px;
     padding: 10px 12px;
     border: 1px solid color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 16%, transparent);
-    border-radius: 14px;
+    border-radius: var(--crm-radius-lg);
     background:
         linear-gradient(90deg, color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 6%, transparent) 1px, transparent 1px) 0 0 / 24px 100%,
         linear-gradient(color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 6%, transparent) 1px, transparent 1px) 0 100% / 100% 22px,
@@ -223,7 +249,7 @@
     inset: 0;
     background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, .35) 50%, transparent 64%);
     transform: translateX(-110%);
-    animation: bi-skeleton-sweep 3s ease-in-out infinite;
+    animation: bi-skeleton-sweep var(--crm-motion-skeleton) var(--crm-ease) infinite;
 }
 
 .bi-skeleton__bar {
@@ -235,7 +261,7 @@
     border-radius: 5px 5px 0 0;
     background: linear-gradient(color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 70%, transparent), color-mix(in srgb, var(--art-accent, var(--crm-accent, #206bc4)) 18%, transparent));
     transform-origin: bottom;
-    animation: bi-skeleton-bar 1.5s ease-in-out infinite alternate;
+    animation: bi-skeleton-bar var(--crm-motion-skeleton) var(--crm-ease) infinite alternate;
 }
 
 .bi-skeleton__bar:nth-child(1) { animation-delay: -.1s; }
@@ -264,11 +290,11 @@
     stroke-linejoin: round;
     stroke-dasharray: 160;
     stroke-dashoffset: 160;
-    animation: bi-skeleton-draw 2.2s ease-in-out infinite;
+    animation: bi-skeleton-draw var(--crm-motion-skeleton) var(--crm-ease) infinite;
 }
 
 .bi-art-error {
-    color: #d63939;
+    color: var(--crm-danger, #d63939);
 }
 
 /* AI-виджеты: аккуратно вписываем ApexCharts в карточку-экспонат */
@@ -287,21 +313,21 @@
 
 .bi-art-card .apexcharts-xaxis-texts-g text,
 .bi-art-card .apexcharts-yaxis-texts-g text {
-    fill: var(--crm-muted, #667085);
+    fill: var(--crm-text-muted, #667085);
     font-size: 10px;
 }
 
 .bi-art-card .apexcharts-tooltip,
 .bi-art-card .apexcharts-tooltip.apexcharts-theme-light {
     border: 1px solid color-mix(in srgb, var(--art-accent) 30%, transparent) !important;
-    border-radius: 12px !important;
+    border-radius: var(--crm-radius-md) !important;
     box-shadow: 0 12px 28px rgba(15, 23, 42, .16) !important;
 }
 
 .bi-art-card .bi-counter-card {
     padding: 12px 14px;
     border: 1px solid color-mix(in srgb, var(--art-accent) 16%, transparent);
-    border-radius: 14px;
+    border-radius: var(--crm-radius-lg);
     background: color-mix(in srgb, var(--art-accent) 5%, transparent);
 }
 
@@ -322,7 +348,7 @@
     position: relative;
     overflow: hidden;
     border: 1px solid var(--crm-border, rgba(0, 0, 0, .09));
-    border-radius: 14px;
+    border-radius: var(--crm-radius-lg);
     background: var(--crm-surface-solid, #fff);
     box-shadow: 0 3px 12px rgba(15, 23, 42, .045);
 }
@@ -335,7 +361,7 @@
     font-size: .68rem;
     letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--crm-muted, #667085);
+    color: var(--crm-text-muted, #667085);
 }
 
 .bi-art-forecast .table tbody td {
@@ -379,4 +405,269 @@
 
     .bi-trend__line,
     .bi-skeleton__line polyline { stroke-dashoffset: 0; }
+}
+
+/* Серверный fallback AI-виджетов: читается до загрузки ApexCharts. */
+.bi-art-card .bi-ssr {
+    max-height: 220px;
+    overflow: auto;
+    font-size: .78rem;
+    color: var(--crm-text-muted, #667085);
+}
+
+.bi-art-card .bi-counter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+    gap: 8px;
+}
+
+.bi-art-card .bi-counter-name {
+    display: block;
+    margin-bottom: 5px;
+    font-size: .72rem;
+    color: var(--crm-text-muted, #667085);
+}
+
+.bi-art-card .bi-counter-value {
+    display: block;
+    font-size: 1.35rem;
+    line-height: 1.1;
+    color: var(--crm-text, #1d273b);
+}
+
+.bi-art-card .bi-ssr__counters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+    gap: 8px;
+}
+
+.bi-art-card .bi-ssr__list,
+.bi-art-card .bi-ssr__matrix,
+.bi-art-card .bi-ssr__table {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.bi-art-card .bi-ssr__list li {
+    display: grid;
+    grid-template-columns: minmax(56px, 38%) 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--art-accent) 8%, transparent);
+}
+
+.bi-art-card .bi-ssr__list li:last-child { border-bottom: 0; }
+
+.bi-art-card .bi-ssr__label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bi-art-card .bi-ssr__bar {
+    height: 6px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--art-accent) 9%, transparent);
+    overflow: hidden;
+}
+
+.bi-art-card .bi-ssr__bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--art-accent) 72%, transparent);
+}
+
+.bi-art-card .bi-ssr__value {
+    color: var(--crm-text, #1d273b);
+    font-variant-numeric: tabular-nums;
+}
+
+.bi-art-card .bi-ssr__table table,
+.bi-art-card .bi-ssr__matrix table {
+    margin: 0;
+    font-size: .74rem;
+}
+
+.bi-art-card .bi-ssr__table th,
+.bi-art-card .bi-ssr__matrix th {
+    white-space: nowrap;
+}
+
+.bi-art-card .bi-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 96px;
+    font-size: .8rem;
+    color: var(--crm-text-muted, #667085);
+}
+
+/* --------------------------------------------------------------------------
+   Единый контракт JS-виджетов. Раньше эти правила инжектировались
+   bi-widgets.js в <style> во время выполнения; теперь они лежат здесь
+   и используют те же токены, что и остальной интерфейс.
+   -------------------------------------------------------------------------- */
+
+.bi-widget {
+    min-width: 0;
+}
+
+.bi-widget .bi-chart-host {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.bi-widget .bi-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--crm-space-2);
+    margin-top: var(--crm-space-1);
+    flex-wrap: wrap;
+}
+
+.bi-widget .bi-pager button,
+.bi-widget .bi-table-footer button {
+    min-height: var(--crm-tap);
+    border: 1px solid var(--crm-border, #e6e7e9);
+    border-radius: var(--crm-radius-sm);
+    background: transparent;
+    color: var(--crm-text, #1d273b);
+    cursor: pointer;
+}
+
+.bi-widget .bi-pager button:disabled,
+.bi-widget .bi-table-footer button:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.bi-widget .bi-pager button:focus-visible,
+.bi-widget .bi-table-footer button:focus-visible,
+.bi-widget .table-sort:focus-visible {
+    outline: 2px solid var(--crm-accent, #206bc4);
+    outline-offset: 2px;
+}
+
+.bi-widget .table-sort {
+    min-height: var(--crm-tap);
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: var(--crm-space-1);
+    cursor: pointer;
+}
+
+.bi-widget .bi-pager-label,
+.bi-widget .bi-notice,
+.bi-widget .bi-table-footer {
+    color: var(--crm-text-muted, #667085);
+}
+
+.bi-widget .bi-pager-label {
+    font-size: .8125rem;
+}
+
+.bi-widget .bi-notice {
+    font-size: .75rem;
+    margin-top: var(--crm-space-1);
+}
+
+.bi-widget .bi-empty {
+    padding: var(--crm-space-4) 0;
+    color: var(--crm-text-muted, #667085);
+    font-size: .875rem;
+}
+
+.bi-widget .bi-error {
+    padding: var(--crm-space-4) 0;
+    color: var(--crm-danger, #d63939);
+    font-size: .875rem;
+}
+
+.bi-widget .bi-counter-card {
+    min-width: 0;
+}
+
+.bi-widget .bi-counter-value {
+    font-size: 1.45rem;
+    line-height: 1.2;
+    font-weight: 600;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.bi-widget .bi-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+
+.bi-widget .bi-table th,
+.bi-widget .bi-table td {
+    padding: .45rem .6rem;
+    border-bottom: 1px solid var(--crm-border, #e6e7e9);
+    text-align: left;
+    vertical-align: top;
+}
+
+.bi-widget .bi-table th {
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.bi-widget .bi-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--crm-text, #1d273b) 2%, transparent);
+}
+
+.bi-widget .bi-table-compact th,
+.bi-widget .bi-table-compact td {
+    padding: .25rem .45rem;
+    font-size: .8125rem;
+}
+
+.bi-widget .bi-table-search {
+    width: 100%;
+    max-width: 260px;
+    margin-bottom: var(--crm-space-2);
+}
+
+.bi-widget .bi-table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--crm-space-2);
+    margin-top: var(--crm-space-2);
+    font-size: .8125rem;
+    flex-wrap: wrap;
+}
+
+.bi-widget .bi-funnel-steps {
+    margin-top: var(--crm-space-3);
+    font-size: .8125rem;
+}
+
+.bi-widget .bi-funnel-steps div {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--crm-border, #e6e7e9);
+    padding: .25rem 0;
+}
+
+@media (max-width: 575px) {
+    .card.bi-art-card {
+        border-radius: var(--crm-radius-md);
+    }
+
+    .bi-art-card__header,
+    .bi-art-card__body {
+        padding-left: var(--crm-space-3);
+        padding-right: var(--crm-space-3);
+    }
 }

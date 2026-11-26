@@ -20,7 +20,7 @@
 
 .bm-pet {
     position: fixed;
-    z-index: 1043;
+    z-index: calc(var(--crm-z-dropdown) + 3);
     right: 12px;
     bottom: 12px;
     --mini-size: 92px;
@@ -116,7 +116,7 @@
     .bm-pet[data-facing=left] .mini-facing { transform: perspective(1300px) rotateY(180deg); }
     .mini-head {
         transform-origin: 232px 234px;
-        transform: translateX(var(--mini-turn-x, 0px)) skewY(var(--mini-yaw, 0deg)) rotate(var(--mini-tilt, 0deg));
+        transform: translateX(var(--mini-turn-x, 0px)) skewY(var(--mini-yaw, 0deg)) rotate(calc(var(--mini-tilt, 0deg) + var(--bumi-mood-tilt, 0deg)));
         transition: transform .26s ease-out;
     }
     .mini-idle { transform-origin: 235px 231px; animation: mini-look 8s ease-in-out infinite; }

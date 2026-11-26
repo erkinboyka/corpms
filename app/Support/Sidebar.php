@@ -22,6 +22,8 @@ class Sidebar
     private const PARENT_ROUTES = [
         'accounting.entries.show' => 'accounting.entries.index',
         'bi.dashboards.show' => 'bi.index',
+        'bumi.settings.agent' => 'bumi.settings.index',
+        'bumi.settings.channel' => 'bumi.settings.index',
         'crm.clients.show' => 'crm.clients.index',
         'documents.show' => 'documents.index',
         'employees.show' => 'employees.index',
@@ -87,6 +89,7 @@ class Sidebar
             ['attendance.timesheet', 'Табель', 'calendar-time', 'attendance.timesheet.view'],
             ['attendance.anomalies', 'Аномалии', 'alert-triangle', 'attendance.anomalies.view'],
             ['attendance.corrections', 'Корректировки', 'notebook', 'attendance.correct'],
+            ['attendance.offsite', 'Удалённая работа', 'home-bolt', 'attendance.offsite.view'],
         ]],
         ['module', 'Зарплата', 'wallet', null, [
             ['payroll.index', 'Ведомости', 'report-money', 'payroll.view'],
@@ -100,6 +103,7 @@ class Sidebar
             ['crm.deals.index', 'Сделки', 'transaction-euro', 'crm.view'],
             ['crm.activities.index', 'Активности', 'calendar-event', 'crm.view'],
         ]],
+        ['bumi.settings.index', 'Bumi в чатах', 'message-circle', 'bumi.view@company'],
 
         ['_', 'Склад и закупки', 'package'],
         ['module', 'Склад', 'package', null, [

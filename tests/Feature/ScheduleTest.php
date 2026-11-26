@@ -27,7 +27,7 @@ final class ScheduleTest extends TestCase
         return $out;
     }
 
-    public function test_schedule_contains_exactly_seven_named_jobs(): void
+    public function test_schedule_contains_exactly_ten_named_jobs(): void
     {
         $events = $this->events();
 
@@ -39,6 +39,9 @@ final class ScheduleTest extends TestCase
             'ops.health',
             'biometrics.prune-raw-payloads',
             'lms.prune',
+            'ops.worker-selfcheck',
+            'ops.queue-watchdog',
+            'ops.queue-health',
         ], array_keys($events));
     }
 
@@ -54,6 +57,9 @@ final class ScheduleTest extends TestCase
             'ops.health' => '*/15 * * * *',
             'biometrics.prune-raw-payloads' => '10 4 * * *',
             'lms.prune' => '20 4 * * *',
+            'ops.worker-selfcheck' => '*/5 * * * *',
+            'ops.queue-watchdog' => '*/10 * * * *',
+            'ops.queue-health' => '*/15 * * * *',
         ], array_map(static fn (Event $event): string => $event->getExpression(), $events));
     }
 
@@ -63,7 +69,15 @@ final class ScheduleTest extends TestCase
         $property = new ReflectionProperty(Event::class, 'withoutOverlapping');
         $property->setAccessible(true);
 
-        foreach (['db.backup', 'files.backup', 'ops.health', 'biometrics.prune-raw-payloads'] as $name) {
+        foreach ([
+            'db.backup',
+            'files.backup',
+            'ops.health',
+            'biometrics.prune-raw-payloads',
+            'ops.worker-selfcheck',
+            'ops.queue-watchdog',
+            'ops.queue-health',
+        ] as $name) {
             self::assertTrue((bool) $property->getValue($events[$name]), $name.' должен быть без пересечений');
         }
     }

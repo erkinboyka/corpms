@@ -24,12 +24,14 @@ class AuditService
         mixed $oldValue = null,
         mixed $newValue = null,
         ?string $sessionId = null,
+        ?int $companyId = null,
     ): AuditLog {
         $entry = new AuditLog([
             'user_id' => $user?->id,
             // DB-S3: tenant-ключ пишется сразу, чтобы фильтр дашборда и
             // аналитики не требовал join с users/employees на каждый запрос.
-            'company_id' => $user?->employee?->company_id,
+            // Webhook/queue не имеют пользователя — компания передаётся явно.
+            'company_id' => $companyId ?? $user?->employee?->company_id,
             'action' => $action,
             'old_value' => $this->normalize($oldValue),
             'new_value' => $this->normalize($newValue),

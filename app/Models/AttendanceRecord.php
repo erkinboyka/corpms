@@ -16,6 +16,8 @@ class AttendanceRecord extends Model
 
     protected $guarded = []; // Octane-safe: строгие fillable добавим по мере BR-проверок
 
+    protected $attributes = ['work_type' => 'office'];
+
     protected function casts(): array
     {
         return [

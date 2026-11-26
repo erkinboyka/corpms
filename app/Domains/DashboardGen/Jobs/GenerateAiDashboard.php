@@ -37,13 +37,20 @@ final class GenerateAiDashboard implements ShouldQueue
         private readonly int $companyId,
         private readonly int $userId,
         private readonly string $instruction,
-    ) {}
+    ) {
+        // Генерация дашборда долгая — держим её в отдельном пуле, чтобы
+        // она не блокировала ответы Bumi и обычные фоновые операции.
+        $this->onQueue((string) config('worker.pools.bi.queue', 'bi'));
+        $this->timeout = (int) config('worker.pools.bi.timeout', 600);
+    }
 
     public function handle(): void
     {
-        $dashboard = BiDashboard::query()->find($this->dashboardId);
+        $dashboard = BiDashboard::query()
+            ->forCompany($this->companyId)
+            ->find($this->dashboardId);
 
-        if ($dashboard === null || $dashboard->company_id !== $this->companyId) {
+        if ($dashboard === null || (int) $dashboard->company_id !== $this->companyId) {
             return;
         }
 

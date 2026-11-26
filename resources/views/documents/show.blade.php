@@ -291,13 +291,7 @@
                             <a class="small d-block mt-2" href="{{ $qr['url'] }}" target="_blank" rel="noopener">{{ __('Открыть ссылку на телефоне') }}</a>
                             <div class="alert alert-info small mt-3 mb-0 text-start">
                                 <div class="text-secondary">{{ __('Код подтверждения (6 цифр)') }}</div>
-                                <div class="d-flex align-items-center gap-2 mt-1">
-                                    <strong class="fs-3 signature-qr-code">{{ $qr['code'] }}</strong>
-                                    <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-copy-code="{{ $qr['code'] }}" title="{{ __('Скопировать код') }}">
-                                        <i class="ti ti-copy"></i>
-                                    </button>
-                                </div>
-                                <div class="small text-secondary mt-1">{{ __('Тот же код отправлен подписанту в уведомлении') }}</div>
+                                <div class="small mt-1">{{ __('Код отправлен подписанту в уведомлении и в истории уведомлений документа') }}</div>
                             </div>
                         </div>
                     @endif

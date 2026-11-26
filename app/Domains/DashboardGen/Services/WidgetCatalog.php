@@ -13,6 +13,22 @@ namespace App\Domains\DashboardGen\Services;
  */
 class WidgetCatalog
 {
+    /** Вариант по умолчанию — используется и JS, и серверным fallback. */
+    public const DEFAULT_TYPES = [
+        'mini-counters' => 'cards',
+        'bar' => 'column',
+        'line' => 'area',
+        'pie' => 'pie',
+        'radial' => 'gauge',
+        'combo' => 'bar-line',
+        'table' => 'plain',
+        'scatter' => 'scatter',
+        'radar' => 'radar',
+        'heatmap' => 'discrete',
+        'treemap' => 'distributed',
+        'funnel' => 'funnel',
+    ];
+
     /**
      * @return list<array{name: string, purpose: string, types: list<array{type: string, when_to_use: string}>}>
      */
@@ -155,6 +171,20 @@ class WidgetCatalog
         }
 
         return false;
+    }
+
+    public function defaultType(string $family): ?string
+    {
+        return self::DEFAULT_TYPES[$family] ?? null;
+    }
+
+    /**
+     * Серверный fallback для всех семейств: один диспетчер выбирает разметку
+     * по форме данных, поэтому новые семейства не остаются пустыми до JS.
+     */
+    public function ssrView(string $family): ?string
+    {
+        return $this->hasFamily($family) ? 'bi.widgets.fallback' : null;
     }
 
     /** @return list<string> */

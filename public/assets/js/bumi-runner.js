@@ -35,6 +35,7 @@
         setPatrolBounds();
         companion.setAttribute('data-bm-running', '');
         document.body.classList.add('bi-generating');
+        window.CorpMsBumi?.react('bi_generate');
 
         const pausePatrol = () => companion.setAttribute('data-bm-paused', '');
         const resumePatrol = () => companion.removeAttribute('data-bm-paused');
@@ -59,6 +60,55 @@
         let pollErrors = 0;
         let finishing = false;
 
+        function renderProgress(data) {
+            const list = document.querySelector('[data-bm-progress-list]');
+            if (!list || !Array.isArray(data.widgets)) return;
+
+            const seen = new Set();
+
+            data.widgets.forEach(function (item) {
+                const id = String(item.id ?? '');
+                if (!id) return;
+                seen.add(id);
+
+                let row = list.querySelector('[data-widget-id="' + id + '"]');
+                if (!row) {
+                    const empty = list.querySelector('[data-empty]');
+                    if (empty) empty.remove();
+
+                    row = document.createElement('li');
+                    row.className = 'list-group-item d-flex align-items-center justify-content-between gap-2';
+                    row.setAttribute('data-widget-id', id);
+
+                    const title = document.createElement('span');
+                    title.setAttribute('data-title', '');
+                    const status = document.createElement('span');
+                    status.className = 'crm-chip';
+                    status.setAttribute('data-status', '');
+                    row.appendChild(title);
+                    row.appendChild(status);
+                    list.appendChild(row);
+                }
+
+                const titleEl = row.querySelector('[data-title]');
+                const statusEl = row.querySelector('[data-status]');
+                const label = item.ready ? 'готов'
+                    : (item.status === 'error' ? 'ошибка'
+                    : (item.status === 'ready' ? 'готов' : 'в работе'));
+
+                if (titleEl && titleEl.textContent !== String(item.title ?? '')) {
+                    titleEl.textContent = String(item.title ?? '');
+                }
+                if (statusEl && statusEl.textContent !== label) {
+                    statusEl.textContent = label;
+                }
+            });
+
+            list.querySelectorAll('[data-widget-id]').forEach(function (row) {
+                if (!seen.has(row.getAttribute('data-widget-id'))) row.remove();
+            });
+        }
+
         async function poll() {
             if (!statusUrl || finishing) return;
 
@@ -76,16 +126,19 @@
                 const data = await response.json();
                 pollErrors = 0;
                 companion.dataset.bmProgress = (data.ready ?? 0) + '/' + (data.total ?? 0);
-                const statusEl = document.querySelector('[data-bm-status]');
+                const countEl = document.querySelector('[data-bm-progress-count]');
+                if (countEl) countEl.textContent = (data.ready ?? 0) + ' / ' + (data.total ?? 0);
+                renderProgress(data);
+
                 const liveEl = document.querySelector('[data-bm-progress-live]');
                 const progressText = data.status === 'generating'
                     ? 'Bumi собирает дашборд: ' + (data.ready ?? 0) + ' из ' + (data.total ?? 0)
                     : (data.status === 'ready' ? 'Дашборд готов' : 'Генерация завершилась с ошибкой');
-                if (statusEl) statusEl.textContent = progressText;
                 if (liveEl) liveEl.textContent = progressText;
 
                 if (data.status !== 'generating') {
                     finishing = true;
+                    window.CorpMsBumi?.react(data.status === 'ready' ? 'bi_ready' : 'bi_error');
                     window.clearInterval(pollTimer);
                     window.clearInterval(stageTimer);
                     document.body.classList.remove('bi-generating');

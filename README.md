@@ -12,6 +12,7 @@ PHP 8.3+, Laravel 13, Composer, PDO SQLite/MySQL, mbstring, XML/DOM, ZIP для 
 4. Выполнить `php artisan migrate` для выбранной локальной БД.
 5. Настроить web-root на `public/` или выполнить `php artisan serve`.
 6. Для тестовой демонстрации в отдельной локальной БД: `php artisan db:seed --class=RbacSeeder`, затем `php artisan db:seed --class=DemoSeeder`. Демонстрационные учётки и пароли не предназначены для промышленной установки.
+7. Необязательный идемпотентный BI-набор: `php artisan db:seed --class=BiDemoSeeder`. Повторный запуск не удаляет пользовательские правки и не трогает дашборд по умолчанию.
 
 Первый администратор создаётся через `php artisan corpms:admin admin@example.org --company-code=main --company-name="Название компании"`. Команда запрашивает пароль скрытым вводом и не изменяет существующие учётки. Не запускать DemoSeeder на рабочих данных.
 

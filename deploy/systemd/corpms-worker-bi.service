@@ -1,0 +1,16 @@
+[Unit]
+Description=CorpMS queue worker (BI pool)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/corpms/current
+ExecStart=/usr/bin/php artisan queue:work --queue=bi --tries=1 --sleep=3 --timeout=600
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=630
+
+[Install]
+WantedBy=multi-user.target

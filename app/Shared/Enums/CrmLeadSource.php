@@ -10,5 +10,8 @@ enum CrmLeadSource: string
     case Call = 'call';
     case Referral = 'referral';
     case Event = 'event';
+    case Telegram = 'telegram';
+    case Instagram = 'instagram';
+    case WhatsApp = 'whatsapp';
     case Other = 'other';
 }
